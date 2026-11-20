@@ -121,7 +121,7 @@ From the owner's list (`claude/baseball3-teams-2026-11-20.md` in the planning pr
 | Desert & Mountain | Salt Lake Brine Shrimp | SLC | salt white #EEEDE8 / Wasatch blue #3E5C8A |
 | Desert & Mountain | Austin Bats | AUS | dusk purple #4B3A6B / limestone #D8CBB0 |
 
-**The names rule.** Owner's choice (Nov 20, 2026): teams use real U.S. cities with the invented nicknames above. Claude's wording, not yet confirmed by the owner: nicknames, logos, players and coaches stay invented, and no real MLB team or player name is ever used. Baseball1's longplan proposed nearly the same text.
+**The names rule** (owner's choice, Nov 20, 2026; Claude's wording, confirmed by the owner in Session 2): teams use real U.S. cities with the invented nicknames above. Nicknames, logos, players and coaches stay invented, and no real MLB team or player name is ever used.
 
 Claude's defaults (to check when M2 builds the league): codes are 2–3 letters as listed; market sizes, ballpark sizes and the schedule's division and league mix get proposed in M2.
 
@@ -144,6 +144,17 @@ League games, over several simulated seasons. M1 tunes the league-wide rates; M2
 | Batting champion, each league [55] | .330–.350 |
 | Regulars under .240 against .300 hitters [55] | more under .240 than at .300 |
 | Contact against Power, in AVG [55] | Contact moves AVG more than Power does |
+
+**Extra engine targets** (Claude proposed them from general baseball knowledge; the owner kept them in Session 2, Nov 20, 2026). M1 tunes these too:
+
+| Measure | Target |
+|---|---|
+| Walks | about 8% of plate appearances (owner's choice; Baseball1 ran about 6%). If 8% can't fit with 4.3–4.6 runs, Claude reports before cutting anything |
+| Chase rate | hitters swing at about 28–32% of pitches outside the zone (Baseball1 measured 23%) |
+| Whiffs | about 24–26% of swings |
+| Pitches per plate appearance | about 3.8–3.9 |
+| Starters | about 5.3–5.8 innings and 85–95 pitches a start |
+| Errors | about 0.5 per team-game |
 
 - Built in from the start (M1–M2), not added later [55].
 - Played and simmed games use the same model. There is no special edge in games you play. Re-add one only if playtests ask for it [56].

@@ -1,9 +1,9 @@
-**Docs version: 2** (2026-11-20): M0 done: the skeleton is built and tested. Next is M1 step 1.1.
+**Docs version: 3** (2026-11-20): Session 2, M1 step 1.1 task 1: plan check done; the owner's answers (names rule wording, 8% walks, extra engine targets) recorded.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 1 done. M0 is finished on the branch `ccr-facbd381-x31dk5` and is **not merged to `main`** (that needs the owner's OK). Next: M1 step 1.1 (Session 2), starting with its plan check.
+**Stopped at:** Session 2 (M1 step 1.1), task 1 done (plan check). Next: task 2, `B3.rng`. Branch: `ccr-6e229fc2-je0w02` (this session's branch; it contains all of Session 1's `ccr-facbd381-x31dk5`). Nothing is merged to `main` yet (that needs the owner's OK).
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 
@@ -41,7 +41,7 @@ Confirmed by the owner on Nov 20, 2026 (order and sizes from `docs/proposal.md` 
 ## Current milestones
 
 ### M1: Game engine, headless
-**Status:** planned; next (S2–S4).
+**Status:** in progress (step 1.1, Session 2).
 **Goal:** A headless engine that plays full games pitch by pitch, for simulated games and games you play alike, and hits the calibration targets with rated test teams.
 **Why now:** It is first in the owner's order. The season, the game view and every later number run on it. Baseball1's lesson: calibrate before building on top, because every later tuning change ripples through WAR, workload and contracts.
 
@@ -66,17 +66,24 @@ Confirmed by the owner on Nov 20, 2026 (order and sizes from `docs/proposal.md` 
 
 **Decisions**
 - Owner's choices (confirmed Nov 20, 2026): one engine and one physics for every game type; no special edge in games you play; each rating's job; the target table in DESIGN.md section 7; 7 pitch types, 3–5 per pitcher.
+- Owner's choices (Session 2, Nov 20, 2026): walks about 8% of plate appearances; keep the other extra engine targets below (now in DESIGN.md section 7).
 - Claude's defaults:
   - Pitch-by-pitch simulation with a spatial ball-in-play model (Baseball1 used one; it is what makes gap doubles possible).
   - Errors are in, rare, and come from Fielding.
   - Test teams for calibration come from a simple generator in `tools/lib/testteams.js`, with the rating spread a league will have. M2's player generator replaces it, and M2 re-checks every target over full seasons.
   - Speed budget: a full season's 2,430 games in about 10 seconds or less in Node (Baseball1's season took about 5 seconds).
-  - Extra engine targets from general baseball knowledge (not research), reported but not yet approved: walks about 8% of plate appearances (Baseball1 ran about 6%); hitters chase about 28–32% of pitches outside the zone (Baseball1 measured 23%); whiffs about 24–26% of swings; about 3.8–3.9 pitches per plate appearance; starters about 5.3–5.8 innings and 85–95 pitches a start; errors about 0.5 per team-game.
+  - Extra engine targets, proposed by Claude from general baseball knowledge (not research) and kept by the owner in Session 2: walks about 8% of plate appearances (Baseball1 ran about 6%); hitters chase about 28–32% of pitches outside the zone (Baseball1 measured 23%); whiffs about 24–26% of swings; about 3.8–3.9 pitches per plate appearance; starters about 5.3–5.8 innings and 85–95 pitches a start; errors about 0.5 per team-game. If 8% walks can't fit with 4.3–4.6 runs, Claude reports before cutting anything.
 
 **Tasks** (commit and push after each)
 
 Step 1.1 (S2): rules and game loop
-1. [ ] Plan check: the Docs version, and this plan against the skeleton. Done when: reported to the owner.
+1. [x] Plan check: the Docs version, and this plan against the skeleton. Done when: reported to the owner. **Result (Session 2):**
+   - Docs version: this plan says "Based on: docs version 1"; the current version was 2. The only change from 1 to 2 was in this file (M0 moved to Done, the Stopped at line), so nothing in M1 was stale.
+   - Task 2's Math.random rule already exists from M0 (a text check in `tools/tests/rules.test.js`). Task 2 adds a runtime check instead: in the Node tests `Math.random` throws, so any call that the text check misses fails while games run.
+   - Files: step 1.1 builds `rng.js`, `data.js` (positions and pitch-type names only), `game.js`, `manager.js` (placeholder CPU choices) and `box.js` from ARCHITECTURE.md's list, plus a temporary `js/core/placeholder.js` (the stand-in pitch outcome, removed in step 1.2). `tools/lib/testteams.js` starts now with plain teams (no ratings until step 1.3), and `tools/gametest.js` runs the 1,000-game check (Claude's defaults).
+   - Branch: this session's branch is `ccr-6e229fc2-je0w02`, set by the session environment. It was fast-forwarded to Session 1's last commit, so it holds all of M0.
+   - Rules DESIGN.md leaves open, which step 1.1 sets as Claude's defaults (listed in DESIGN.md section 2 when the step ends): Quick Game extras without a runner on second; how the mercy rule is checked; steals of second and third only; trailing runners hold on a tag-up; no dropped third strike; a simple earned-run rule until errors are real in step 1.2.
+   - The owner's answers (Nov 20, 2026): the names rule wording is OK; walks about 8%; keep the extra engine targets.
 2. [ ] `B3.rng`: seeded random numbers whose state can be saved and restored, plus a test rule that `js/core/` never calls `Math.random`. Done when: the same seed gives the same sequence after a save and restore.
 3. [ ] Game state and rules, with a placeholder outcome for each pitch. Done when: 1,000 seeded games end correctly with every invariant holding (3 outs per half-inning except walk-offs, runs in the log equal the score, extra-inning rules by game type), and two runs with the same seed print identical output.
 4. [ ] Decision points, answered by placeholder CPU logic. Done when: a test plays a game where a scripted "player" answers every choice for one side.
@@ -100,8 +107,7 @@ Step 1.3 (S4): ratings and calibration
 - [ ] Owner: read the calibration report
 
 **Open questions** (for the owner)
-- Walk rate: about 8% (real baseball) or about 6% (Baseball1)? Claude's default is 8%, as long as runs stay in 4.3–4.6; if they can't, I'll report before cutting anything.
-- The other extra engine targets under "Decisions" (chase, whiff, pitches per plate appearance, starter length, errors): keep or change?
+- None open. Walk rate (8%) and the extra engine targets (keep) were answered in Session 2.
 
 **Risks**
 - Calibration may need a fourth session (range 3–4).
@@ -150,7 +156,6 @@ Step 1.3 (S4): ratings and calibration
 ---
 
 ## Backlog
-- Open from Session 1: the names rule's wording (DESIGN.md section 6: invented nicknames, logos, players and coaches; no real MLB names) is Claude's, not yet confirmed by the owner.
 - Delete the working branch on GitHub after its work is merged, with the owner's OK.
 
 ## Done
