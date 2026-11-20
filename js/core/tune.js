@@ -44,12 +44,16 @@
 
   // Fielding. A null takes the position's value from POS below (a fielder's inputs don't move with
   // his position in a game: there are no defensive substitutions in M1).
+  // A fielder's ratings are graded against his position (step 1.4, Claude's default): Range and Arm at
+  // 60 give the position's own first step and arm in POS.
   const FLD = {
-    react: null,       // Range: first step, seconds before he moves after contact
+    react: null,       // first step, seconds before he moves after contact (null: his position's, in POS)
+    first: 1,          // Range: multiplier on that first step (below 1 is quicker)
     route: 0.92,       // Range: share of his top speed he keeps on the way to the ball (the route)
     hands: 1,          // Hands: error rate multiplier (0.5 is half as many fumbles, drops and wild throws)
     release: 0,        // Hands: seconds taken off every catch-and-throw (quick release; double-play pivots)
-    arm: null,         // Arm: throw speed in mph
+    arm: null,         // throw speed in mph (null: his position's, in POS)
+    armPlus: 0,        // Arm: mph added to that throw speed
     framing: 0         // Framing (catchers): feet the borderline edge of the zone moves toward strikes
   };
   // Position values: [react s, arm mph, catch-to-throw s]. Shortstops and center fielders start quickest.
@@ -79,6 +83,7 @@
     // like 91.25, 95 like 100 and 99 like 108.8. The capped combination bonus: in each group (the hitting
     // ratings; the pitching ratings with every pitch grade) only the biggest extra counts in full, the
     // others count at `others`, and the extras together add at most `cap` points.
+    // Groups: hitting; pitching (with every pitch grade); defense and running (step 1.4).
     top: { from: 85, k: 0.05, others: 0.5, cap: 12 },
     bat: {
       contactSd: ['contact', 'mul', 0.88],
@@ -91,6 +96,23 @@
       recognition: ['recognition', 'add', 0.07],
       judgeSd: ['discipline', 'mul', 0.85],
       judgeLean: ['discipline', 'mul', 0.7]
+    },
+    // Defense and running (step 1.4). Range, Arm and Framing count fully at their key spots (DESIGN.md
+    // section 10: Range at SS and CF, Arm in RF and at C, Framing at C, Hands at SS, Speed in CF,
+    // Baserunning for a regular), and less elsewhere, because those spots get the most chances.
+    fld: {
+      first: ['range', 'mul', 0.9],
+      route: ['range', 'add', 0.012],
+      hands: ['hands', 'mul', 0.8],
+      release: ['hands', 'add', 0.03],
+      armPlus: ['arm', 'add', 2.5],
+      framing: ['framing', 'add', 0.015]
+    },
+    run: {
+      speed: ['speed', 'add', 0.8],
+      read: ['baserunning', 'mul', 0.85],
+      jump: ['baserunning', 'mul', 0.85],
+      judge: ['baserunning', 'mul', 0.85]
     },
     pit: {
       velo: ['velocity', 'add', 1.6],
@@ -235,6 +257,13 @@
 
   // The CPU's choices (B3.manager.cpu, M1 step 1.3 task 10). Claude's defaults, tuned in step 1.4.
   const CPU = {
+    // Steals (step 1.4): before each pitch the CPU judges the runner's chance (B3.ball.stealOdds: his jump
+    // and Speed against the delivery and the catcher's release and Arm). Below `min` he stays; from there
+    // to `full` his chance of going on this pitch rises to `rate`. Steals of third need more.
+    steal: { min: [0.68, 0.78], full: [0.85, 0.92], rate: [0.05, 0.03], twoOut: 0.6 },
+    // Tag-ups (step 1.4): the lead runner goes when he judges his chance (B3.ball.tagupOdds, plus his own
+    // Baserunning error) is at least this, from second or from third.
+    tagup: { need: { 2: 0.8, 3: 0.6 } },
     swing: {
       // A CPU hitter swings when the pitch looks to cross inside this line: feet from the edge of the zone
       // (below 0 inside), by balls (rows 0-3) and strikes (columns 0-2). He takes the corners early in the

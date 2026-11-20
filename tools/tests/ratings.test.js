@@ -35,35 +35,63 @@ module.exports = function (t) {
 
   t.test('each rating moves its own hooks the right way, and no others', () => {
     const B3 = loadCore();
-    // rating -> { hook: +1 (rises with the rating) or -1 (falls) }
+    // rating -> { 'side.hook': +1 (rises with the rating) or -1 (falls) }
     const own = {
-      contact: { contactSd: -1 }, timing: { timingSd: -1, timingTop: 1 }, launch: { launchK: -1, launchSd: -1, sprayNoise: -1 },
-      rawPower: { batSpeed: 1 }, recognition: { recognition: 1 }, discipline: { judgeSd: -1, judgeLean: -1 },
-      velocity: { velo: 1 }, command: { commandSd: -1 }, deception: { deception: 1 }, stamina: { stamina: 1 }
+      contact: { 'bat.contactSd': -1 }, timing: { 'bat.timingSd': -1, 'bat.timingTop': 1 },
+      launch: { 'bat.launchK': -1, 'bat.launchSd': -1, 'bat.sprayNoise': -1 },
+      rawPower: { 'bat.batSpeed': 1 }, recognition: { 'bat.recognition': 1 }, discipline: { 'bat.judgeSd': -1, 'bat.judgeLean': -1 },
+      velocity: { 'pit.velo': 1 }, command: { 'pit.commandSd': -1 }, deception: { 'pit.deception': 1 }, stamina: { 'pit.stamina': 1 },
+      // Defense and running (step 1.4): Range a quicker first step and a better route, Hands fewer errors
+      // and a quicker release, Arm more mph, Framing a wider edge, Speed sprint speed, Baserunning a quicker
+      // read and jump and a smaller error in judging an extra base.
+      range: { 'fld.first': -1, 'fld.route': 1 }, hands: { 'fld.hands': -1, 'fld.release': 1 }, arm: { 'fld.armPlus': 1 },
+      framing: { 'fld.framing': 1 }, speed: { 'run.speed': 1 }, baserunning: { 'run.read': -1, 'run.jump': -1, 'run.judge': -1 }
     };
+    const PITR = ['velocity', 'command', 'deception', 'stamina'];
     const base = B3.ratings.inputs(pitcher(Object.assign({ stamina: 60 })));
     const baseH = B3.ratings.inputs(hitter());
     for (const k in own) {
       for (const at of [40, 70, 95]) {
-        const pit = k === 'velocity' || k === 'command' || k === 'deception' || k === 'stamina';
+        const pit = PITR.indexOf(k) >= 0;
         const r = {}; r[k] = at; if (pit && k !== 'stamina') r.stamina = 60;
         const inp = pit ? B3.ratings.inputs(pitcher(r)) : B3.ratings.inputs(hitter(r));
-        const b = pit ? base : baseH, side = pit ? 'pit' : 'bat';
-        for (const hk in inp[side]) {
-          const d = JSON.stringify(inp[side][hk]) === JSON.stringify(b[side][hk]) ? 0 : Math.sign(inp[side][hk] - b[side][hk]);
-          const want = own[k][hk] ? own[k][hk] * Math.sign(at - 60) : 0;
-          assert.strictEqual(d, want, k + ' at ' + at + ' moved ' + side + '.' + hk + ' by sign ' + d);
+        const b = pit ? base : baseH;
+        for (const side of ['bat', 'pit', 'fld', 'run']) {
+          for (const hk in inp[side]) {
+            const d = JSON.stringify(inp[side][hk]) === JSON.stringify(b[side][hk]) ? 0 : Math.sign(inp[side][hk] - b[side][hk]);
+            const want = own[k][side + '.' + hk] ? own[k][side + '.' + hk] * Math.sign(at - 60) : 0;
+            assert.strictEqual(d, want, k + ' at ' + at + ' moved ' + side + '.' + hk + ' by sign ' + d);
+          }
         }
-        const other = pit ? 'bat' : 'pit';
-        assert.deepStrictEqual(inp[other], b[other], k + ' moved the ' + other + ' inputs');
-        assert.deepStrictEqual(inp.fld, b.fld, k + ' moved fielding (step 1.4)');
-        assert.deepStrictEqual(inp.run, b.run, k + ' moved running (step 1.4)');
       }
     }
     // The scales: +10 points is one step.
     const R = B3.tune.RATE;
     near(B3.ratings.inputs(hitter({ contact: 70 })).bat.contactSd, B3.tune.BAT.contactSd * R.bat.contactSd[2], 1e-12, 'contact step');
     near(B3.ratings.inputs(pitcher({ velocity: 50 })).pit.velo, B3.tune.PIT.velo - R.pit.velo[2], 1e-12, 'velocity step');
+    near(B3.ratings.inputs(hitter({ arm: 70 })).fld.armPlus, R.fld.armPlus[2], 1e-12, 'arm step');
+    near(B3.ratings.inputs(hitter({ speed: 50 })).run.speed, B3.tune.RUN.speed - R.run.speed[2], 1e-12, 'speed step');
+  });
+
+  t.test('Range and Arm are graded against the position; defense and running share their own cap', () => {
+    const B3 = loadCore();
+    // The fielders the ball sees: a shortstop and a right fielder with Range 70 and Arm 70 against 60s.
+    const play = (rt) => {
+      const t = average('AWY', 'A'), h = average('HOM', 'H');
+      for (const id of ['HOM-SS', 'HOM-RF']) Object.assign(h.players[id].ratings, rt);
+      const g = B3.game.create({ type: 'regular', away: t, home: h, rng: B3.rng.create('def') });
+      return { ss: g.teams[1].inp['HOM-SS'].fld, rf: g.teams[1].inp['HOM-RF'].fld };
+    };
+    const a = play({}), b = play({ range: 70, arm: 70 });
+    assert.strictEqual(a.ss.first, 1);
+    assert.strictEqual(a.ss.armPlus, 0);
+    near(b.ss.first, B3.tune.RATE.fld.first[2], 1e-12, 'one step quicker');
+    near(b.rf.armPlus, B3.tune.RATE.fld.armPlus[2], 1e-12, 'one step of arm');
+    assert.strictEqual(b.ss.react, null, 'the first step itself stays the position\'s');
+    // The cap: the defense-and-running group is separate from hitting.
+    const e = B3.ratings.effective(hitter({ contact: 95, range: 95, speed: 95 }));
+    near(e.contact, 100, 1e-9, 'hitting keeps its full extra');
+    near(e.range + e.speed, 95 + 5 + 95 + 2.5, 1e-9, 'Range and Speed share a group');
   });
 
   t.test('the steep curve past 85, and the capped combination bonus', () => {

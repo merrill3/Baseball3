@@ -1,27 +1,31 @@
 // Ratings into the physics' inputs (the rating hooks). Logic file: no DOM.
 //
 //   B3.ratings.inputs(player)     the player's physics inputs: B3.tune.inputs with his ratings mapped in
-//   B3.ratings.hooks(player)      just the mapped part, { bat, pit } (for tests and tools)
+//   B3.ratings.hooks(player)      just the mapped part, { bat, pit, fld, run } (for tests and tools)
 //   B3.ratings.effective(player)  each rating after the top-end curve and the combination cap
 //   B3.ratings.curve(r)           one rating through the top-end curve, alone (no cap)
 //   B3.ratings.stamina(r)         pitches before fatigue for a Stamina rating
 //
 // A player can carry (every part optional; anything missing is average, 60):
-//   ratings     { contact, timing, launch, rawPower, recognition, discipline,    hitting (DESIGN.md
-//                 velocity, command, deception, stamina }                          section 10), 20-99
+//   ratings     { contact, timing, launch, rawPower, recognition, discipline,    hitting,
+//                 velocity, command, deception, stamina,                           pitching,
+//                 range, hands, arm, framing, speed, baserunning }                 defense and running
+//                                                                                  (DESIGN.md section 10), 20-99
 //   arsenal     { FF: { grade, shape }, ... }   a grade (20-99) and a shape (-1 fly-ball tilt to +1
 //                                               ground-ball tilt) for each of his pitch types
 //   tendencies  { aggressiveness: Patient | Balanced | Aggressive, aim: Nibbler | Balanced | Attacker }
-// Each rating sets the inputs for its one job and nothing else; the scales are B3.tune.RATE. The
-// defense and running ratings (Range, Hands, Arm, Framing, Speed, Baserunning) are mapped in step 1.4;
-// until then those inputs keep their placeholders.
+// Each rating sets the inputs for its one job and nothing else; the scales are B3.tune.RATE. Range and
+// Arm are graded against the fielder's position: at 60 he has his position's first step and arm
+// (B3.tune.POS); Range multiplies the first step (fld.first) and Arm adds mph (fld.armPlus). Framing
+// matters only for a catcher. Speed sets run.speed, which is also his speed to a ball in the field.
 (function (root) {
   'use strict';
   const B3 = root.B3 = root.B3 || {};
 
   const HIT = ['contact', 'timing', 'launch', 'rawPower', 'recognition', 'discipline'];
   const PIT = ['velocity', 'command', 'deception'];
-  const ALL = HIT.concat(PIT, ['stamina']);
+  const DEF = ['range', 'hands', 'arm', 'framing', 'speed', 'baserunning'];
+  const ALL = HIT.concat(PIT, ['stamina'], DEF);
 
   function R() { return B3.tune.RATE; }
   function fail(msg) { throw new Error('B3.ratings: ' + msg); }
@@ -66,15 +70,18 @@
     return has(a[type], 'grade') ? check(a[type].grade, (player.id || 'player') + ' ' + type + ' grade') : 60;
   }
 
-  // Every rating after the curve and the cap: { contact, ..., stamina, grades: { type: points } }.
+  // Every rating after the curve and the cap: { contact, ..., stamina, range, ..., grades: { type: points } }.
+  // Three groups share a cap each: hitting; pitching with the pitch grades; defense and running.
   function effective(player) {
     const pitches = Array.isArray(player.pitches) ? player.pitches : [];
     const hit = capped(HIT.map((k) => ({ k: k, r: ratingOf(player, k) })));
     const pit = capped(PIT.map((k) => ({ k: k, r: ratingOf(player, k) }))
       .concat(pitches.map((type) => ({ k: 'grade:' + type, r: gradeOf(player, type) }))));
+    const def = capped(DEF.map((k) => ({ k: k, r: ratingOf(player, k) })));
     const out = { grades: {} };
     for (const k of HIT) out[k] = hit[k];
     for (const k of PIT) out[k] = pit[k];
+    for (const k of DEF) out[k] = def[k];
     for (const type of pitches) out.grades[type] = pit['grade:' + type];
     out.stamina = curve(ratingOf(player, 'stamina')); // outside the cap: Stamina is outside the equal-value rule
     return out;
@@ -107,12 +114,14 @@
     return map[td[k]];
   }
 
-  // The inputs his ratings set: { bat, pit }, in the hooks' own names and units.
+  // The inputs his ratings set: { bat, pit, fld, run }, in the hooks' own names and units.
   function hooks(player) {
     const T = B3.tune, rate = R(), e = effective(player);
-    const bat = {}, pit = {};
+    const bat = {}, pit = {}, fld = {}, run = {};
     for (const k in rate.bat) bat[k] = hook(T.BAT[k], rate.bat[k], e[rate.bat[k][0]]);
     for (const k in rate.pit) pit[k] = hook(T.PIT[k], rate.pit[k], e[rate.pit[k][0]]);
+    for (const k in rate.fld) fld[k] = hook(T.FLD[k], rate.fld[k], e[rate.fld[k][0]]);
+    for (const k in rate.run) run[k] = hook(T.RUN[k], rate.run[k], e[rate.run[k][0]]);
     bat.aggressiveness = tendency(player, 'aggressiveness');
     pit.aim = tendency(player, 'aim');
     if (has(player.ratings, 'stamina')) pit.stamina = stamina(e.stamina);
@@ -129,7 +138,7 @@
       }
       pit.putAway = putAway(pitches, e.grades);
     }
-    return { bat: bat, pit: pit };
+    return { bat: bat, pit: pit, fld: fld, run: run };
   }
 
   // The put-away pitch: his best-graded type. On a tie, the type that misses the most bats (B3.tune.TYPE's bite).
@@ -145,7 +154,7 @@
   function inputs(player) { return B3.tune.inputs(player, hooks(player)); }
 
   B3.ratings = {
-    HIT: HIT, PIT: PIT, ALL: ALL,
+    HIT: HIT, PIT: PIT, DEF: DEF, ALL: ALL,
     inputs: inputs,
     hooks: hooks,
     effective: effective,

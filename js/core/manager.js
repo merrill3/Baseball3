@@ -1,7 +1,7 @@
 // CPU choices at every decision point. Logic file: no DOM.
 // Step 1.3 (task 10): the swing, pitch and pitching-change choices read the players' inputs from their
-// ratings (B3.ratings); their numbers are B3.tune.CPU. Steals and tag-ups keep step 1.1's placeholder
-// logic until step 1.4 maps Speed and Baserunning. Each function gets the decision (g.pending) and the
+// ratings (B3.ratings); their numbers are B3.tune.CPU. Step 1.4: steals and tag-ups from the runner's
+// odds (B3.ball.stealOdds, tagupOdds: Speed, Baserunning, the fielders' Arm and Hands). Each function gets the decision (g.pending) and the
 // game, and returns an answer for B3.game.answer.
 (function (root) {
   'use strict';
@@ -55,12 +55,20 @@
       return { pitcher: pickReliever(g, team, lead) };
     },
 
-    // Rare steals of second, rarer of third.
+    // Steals (step 1.4): the lead runner who can go judges his chance (B3.ball.stealOdds: his jump and
+    // Speed against the delivery and the catcher). Below CPU.steal.min he stays; above it he goes on
+    // this pitch with a chance that rises to `rate` at `full`. With two outs he goes less often. A
+    // runner on first goes with the runner on second (a double steal) or alone.
     steal: function (d, g) {
-      if (g.outs === 2 && g.rng.chance(0.5)) return null;
-      if (d.runners.indexOf(2) >= 0 && !g.bases[0] && g.rng.chance(0.004)) return { runners: [2] };
-      if (d.runners.indexOf(1) >= 0 && !g.bases[1] && g.rng.chance(0.016)) return { runners: [1] };
-      return null;
+      const S = C().steal;
+      const lead = d.runners.indexOf(2) >= 0 ? 2 : 1;
+      const k = lead - 1;
+      const p = B3.ball.stealOdds(g, lead);
+      if (p < S.min[k]) return null;
+      let go = S.rate[k] * Math.min(1, (p - S.min[k]) / (S.full[k] - S.min[k]));
+      if (g.outs === 2) go *= S.twoOut;
+      if (!g.rng.chance(go)) return null;
+      return { runners: lead === 2 && g.bases[0] ? [1, 2] : [lead] };
     },
 
     // The type: by its usual share and its grade; fastballs when behind, the put-away pitch with two
@@ -113,14 +121,15 @@
       return { swing: true, timing: B3.pitch.cpuTiming(g, g.pitch) };
     },
 
-    // Tag from third on a catch in the outfield; sometimes from second on a deep fly (placeholder
-    // depths until step 1.4; dist is null when unknown).
+    // Tag-ups (step 1.4): the lead runner goes when his own judgment of his chance (B3.ball.tagupOdds,
+    // with his Baserunning's error added to the margin) reaches CPU.tagup.need for his base. Never on a
+    // pop-up.
     tagup: function (d, g) {
-      if (d.code === 'PO') return { go: false };
-      const deep = (ft) => d.dist === null || d.dist === undefined || d.dist >= ft;
-      if (d.from === 3) return { go: deep(260) };
-      if (d.from === 2) return { go: d.code === 'FO' && deep(330) && g.rng.chance(0.5) };
-      return { go: false };
+      if (d.code === 'PO' || !g.play || !g.play.meta) return { go: false };
+      const need = C().tagup.need[d.from];
+      if (need === undefined) return { go: false };
+      const run = g.teams[d.side].inp[d.runner].run;
+      return { go: B3.ball.tagupOdds(g, g.play, d.from, g.rng.normal(0, run.judge)) >= need };
     }
   };
 

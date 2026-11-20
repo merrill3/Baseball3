@@ -1,6 +1,6 @@
 // The CPU's choices (M1 step 1.3, task 10): swing or take (Discipline, Recognition, Deception,
 // Aggressiveness, the count), the pitch (grades, the put-away pitch, the count, Aim) and pitching changes
-// (Stamina, getting hit hard, roles). Each choice is asked directly, many times, on a game waiting at its
+// (Stamina, getting hit hard, roles); step 1.4: steals and tag-ups (Speed, Baserunning, Arm, Hands). Each choice is asked directly, many times, on a game waiting at its
 // first pitch: the away leadoff man (AWY-CF) against the home starter (HOM-SP).
 'use strict';
 const assert = require('assert');
@@ -8,6 +8,8 @@ const { loadCore } = require('../lib/load');
 const { averagePair, ratedPair } = require('../lib/testteams');
 
 const N = 4000;
+const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, (msg || '') + ': ' + a + ' is not within ' + tol + ' of ' + b);
+const B3min = (B3) => B3.tune.CPU.steal.min[0];
 
 // opts: { bat, pit } rating overrides for the batter and the pitcher, tendencies, arsenal, sim hooks.
 function setup(opts, seed) {
@@ -148,6 +150,62 @@ module.exports = function (t) {
     // The count: never during a plate appearance.
     live.pitches = 200; team.pitcher = 'HOM-SP'; g.balls = 1;
     assert.strictEqual(cpu.change(d(), g), null, 'not in the middle of a plate appearance');
+  });
+
+  t.test('steals: the runner judges his odds (Speed, Baserunning against the catcher) and goes only when they are good', () => {
+    // A runner on first (AWY-2B) with the home catcher behind the plate; ratings for both.
+    const env = (runner, catcher) => {
+      const B3 = loadCore();
+      const t = averagePair();
+      Object.assign(t.away.players['AWY-2B'].ratings, runner || {});
+      Object.assign(t.home.players['HOM-C'].ratings, catcher || {});
+      const g = B3.game.create(Object.assign(t, { type: 'regular', rng: B3.rng.create('steal test') }));
+      g.bases[0] = { id: 'AWY-2B', resp: 'HOM-SP', earned: true };
+      return { B3, g };
+    };
+    const odds = (e) => e.B3.ball.stealOdds(e.g, 1);
+    const tries = (e, n) => {
+      let k = 0;
+      for (let i = 0; i < n; i++) if (e.B3.manager.cpu.steal({ kind: 'steal', side: 0, runners: [1] }, e.g)) k++;
+      return k / n;
+    };
+    const avg = env(), fast = env({ speed: 80 }), quick = env({ baserunning: 80 }), arm = env({}, { arm: 80 }), hands = env({}, { hands: 80 });
+    assert.ok(odds(fast) > odds(avg) + 0.05, 'Speed: ' + odds(fast) + ' vs ' + odds(avg));
+    assert.ok(odds(quick) > odds(avg) + 0.02, 'Baserunning (the jump)');
+    assert.ok(odds(arm) < odds(avg) - 0.05, 'the catcher\'s Arm');
+    assert.ok(odds(hands) < odds(avg) - 0.01, 'the catcher\'s quick release (Hands)');
+    // He goes more often with better odds, and never when they are poor.
+    const slow = env({ speed: 35, baserunning: 35 }, { arm: 80 });
+    assert.ok(odds(slow) < B3min(slow.B3), 'a slow runner against a strong arm has poor odds');
+    assert.strictEqual(tries(slow, 3000), 0, 'so he never goes');
+    assert.ok(tries(fast, 6000) > tries(avg, 6000) + 0.005, 'fast runners go more often');
+    // The odds he judges match what happens: steals of second by the fast runner, pitch by pitch.
+    let safe = 0;
+    const n = 4000;
+    for (let i = 0; i < n; i++) {
+      fast.g.pitch = fast.B3.pitch.throw(fast.g, { type: 'FF', x: 0, z: 2.5 });
+      if (fast.B3.ball.steal(fast.g, 1, fast.g.pitch)) safe++;
+    }
+    near(safe / n, odds(fast), 0.06, 'his judged odds against the real steals');
+  });
+
+  t.test('tag-ups: runners tag on deep catches and hold on shallow ones; faster runners tag more', () => {
+    const run = (speed, games) => {
+      const B3 = loadCore();
+      const seen = [];
+      const ctl = { tagup: (d, g) => { const a = B3.manager.cpu.tagup(d, g); if (d.from === 3) seen.push({ dist: d.dist, go: a.go }); return a; } };
+      for (let n = 0; n < games; n++) {
+        const t = averagePair();
+        for (const s of t.away.lineup) t.away.players[s.id].ratings.speed = speed;
+        B3.game.play(B3.game.create(Object.assign(t, { type: 'regular', rng: B3.rng.create('tag ' + n) })), [ctl, null]);
+      }
+      const rate = (lo, hi) => { const x = seen.filter((s) => s.dist >= lo && s.dist < hi); return x.filter((s) => s.go).length / Math.max(1, x.length); };
+      return { deep: rate(300, 999), mid: rate(230, 290), shallow: rate(0, 180) };
+    };
+    const avg = run(60, 250), fast = run(85, 250);
+    assert.ok(avg.deep > 0.9, 'deep catches: ' + avg.deep);
+    assert.ok(avg.shallow < 0.1, 'shallow catches: ' + avg.shallow);
+    assert.ok(fast.mid > avg.mid + 0.05, 'faster runners tag more on medium catches: ' + fast.mid + ' vs ' + avg.mid);
   });
 
   t.test('simulated games stay sane with rated teams and with average teams', () => {

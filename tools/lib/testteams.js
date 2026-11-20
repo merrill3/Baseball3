@@ -4,7 +4,8 @@
 //   team(code, name), pair()      plain teams: no ratings, so every rating hook has its placeholder
 //                                 value (an average big-leaguer). The unit tests use these.
 //   average(code, name)           the same players with every rating written out at 60 (average grades,
-//                                 Balanced tendencies): tools/worth.js moves one rating from here
+//                                 Balanced tendencies; defense and running from step 1.4, Framing for
+//                                 the catcher): tools/worth.js and tools/lib/value.js move one rating from here
 //   rated(code, name, rng)        players with ratings drawn with a league-like spread (step 1.3)
 //   ratedPair(rng)                two rated teams; rng is a B3.rng generator used only for the draws
 // The spread is Claude's default for testing (each rating about 60 +- 10, independent); M2's player
@@ -25,6 +26,8 @@ const STAFF = [
 ];
 const HIT = ['contact', 'timing', 'launch', 'rawPower', 'recognition', 'discipline'];
 const PIT = ['velocity', 'command', 'deception'];
+// Defense and running (step 1.4): every hitter has them; Framing only catchers.
+const DEF = ['range', 'hands', 'arm', 'speed', 'baserunning'];
 // Stamina ratings that give the placeholder pitches by role (B3.tune.STAMINA: SP 92, LR 50, others 28).
 const STAMINA = { SP: 60, LR: 42.2, other: 30 };
 
@@ -55,7 +58,8 @@ function average(code, name) {
   return team(code, name, (p, kind) => {
     p.ratings = {};
     if (kind === 'hitter') {
-      for (const k of HIT) p.ratings[k] = 60;
+      for (const k of HIT.concat(DEF)) p.ratings[k] = 60;
+      if (p.id.endsWith('-C')) p.ratings.framing = 60;
       p.tendencies = { aggressiveness: 'Balanced' };
     } else {
       for (const k of PIT) p.ratings[k] = 60;
@@ -77,7 +81,8 @@ function rated(code, name, rng) {
   return team(code, name, (p, kind) => {
     p.ratings = {};
     if (kind === 'hitter') {
-      for (const k of HIT) p.ratings[k] = draw(60, 10);
+      for (const k of HIT.concat(DEF)) p.ratings[k] = draw(60, 10);
+      if (p.id.endsWith('-C')) p.ratings.framing = draw(60, 10);
       p.tendencies = { aggressiveness: style(['Patient', 'Balanced', 'Aggressive']) };
     } else {
       const reliever = p.role !== 'SP';
@@ -98,4 +103,4 @@ function ratedPair(rng) {
   return { away: rated('AWY', 'Away Testers', rng), home: rated('HOM', 'Home Testers', rng) };
 }
 
-module.exports = { team, pair, average, averagePair, rated, ratedPair, HIT, PIT, STAMINA };
+module.exports = { team, pair, average, averagePair, rated, ratedPair, HIT, PIT, DEF, STAMINA };

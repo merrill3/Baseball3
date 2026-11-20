@@ -5,7 +5,9 @@
 //                                      contact is { ev, la, sp } from B3.pitch; steal lists the runners
 //                                      who were going on the pitch ([{ from, runner }] or null).
 //   B3.ball.steal(g, from, pitch)      true if the runner stealing from base `from` (1 or 2) is safe
+//   B3.ball.stealOdds(g, from)         his chance before the pitch, for the CPU's choice (step 1.4)
 //   B3.ball.tagup(g, play, from)       true if the runner tagging from `from` is safe; adds to the script
+//   B3.ball.tagupOdds(g, play, from, err)  his chance (err: his judgment's error, s), for the CPU (step 1.4)
 //   B3.ball.flight(contact)            the ball's path: { pts: [[t, x, y, z]], land, hr, wall, stop }
 //
 // Every rating hook it uses is an input from B3.ratings.inputs (B3.tune.inputs): fielders' Range (react, route), Hands
@@ -147,9 +149,9 @@
       const P = POS[pos];
       out[pos] = {
         pos: pos, id: id, at: at,
-        react: isNum(inp.fld.react) ? inp.fld.react : P[0],
+        react: (isNum(inp.fld.react) ? inp.fld.react : P[0]) * (isNum(inp.fld.first) ? inp.fld.first : 1),
         speed: inp.run.speed * inp.fld.route,
-        arm: isNum(inp.fld.arm) ? inp.fld.arm : P[1],
+        arm: (isNum(inp.fld.arm) ? inp.fld.arm : P[1]) + (isNum(inp.fld.armPlus) ? inp.fld.armPlus : 0),
         xfer: Math.max(0.2, P[2] - inp.fld.release),
         release: inp.fld.release,
         hands: inp.fld.hands
@@ -882,8 +884,9 @@
   }
 
   // A steal: the runner's jump and speed against the delivery, the pitch's flight and the catcher's
-  // release and arm (Arm plus Hands' quick release).
-  function steal(g, from, pitch) {
+  // release and arm (Arm plus Hands' quick release). margin is the ball's time (plus the tag) minus the
+  // runner's, in seconds, for a pitch of `ms` flight time.
+  function stealMargin(g, from, ms) {
     const B = T().BALL, ST = T().STEAL;
     const rn = g.bases[from - 1];
     const run = g.teams[g.half].inp[rn.id].run;
@@ -892,14 +895,28 @@
     const lead = B.lead[from - 1] + ST.secondLead[from - 1];
     const tRun = run.jump + runTime(90 - lead, run.speed, 0);
     const cv = cover(D, from + 1, ['C']);
-    const tBall = Math.max(ST.delivery + (pitch ? pitch.ms / 1000 : 0.4) + c.xfer + throwTime(dist(c.at, base(from + 1)), c.arm), cv.t);
-    return g.rng.chance(logistic((tBall + B.tag - tRun + g.rng.normal(0, ST.sd)) / B.playSd));
+    const tBall = Math.max(ST.delivery + ms / 1000 + c.xfer + throwTime(dist(c.at, base(from + 1)), c.arm), cv.t);
+    return tBall + B.tag - tRun;
+  }
+
+  function steal(g, from, pitch) {
+    const B = T().BALL, ST = T().STEAL;
+    const m = stealMargin(g, from, pitch ? pitch.ms : 400);
+    return g.rng.chance(logistic((m + g.rng.normal(0, ST.sd)) / B.playSd));
+  }
+
+  // The chance a steal from `from` is safe, as the runner sees it before the pitch: an average pitch
+  // from this pitcher (93% of his fastball's speed), with the play's noise folded in. For the CPU's choice.
+  function stealOdds(g, from) {
+    const B = T().BALL, ST = T().STEAL;
+    const p = g.teams[1 - g.half].inp[g.teams[1 - g.half].pitcher].pit;
+    const m = stealMargin(g, from, B3.pitch.flightMs(p.velo * 0.93));
+    return logistic(m / Math.sqrt(B.playSd * B.playSd + (ST.sd / 1.7) * (ST.sd / 1.7)));
   }
 
   // A tag-up after a catch: the runner leaves when the ball is caught (or when he is back on the bag).
   // The throw comes from whoever has the ball once the catch play is over (meta.free).
-  function tagup(g, play, from) {
-    const B = T().BALL;
+  function tagTimes(g, play, from) {
     const m = play.meta;
     const rn = g.bases[from - 1];
     const run = g.teams[g.half].inp[rn.id].run;
@@ -911,6 +928,19 @@
     const cv = cover(D, from + 1, [m.fielder, free.pos]);
     const tRel = free.t + fd.xfer;
     const tBall = Math.max(tRel + throwTime(dist(free.at, base(from + 1)), fd.arm), cv.t);
+    return { rn: rn, run: run, free: free, fd: fd, leave: leave, tRun: tRun, cv: cv, tRel: tRel, tBall: tBall };
+  }
+
+  // The chance a tag-up from `from` is safe, as the runner judges it: `err` seconds (his own error) added
+  // to the margin. For the CPU's choice.
+  function tagupOdds(g, play, from, err) {
+    const t = tagTimes(g, play, from);
+    return logistic((t.tBall + T().BALL.tag - t.tRun + (err || 0)) / T().BALL.playSd);
+  }
+
+  function tagup(g, play, from) {
+    const B = T().BALL;
+    const { rn, run, free, fd, leave, tRun, cv, tRel, tBall } = tagTimes(g, play, from);
     const safe = safeBy(g, tBall + B.tag - tRun);
     // The script: the runner leaves the bag, the throw comes in, the cover man waits on the bag.
     const S = play.script;
@@ -945,7 +975,9 @@
   B3.ball = {
     inPlay: inPlay,
     steal: steal,
+    stealOdds: stealOdds,
     tagup: tagup,
+    tagupOdds: tagupOdds,
     flight: flight,
     runTime: runTime,
     throwTime: throwTime
