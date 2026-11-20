@@ -222,7 +222,7 @@ The owner was interviewed on a full ratings redesign in a separate chat (merrill
 | Recognition | Reading the pitch early: less fooled by off-speed and break, fewer chases on strike-looking pitches | chase on strike-looking pitches, breaking-ball whiff % |
 | Discipline | Swing-or-take judgment in and near the zone, by count | walk %, swing-decision run value |
 
-- **Aggressiveness** is a tendency (Patient, Balanced, Aggressive), not a 20–99 rating and not part of the overall. It is about value-neutral alone, and pays off or hurts depending on Discipline.
+- **Aggressiveness** is a tendency (Patient, Balanced, Aggressive), not a 20–99 rating and not part of the overall. It is about value-neutral alone, and pays off or hurts depending on Discipline. **Which way** (owner's choice, Session 4, Nov 20, 2026): good Discipline rewards Aggressive. A disciplined aggressive hitter attacks hittable strikes early; an undisciplined one chases. Patient is the safer style for a hitter with poor Discipline.
 - **Your own batting** stays timing only (section 2); your hitter's ratings roll the *where* error.
 
 **Pitching.** Four pitcher ratings plus the arsenal:
@@ -234,7 +234,7 @@ The owner was interviewed on a full ratings redesign in a separate chat (merrill
 | Deception | Hides pitch type and speed; the mirror of Recognition | chase %, off-speed whiff % for its grade |
 | Stamina | Pitches per outing. Weighted by role and outside the equal-value rule: it counts for starters, barely for relievers | pitches per start, innings |
 
-- **Aim** is a tendency (Nibbler, Balanced, Attacker), about value-neutral, paying off with good Command.
+- **Aim** is a tendency (Nibbler, Balanced, Attacker), about value-neutral, paying off with good Command. **Which way** (owner's choice, Session 4, Nov 20, 2026): good Command rewards Nibbler. A nibbler with good Command paints the corners; with poor Command he misses off the plate and walks people. Attacker is the safer style for a pitcher with poor Command.
 - **Arsenal:** each pitch has a **grade** (movement and quality) and a **shape** (ground-ball or fly-ball tilt). Grades carry moderate weight; the pitch type stays the main driver. For balance and the overall, the arsenal counts as one usage-weighted composite. It is a section of the pitcher's profile, not its own screen. Sizes are in section 4.
 - **Put-away pitch:** the best-graded pitch, with the steep curve past 85. Strikeout aces come from here.
 - **Growth** (M6's growth function): pitch grades grow and age. A pitcher sometimes learns a new pitch in the offseason: rare, about 3–5% of pitchers a year, mostly 27 and under or with only 2–3 pitches; it starts at grade 35–50, can grow, and makes a news item. Pitches are never lost.

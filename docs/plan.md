@@ -1,9 +1,9 @@
-**Docs version: 15** (2026-11-20): Session 3 interview: what must differ from Baseball1 (ratings and screens), dare is one shared number, merge to `main` after each step; step 1.2 merged to `main`.
+**Docs version: 16** (2026-11-20): Session 4, M1 step 1.3 plan check; the owner chose which way the tendencies pay off (Aggressive with good Discipline, Nibbler with good Command).
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 3 finished M1 step 1.2 (tasks 6–8) and, with the owner's OK, merged it into `main` (fast-forward from `claude/baseball3-session-3-m1-u6m8f7`). After it, the owner was interviewed (DESIGN.md: "What must differ from Baseball1"; no baserunning tendency; CLAUDE.md: merge after each step). Next: Session 4, M1 step 1.3 (tasks 9–10: hitting and pitching ratings, CPU choices), opening with its plan check; the notes for it are under step 1.2 below. Start it with: "Start Session 4 of Baseball3 (merrill3/Baseball3): M1 step 1.3. Use the branch the session environment gives you, starting from main. Read CLAUDE.md, then the "Stopped at:" line in docs/plan.md. Do only step 1.3 (tasks 9–10), opening with its plan check. Baseball1 is reference only; never change it."
+**Stopped at:** Session 4 is on M1 step 1.3 (tasks 9–10) on the branch `claude/baseball3-session-4-step-1-3-svjqrz` (from `main`). The plan check is done and reported (below, under step 1.3); the owner chose which way the tendencies pay off. Next: task 9 (`js/core/ratings.js`, rated test teams, `tools/worth.js`). If this session stops early, resume with: "Continue Session 4 of Baseball3 (merrill3/Baseball3): M1 step 1.3 on the branch claude/baseball3-session-4-step-1-3-svjqrz. Read CLAUDE.md, then the "Stopped at:" line in docs/plan.md. Baseball1 is reference only; never change it."
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 
@@ -41,7 +41,7 @@ Confirmed by the owner on Nov 20, 2026 (order and sizes from `docs/proposal.md` 
 ## Current milestones
 
 ### M1: Game engine, headless
-**Status:** in progress: step 1.1 done (Session 2); step 1.2 done (Session 3); step 1.3 next (Session 4).
+**Status:** in progress: step 1.1 done (Session 2); step 1.2 done (Session 3); step 1.3 in progress (Session 4).
 **Goal:** A headless engine that plays full games pitch by pitch, for simulated games and games you play alike, and hits the calibration targets with rated test teams.
 **Why now:** It is first in the owner's order. The season, the game view and every later number run on it. Baseball1's lesson: calibrate before building on top, because every later tuning change ripples through WAR, workload and contracts.
 
@@ -129,6 +129,17 @@ Step 1.2 (S3): pitches, the two-error swing and ball in play
 - The test suite now takes about 40 s (`ball.test.js` and `script.test.js` play many games); the owner said speed work can wait (task 13).
 
 Step 1.3 (S4): hitting and pitching ratings, CPU choices
+
+**Step 1.3 plan check (Session 4, Nov 20, 2026).** Reported to the owner before building.
+- Docs version: M1 was last revised at version 8 and the current version was 15. Versions 9–15 were Session 3's own updates (handedness, step 1.2's results, the speed choice, `dare`, the merge rule), already in this plan. The hand-off prompt named no "Based on" version. Nothing stale.
+- Branch: `claude/baseball3-session-4-step-1-3-svjqrz`, set by the session environment, at `main` (`be37139`), so it holds all of step 1.2. Baseline: 59 tests pass (about 48 s); `node tools/gametest.js 1000 7` passes (checksum `52f12df7`, about 8 s; the checksum changes in this step because the CPU's choices change).
+- The seam matches step 1.2's notes: the hooks are in `B3.tune` (BAT, PIT); `discipline`, `aggressiveness` and `aim` are hooks nothing reads yet; `js/core/manager.js` still has step 1.1's placeholder choices.
+- Files (Claude's defaults): `js/core/ratings.js` (`B3.ratings`, loaded after `tune.js`) maps ratings to the hook inputs; a rating of 60 gives exactly the placeholder value, and a player without ratings plays as before, so step 1.2's tests keep their meaning. `game.js` takes each player's inputs from it. Players gain `ratings` (20–99 by name), `arsenal` (`{ type: { grade, shape } }`; a grade is 20–99, a shape from −1, fly-ball tilt, to +1, ground-ball tilt) and `tendencies` (`{ aggressiveness: 'Patient' | 'Balanced' | 'Aggressive', aim: 'Nibbler' | 'Balanced' | 'Attacker' }`). `tools/lib/testteams.js` keeps `pair()` as two average teams for the unit tests and adds rated teams with a league-like spread for the tools. `tools/worth.js` prints the "10 points are worth" table (task 9's check); `tools/calibrate.js` in task 12 reuses it.
+- Order: Discipline, Aggressiveness and Aim act only through task 10's choices, so their rows in the table come after task 10. Steals and tag-ups keep their placeholder choices until step 1.4 (task 11 maps Speed and Baserunning; Claude's reading of the plan). Defense and running ratings are not mapped in this step.
+- Stamina (Claude's default): one scale for every role; a reliever is a low-Stamina pitcher (the overall weights Stamina by role in M2). Players without ratings keep the placeholder Stamina by role.
+- The combination cap (Claude's default): the steep extra past 85 counts in full only for a player's best rating in each group (hitting; pitching, with the put-away pitch's grade) and partly for the rest, up to a cap; `tools/worth.js` also measures how much pairs of high ratings help each other beyond their separate worth (for example Contact with Raw Power), so step 1.4 can set the cap's numbers.
+- **Gap found: which way the tendencies pay off.** DESIGN.md said Aggressiveness "pays off or hurts depending on Discipline" and Aim "pays off with good Command", without the direction. **Owner's choices (Session 4):** good Discipline rewards Aggressive (a disciplined aggressive hitter attacks hittable strikes early, an undisciplined one chases; Patient is the safer style for poor Discipline); good Command rewards Nibbler (a nibbler with good Command paints the corners, with poor Command he walks people; Attacker is the safer style for poor Command). Now in DESIGN.md section 10.
+- Not in step 1.3: tuning to the target table and the equal-value check (step 1.4). Step 1.3 aims for sane numbers near the targets and reports where they stand.
 9. [ ] Hitting and pitching ratings into sim numbers, each with its job (DESIGN.md section 10): Contact, Timing, Launch, Raw Power, Recognition, Discipline; Velocity, Command, Deception, Stamina; pitch grades, shapes and the put-away pitch; the steep curve past 85 and the capped combination bonus; the tendencies Aggressiveness and Aim; fatigue. Test teams gain these ratings. Done when: the "10 points are worth" table shows each rating moving its own stats the right way, and not moving the others much.
 10. [ ] CPU pitch choice (using the put-away pitch), swing decisions (Discipline, Recognition, Aggressiveness) and pitching changes, replacing step 1.1's placeholder logic. Done when: tests show each choice responds to its inputs, and simulated games stay sane.
 
