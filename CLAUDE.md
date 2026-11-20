@@ -38,6 +38,7 @@ Diamond Dash (working title, owner's choice) is a browser baseball game built fr
 
 ## Test after changes
 - `node tools/test.js` must print `all tests passed`.
+- `node tools/gametest.js 1000 7` must print `all checks passed` (1,000 seeded games, every rule checked from the log).
 - `node tools/e2e/boot-check.js`: the page loads from `file://` at 1280×800 and 390×844 with no console errors.
 - From M1: `node tools/calibrate.js`, aiming for about 4.3–4.6 runs per team per game and the rest of the target table in DESIGN.md section 7. From M2: `node tools/seasontest.js`.
 

@@ -1,6 +1,6 @@
 # Diamond Dash (Baseball3): design decisions
 
-Every product decision for Baseball3, with who made it. Nothing beyond the skeleton is built yet; this file says what will be built. `docs/plan.md` says when.
+Every product decision for Baseball3, with who made it. So far the rules and game loop are built (M1 step 1.1, headless); this file says what will be built. `docs/plan.md` says when.
 
 **Labels**
 - **Owner's choice:** the owner decided it.
@@ -34,6 +34,16 @@ Baseball1 (merrill3/Baseball1, also called "Diamond Dash") is the reference. Its
 - **Extra innings:** Quick Game plays up to 3 extra innings, then ends in a tie. League games always play to a winner. In regular-season and spring games each extra inning starts with a runner on second; postseason games don't [17].
 - **Mercy rule:** Quick Game only (a 10-run lead after 7 innings, in 9-inning games). Never in league games [18].
 - The designated hitter is used, so pitchers don't bat (Claude's default, as in Baseball1).
+- **Rules details** (Claude's defaults, set in M1 step 1.1 where the decisions above leave a gap):
+  - Quick Game extra innings start with no runner on second (only regular-season and spring games have one; Baseball1's exhibitions had none either).
+  - The mercy rule is read as: the game ends when a team leads by 10 or more once the trailing team has batted 7 times, checked at the end of each half-inning, and at once if the home team reaches the lead while batting.
+  - The runner placed on second in extra innings is the batter before the inning's leadoff hitter, and a run he scores is unearned.
+  - Official scoring rules: on a walk-off only the runs needed to win count, except on a home run, and the batter gets only as many bases as the winning run moved; runs don't count on a play that makes the third out by a force or on the batter; runners keep their order.
+  - Runners can steal second and third, not home. In a double steal the catcher throws to the lead runner.
+  - On a tag-up only the lead runner can go (the owner's choice: you send the lead runner); trailing runners hold.
+  - No dropped third strike. No RBI on a run that scores on an error or a ground-ball double play. Until errors are real (step 1.2), a run is earned unless its runner reached on an error or was the placed runner.
+  - The CPU changes pitchers only between batters; you can change between any two pitches. No three-batter minimum for relievers.
+  - Hit by pitch, bunts, balks, wild pitches, pickoffs, pinch hitters and defensive substitutions are out (after the release, as in docs/plan.md).
 
 ## 3. Look and motion (confirmed Nov 20, 2026)
 - Starting idea: sleek near-black silhouettes with team-color trim (cap, sleeves, number), a light rim highlight, belt and sock trim, dark hands. Drawn simply. The final look is settled at the interview before M4 [19].

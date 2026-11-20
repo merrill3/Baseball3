@@ -1,9 +1,9 @@
-**Docs version: 6** (2026-11-20): Session 2, M1 task 4 done: decision points.
+**Docs version: 7** (2026-11-20): Session 2 done: M1 step 1.1 (rules and game loop) is built and tested; DESIGN.md lists the rules details Claude chose; ARCHITECTURE.md has the engine API. Next is step 1.2.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 2 (M1 step 1.1), tasks 1–4 done. Next: task 5, box score and play log. Branch: `ccr-6e229fc2-je0w02` (this session's branch; it contains all of Session 1's `ccr-facbd381-x31dk5`). Nothing is merged to `main` yet (that needs the owner's OK).
+**Stopped at:** Session 2 done: M1 step 1.1 (tasks 1–5) is built, tested and pushed on the branch `ccr-6e229fc2-je0w02` (it also holds all of Session 1's `ccr-facbd381-x31dk5`). Nothing is merged to `main` yet (that needs the owner's OK). Next: step 1.2 (Session 3), tasks 6–8, starting with a plan check. Prompt for it: "Start Session 3 of Baseball3 (merrill3/Baseball3), working from the branch ccr-6e229fc2-je0w02. Read CLAUDE.md, then the "Stopped at:" line in docs/plan.md. Do M1 step 1.2 only (tasks 6–8), starting with the plan check. Baseball1 is reference only; never change it."
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 
@@ -41,7 +41,7 @@ Confirmed by the owner on Nov 20, 2026 (order and sizes from `docs/proposal.md` 
 ## Current milestones
 
 ### M1: Game engine, headless
-**Status:** in progress (step 1.1, Session 2).
+**Status:** in progress: step 1.1 done (Session 2); next is step 1.2 (Session 3).
 **Goal:** A headless engine that plays full games pitch by pitch, for simulated games and games you play alike, and hits the calibration targets with rated test teams.
 **Why now:** It is first in the owner's order. The season, the game view and every later number run on it. Baseball1's lesson: calibrate before building on top, because every later tuning change ripples through WAR, workload and contracts.
 
@@ -87,7 +87,14 @@ Step 1.1 (S2): rules and game loop
 2. [x] `B3.rng`: seeded random numbers whose state can be saved and restored, plus a test rule that `js/core/` never calls `Math.random`. Done when: the same seed gives the same sequence after a save and restore. **Result:** `js/core/rng.js` (sfc32, seeded from a hash of the seed's text; `save()` gives four numbers). `tools/tests/rng.test.js` checks repeats, save and restore through JSON, bad input and the spread of draws. The Node loader now makes `Math.random` throw, so every test and tool fails on a stray call.
 3. [x] Game state and rules, with a placeholder outcome for each pitch. Done when: 1,000 seeded games end correctly with every invariant holding (3 outs per half-inning except walk-offs, runs in the log equal the score, extra-inning rules by game type), and two runs with the same seed print identical output. **Result:** `js/core/game.js` (state, rules, the decision loop), `js/core/placeholder.js` (temporary stand-in outcomes), `js/core/data.js`, simple CPU answers in `js/core/manager.js`, test teams in `tools/lib/testteams.js`. `tools/lib/gamecheck.js` checks each game from its log alone; `node tools/gametest.js 1000 7` plays 1,000 games of all six types (regular, spring, postseason, Quick Game 9/3/1) and prints `all checks passed`; two runs print identical output (checksum `dc84cd87`). `tools/tests/game.test.js` also scripts the rule cases (walk-off scoring, runs on a third-out double play, sac fly, caught stealing ending an inning, the runner on second, Quick Game ties, the mercy rule) and confirms the checker catches planted mistakes. The game loop was built around the decision points from the start, so task 4 adds the scripted-player test rather than new plumbing.
 4. [x] Decision points, answered by placeholder CPU logic. Done when: a test plays a game where a scripted "player" answers every choice for one side. **Result:** `tools/tests/decisions.test.js`: a scripted player runs the home side (pitch types and targets, swings and takes with timings, steals including double steals, tag-ups, pitching changes), both through `B3.game.play` and one answer at a time through `B3.game.answer` as the UI will; the test checks each answer took effect, every decision went to the right side, the same seed and answers repeat exactly, and bad answers are refused without changing the game. Planting two engine bugs (ignoring the chosen pitch type; dropping pitching changes) made it fail, as it should.
-5. [ ] Box score and play log. Done when: box totals match the game (runs, hits, outs as innings pitched, and plate appearances as the sum of their outcomes).
+5. [x] Box score and play log. Done when: box totals match the game (runs, hits, outs as innings pitched, and plate appearances as the sum of their outcomes). **Result:** `js/core/box.js` builds the box score from the log alone, prints it (`B3.box.text`) and prints the play-by-play (`B3.box.plays`). `tools/tests/box.test.js` checks 600 games of every type: runs, hits and errors against the score and the log, pitchers' outs against the outs made, each batter's PA as the sum of its outcomes and as AB + BB + SF, and pitchers' pitches, batters faced and runs against the game's own counters; planted mistakes are caught. A game run in Chromium from `file://` gives the same result as in Node. See one with `node tools/gametest.js 1 7 --show`.
+
+**Step 1.1 notes for step 1.2's plan check** (Claude's notes, Session 2)
+- `placeholder.js` is the seam: `game.js` calls `B3.placeholder.throwPitch`, `resolve`, `steal` and `tagup`. Step 1.2 replaces those calls with `pitch.js` and `ball.js` and deletes the file. The play shape `ball.js` must return is in ARCHITECTURE.md "The engine".
+- Runners who were stealing get nothing extra on a ball in play yet, and trailing runners hold on tag-ups; step 1.2's ball-in-play model decides those.
+- Earned runs use a simple rule until errors are real (DESIGN.md section 2); step 1.2 should decide whether the full reconstruction is in M1 or later.
+- Speed so far: 1,000 placeholder games take about 1 s in Node. The real physics will be slower; task 11 measures it.
+- The rule choices Claude made in this step are listed in DESIGN.md section 2 ("Rules details") for the owner to check.
 
 Step 1.2 (S3): ball in play
 6. [ ] Pitches, swings and contact: types, speed, movement, location error, take or swing, chase, whiff, foul, and timing into exit speed, launch angle and direction, in the same timing terms the game view will use. Done when: unit tests pass and printed distributions look sane.

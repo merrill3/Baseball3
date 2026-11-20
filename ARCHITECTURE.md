@@ -49,13 +49,36 @@ How the code is organized and the rules every file follows. Decisions about what
 | `tools/tests/core.test.js` | the core scripts load in Node and define `B3` |
 | `tools/e2e/boot-check.js` | Playwright: opens `index.html` from `file://` at 1280×800 and 390×844; checks the title shows, no console errors, no sideways scroll |
 
+**Built (M1 step 1.1: rules and game loop)**, loaded in this order after `b3.js`
+
+| File | What it does |
+|---|---|
+| `js/core/rng.js` | `B3.rng`: seeded random numbers (sfc32). `create(seed)`, `restore(state)`, `is(x)`; each generator has `next`, `int`, `range`, `chance`, `normal`, `pick`, `weighted`, `save()` (four numbers) and `load(state)` |
+| `js/core/data.js` | `B3.data`: lineup positions, position names, the 7 pitch types, the strike zone and `inZone(x, z)` |
+| `js/core/placeholder.js` | **temporary**: stand-in pitch and ball-in-play outcomes (`throwPitch`, `resolve`, `steal`, `tagup`), so the rules can be tested. Step 1.2 replaces it with `pitch.js` and `ball.js` and deletes it |
+| `js/core/manager.js` | `B3.manager.cpu`: the CPU's answer to each decision (placeholder logic; step 1.3 bases it on ratings) |
+| `js/core/game.js` | `B3.game`: game state, rules and the decision loop (see "The engine") |
+| `js/core/box.js` | `B3.box`: the box score (`build`, `text`), the play-by-play (`plays`) and `ip(outs)`, all built from the game log |
+| `tools/lib/testteams.js` | two plain test teams (`pair()`), labeled like "AWY SS"; ratings come in step 1.3 |
+| `tools/lib/gamecheck.js` | checks a finished game against the rules from its log alone; also counts which rule cases came up |
+| `tools/gametest.js` | `node tools/gametest.js [games] [seed] [--show]`: plays seeded games of all six types and checks each; `--show` prints the first game's box score and play-by-play |
+| `tools/tests/rng.test.js`, `game.test.js`, `decisions.test.js`, `box.test.js` | the step 1.1 tests |
+
 **Planned** (names and split are settled at each milestone's plan check)
-- M1 engine, in `js/core/`: `rng.js` (seeded random numbers with saveable state), `data.js` (pitch types, positions, field size), `game.js` (game state and rules, decision points), `pitch.js` (pitch flight, location, swing, contact), `ball.js` (ball flight, fielding, throws, baserunning, the play script), `ratings.js` (ratings to sim numbers), `manager.js` (CPU choices), `box.js` (box score and play log). Tools: `tools/calibrate.js` and `tools/lib/testteams.js`.
+- M1 engine, still to come in `js/core/`: `pitch.js` (pitch flight, location, swing, contact), `ball.js` (ball flight, fielding, throws, baserunning, the play script), `ratings.js` (ratings to sim numbers). `data.js` gains pitch speeds and movement and the field's size. Tools: `tools/calibrate.js`; `tools/lib/testteams.js` gains ratings.
 - M2 league, in `js/core/`: `teams.js` (the 30 teams), `players.js` (generation, overall), `league.js`, `schedule.js`, `season.js`, `stats.js`, `staff.js` (rotation, bullpen rest, injuries), `war.js`, `save.js` (save format, version, upgrade steps). In `js/ui/`: `storage.js` (IndexedDB). Tools: `tools/seasontest.js`.
 
-## The engine (planned for M1)
+## The engine (M1; step 1.1 built the rules and the loop)
 - **One engine for every game.** Simulated games, games you play, Quick Game, spring, All-Star and postseason games all run through the same code and the same physics.
 - **Decision points.** The engine stops at each choice: the pitch (type and target), the swing (take, or swing with a timing offset), a steal, a tag-up, a pitching change. In a simulated game the CPU answers every one. In a game you play, your side's choices come from your input, and the rest is unchanged.
+- **The API** (`js/core/game.js`, built in step 1.1):
+  - `B3.game.create({ type, innings, away, home, rng })`. `type` is `regular`, `spring`, `postseason` or `quick`; `innings` is 1, 3 or 9 for `quick` and 9 otherwise. `rng` is required (no default generator). A team is `{ id, name, code, players: { id: { name, pitches, role } }, lineup: [{ id, pos }] × 9, pitcher, bullpen: [id] }`, with the designated hitter in the lineup and the pitcher out of it.
+  - `g.pending` is the waiting decision; `B3.game.answer(g, answer)` applies an answer and returns the next decision. A bad answer throws and leaves the game unchanged.
+  - `B3.game.play(g, [awayController, homeController])` answers everything; a controller is `{ change, steal, pitch, swing, tagup }`, each `(decision, g) → answer`, and anything missing falls back to `B3.manager.cpu`. `B3.game.sim(opts)` is create plus play with the CPU on both sides.
+  - The decisions and answers, in order before each pitch: `change` (fielding side: `null` or `{ pitcher }` from `bullpen`), `steal` (batting side, only when a runner can go: `null` or `{ runners: [1, 2] }`), `pitch` (fielding side: `{ type, x, z }`, the target in feet from the middle of the plate and above the ground), `swing` (batting side, given the pitch as thrown: `{ swing: false }` or `{ swing: true, timing }` in ms, below 0 early), and after a catch `tagup` for the lead runner (`{ go }`).
+  - The game is plain data plus its `rng`: `g.inning`, `g.half` (0 top, 1 bottom), `g.outs`, `g.balls`, `g.strikes`, `g.bases` (`[first, second, third]`, each `null` or `{ id, resp, earned }`), `g.score`, `g.line`, `g.teams`, `g.log`, `g.over`, `g.result` (`{ winner: 0 | 1 | null, reason: final | walkoff | mercy | tie, score, innings }`).
+  - **The log** is a list of events, each with the inning `i` and half `h`: `pitch` (pitcher, batter, type, speed, location, count before, result B/C/S/F/X, timing if swung), `pa` (batter, pitcher, result code, outs on the play `out`, outs after `o`, runs `sc` with the charged pitcher and earned flag, `rbi`, bases after `bs`, fielder `fl`, tag-up), `sb`, `cs`, `adv`, `sub`, `placed`, `half` (runs, outs, left on base) and `end`. The box score and play-by-play are built from it.
+  - Step 1.1 resolves each pitch with `js/core/placeholder.js`. A ball in play comes back as a play: `{ code, bb, fielder, caught, batter, runners: [first, second, third], runsCount }`, with each runner's end base (0 out, 4 scored); `game.js` checks it (no runner passes another, no two on a base, at most 3 outs) and applies the scoring rules. Step 1.2's `ball.js` returns the same shape plus the play script.
 - **Ball in play.** Contact gives exit speed, launch angle and direction. The ball's flight, the fielders (positions, range, arms) and the runners (speed) decide the result, which comes with a **play script**: timed positions for the ball, fielders and runners that the field view animates in M4.
 - **Calibration** lives in one settings object with a comment on each value. `tools/calibrate.js` plays thousands of seeded games and prints the target table (DESIGN.md section 7) plus "10 rating points are worth" for every rating.
 
@@ -66,6 +89,7 @@ How the code is organized and the rules every file follows. Decisions about what
 - **Size:** full box scores are kept only for your games and recent days. The save's size is measured at the end of every milestone.
 
 ## Testing
-- `node tools/test.js`: every Node test. It must print `all tests passed` after every change.
+- `node tools/test.js`: every Node test. It must print `all tests passed` after every change. The Node loader (`tools/lib/load.js`) makes `Math.random` throw, so any stray call in `js/core/` fails while tests and tools run.
+- `node tools/gametest.js 1000 7`: 1,000 seeded games of all six types, each checked by `tools/lib/gamecheck.js`; prints `all checks passed` and a checksum that repeats from run to run (about 1 s with the placeholder outcomes).
 - `node tools/e2e/boot-check.js [outDir]`: browser check from `file://` at both sizes; screenshots go to `outDir` (default `tools/e2e/out/`, not committed). Needs Playwright (`require('playwright')`).
 - From M1: `node tools/calibrate.js`. From M2: `node tools/seasontest.js`. Each joins this list with its target.
