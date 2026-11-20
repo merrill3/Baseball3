@@ -43,7 +43,7 @@ Baseball1 (merrill3/Baseball1, also called "Diamond Dash") is the reference. Its
   - On a tag-up only the lead runner can go (the owner's choice: you send the lead runner); trailing runners hold.
   - No dropped third strike. No RBI on a run that scores on an error or a ground-ball double play. Until errors are real (step 1.2), a run is earned unless its runner reached on an error or was the placed runner.
   - The CPU changes pitchers only between batters; you can change between any two pitches. No three-batter minimum for relievers.
-  - Hit by pitch, bunts, balks, wild pitches, pickoffs, pinch hitters and defensive substitutions are out (after the release, as in docs/plan.md).
+  - Hit by pitch, bunts, balks, wild pitches, pickoffs, pinch hitters and defensive substitutions are out (after the release, as in docs/plan.md). Catchers' Blocking waits for wild pitches (section 10).
 
 ## 3. Look and motion (confirmed Nov 20, 2026)
 - Starting idea: sleek near-black silhouettes with team-color trim (cap, sleeves, number), a light rim highlight, belt and sock trim, dark hands. Drawn simply. The final look is settled at the interview before M4 [19].
@@ -54,16 +54,11 @@ Baseball1 (merrill3/Baseball1, also called "Diamond Dash") is the reference. Its
 
 ## 4. Pitching and bullpen (confirmed Nov 20, 2026)
 - **7 pitch types:** four-seam fastball, sinker, cutter, slider, curveball, change-up, splitter. Each has its own speed, movement, effect on contact and deception [24].
-- Each pitcher throws 3–5 of them, with his own velocity, control and stamina [25].
+- **Arsenal size** (owner's choice, Session 2, Nov 20, 2026; replaces "3–5 for every pitcher" [25]): starters throw 3–6 pitch types (mostly 4; 6 very rarely), relievers 2–4 (mostly 2; 4 very rarely). Each pitch has its own grade and shape (section 10).
 - Full league staffs in every game, Quick Game included [26].
 - Bring in a reliever between pitches (BULLPEN button or `B`). A removed pitcher can't return. The CPU changes pitchers when its pitcher tires or is hit hard [27].
-- Fatigue lowers control and velocity. The HUD shows your pitcher's energy [28].
-- **Each rating has one job** [29, 30]:
-  - Stuff makes hitters miss (whiffs and strikeouts).
-  - Velocity makes contact weaker (hitters are late; fewer hard-hit balls).
-  - Control sets walks.
-  - Eye sets how often a hitter chases.
-  - Pitch quality changes how often hitters chase.
+- Fatigue lowers Command and velocity. The HUD shows your pitcher's energy [28].
+- **Each rating has one job** [29, 30]. The jobs are in section 10. The ratings redesign (owner's choice, Session 2) replaced the first list here: Stuff (makes hitters miss) is retired, Control is now Command, and Eye is split into Recognition and Discipline.
 - The calibration test checks each job from M1. These come from Baseball1's lessons: Control barely moved walks, chase rates didn't change with pitch quality, and the four-seam fastball was the most hittable pitch.
 
 ## 5. League, season and franchise (confirmed Nov 20, 2026)
@@ -79,9 +74,9 @@ Baseball1 (merrill3/Baseball1, also called "Diamond Dash") is the reference. Its
 - **Saving:** one franchise slot, autosaved, with a save version, an upgrade step for older saves, and Export and Import from the first saving step (M2) [41].
 - Every game keeps full stats. Full box scores are kept for your games and recent days only, to keep the save small [42].
 - **Rosters:** 26 active (13 position players, 5 starters, 8 relievers including a closer) plus a reserve squad. Minor leagues come after the release [44].
-- **Ratings** run 20–99, and 60 is an average big-leaguer. Hitters: Contact, Power, Eye, Speed, Fielding, Arm. Pitchers: Velocity, Control, Stamina, Stuff, plus a pitch set [45].
-- **Overall rating tracks value** (WAR) by position, and teams get a team overall [46].
-- **Growth:** one growth function handles every rating change (aging, performance, spring breakouts, in-season lasting changes, later training), for your team and the CPU teams alike (M6) [47].
+- **Ratings** run 20–99, and 60 is an average big-leaguer [45]. Which ratings there are is in section 10 (the ratings redesign replaced the proposal's list: Contact, Power, Eye, Speed, Fielding, Arm; Velocity, Control, Stamina, Stuff).
+- **Overall rating tracks value** (WAR) by position, and teams get a team overall [46]. With ratings of about equal value per point, the overall is close to a plain average of them, weighted by position (Claude's default, section 10).
+- **Growth:** one growth function handles every rating change (aging, performance, spring breakouts, in-season lasting changes, later training), for your team and the CPU teams alike (M6) [47]. It also grows and ages pitch grades and handles learning a new pitch (section 10).
 - **Contracts and money:** salary in $M, years left, and a payroll budget per team. Payroll always means the whole organization (active roster, injured list, reserves) plus released players still being paid [48]. Finances stay lightweight for now (owner's choice).
 - **Releasing a player:** you keep paying him until his contract would have ended. Blocked during the draft, and blocked if it would leave the roster too thin (M7) [49].
 - **Team control** (M7) [50]: 6 years of big-league service before free agency; about 3 years near the minimum salary, then 3 arbitration years with automatic raises; you tender or non-tender arbitration players; extensions at any time until free agency; minor-league free agency after 7 seasons in the organization without reaching 6 years. CPU teams follow the same rules.
@@ -153,7 +148,7 @@ League games, over several simulated seasons. M1 tunes the league-wide rates; M2
 | .300 hitters per league [55] | 5–10 |
 | Batting champion, each league [55] | .330–.350 |
 | Regulars under .240 against .300 hitters [55] | more under .240 than at .300 |
-| Contact against Power, in AVG [55] | Contact moves AVG more than Power does |
+| Contact against Power, in AVG [55] | Contact moves AVG more than Raw Power does |
 
 **Extra engine targets** (Claude proposed them from general baseball knowledge; the owner kept them in Session 2, Nov 20, 2026). M1 tunes these too:
 
@@ -165,6 +160,8 @@ League games, over several simulated seasons. M1 tunes the league-wide rates; M2
 | Pitches per plate appearance | about 3.8–3.9 |
 | Starters | about 5.3–5.8 innings and 85–95 pitches a start |
 | Errors | about 0.5 per team-game |
+
+**Equal-value check** (Claude's default, from the ratings interview; M1 step 1.4): for each rating in section 10 except Stamina, +10 points at 40, 60 and 80 is worth about the same in runs, within about ±20%, across several test hitters and pitchers. Defense and running ratings are checked at their key positions (the value rule in section 10).
 
 - Built in from the start (M1–M2), not added later [55].
 - Played and simmed games use the same model. There is no special edge in games you play. Re-add one only if playtests ask for it [56].
@@ -187,7 +184,10 @@ League games, over several simulated seasons. M1 tunes the league-wide rates; M2
 - **Manage Team** is assessment-first (owner's choice): an overview (record, run differential, how your hitting, pitching and defense rank, strengths and needs), then Roster, Lineup, Pitching, Injuries and the Auto-manage switch. Game prep lives here (owner's choice).
 - **Improve Team:** Trades, Free agency, Draft. *Suggested:* player development and long-term planning (after the release).
 - **Finances:** lightweight for now (owner's choice). *Suggested:* budget, payroll, contracts.
-- **Library:** organized by subject, with attractive pages plus dense sortable tables (owner's choice). *Suggested subjects:* players, teams, standings and schedule (with the bracket), leaders, stats and records, transaction history.
+- **Library:** organized by subject, with attractive pages plus dense sortable tables (owner's choice). It has two parts (owner's choice, Session 2, Nov 20, 2026, from the ratings interview):
+  - **Reference:** ratings, stats and rules. This is the glossary: M8 writes its text, and the help links here (one home).
+  - **Archive:** the subjects, history and the advanced diagnostics (section 10). A player's diagnostics are on his player page.
+  - Each subject is its own page. *Suggested subjects:* players, teams, standings and schedule (with the bracket), leaders, stats and records, transaction history. The look is settled at the design interview before M3.
 - **Rules** (confirmed Nov 20, 2026):
   - Every piece of information has one home. Other places link to it or reuse the same component. Home's standings card is a snapshot that links to Library, never a second standings screen.
   - *Suggested* (adopted): information can be reached from wherever it's needed. A player's contract is one block on his player page, reachable from Manage Team, Improve Team and Finances.
@@ -195,11 +195,62 @@ League games, over several simulated seasons. M1 tunes the league-wide rates; M2
   - Each feature lives in one area. Trading happens only in Improve Team; other screens link there.
   - Back is predictable. Pages have addresses (`#/library/players/123`), so the browser's Back and a phone's back gesture work. Player and team pages are pages, not popups.
   - Popups only for short choices and confirmations. One stack: Escape or Back closes the top popup only, and every popup closes when the page changes.
-  - Easy for new players: plain labels, a short first-run guide and a glossary (M8).
+  - Easy for new players: plain labels, a short first-run guide and a glossary (M8; the glossary is the Library's Reference part).
 
 **Lessons from the owner's Baseball1 playtests** (owner's list, possibly incomplete): features shouldn't be scattered (trades were "all over the place"); no duplicate screens (standings showed twice); easy for new players; information easy to find; popups and Back behave predictably; batters must chase some pitches outside the zone; prospect potential must look the same everywhere.
 
-## 10. Later and parked
+## 10. Ratings (owner's choices, Nov 20, 2026, from the ratings interview)
+
+The owner was interviewed on a full ratings redesign in a separate chat (merrill3/Baseball1, branch `ccr-a97b9715-fnzb96`, `docs/ratings-interview.md`; that branch is not merged and Baseball1 is unchanged). In Session 2 the owner chose to build it in Baseball3, answered the open points, and confirmed this summary. The interview's three rules: each rating has a unique job; a point of each rating is worth about the same (curves allowed); each rating ties to stats that track performance over the long run. Nothing in this section is built yet (M1 steps 1.2–1.4, then M2).
+
+**Hitting.** A swing has two errors: *when* (timing, in ms) and *where* (bat height against the ball). Six hitting ratings, plus Speed (under running):
+
+| Rating | Job | Main stats |
+|---|---|---|
+| Contact | The *where* error: whiff, foul or in play | contact %, zone contact %, whiff %, K % |
+| Timing | The *when* error: handling velocity; pulling or going the other way | whiff % and results against 95+ mph, spray mix |
+| Launch | A tight launch-angle band and spray control | launch-angle spread, sweet-spot %, popup % |
+| Raw Power | Bat speed and top exit speed only | max and 90th-percentile exit speed, home runs per fly ball, ISO |
+| Recognition | Reading the pitch early: less fooled by off-speed and break, fewer chases on strike-looking pitches | chase on strike-looking pitches, breaking-ball whiff % |
+| Discipline | Swing-or-take judgment in and near the zone, by count | walk %, swing-decision run value |
+
+- **Aggressiveness** is a tendency (Patient, Balanced, Aggressive), not a 20–99 rating and not part of the overall. It is about value-neutral alone, and pays off or hurts depending on Discipline.
+- **Your own batting** stays timing only (section 2); your hitter's ratings roll the *where* error.
+
+**Pitching.** Four pitcher ratings plus the arsenal:
+
+| Rating | Job | Main stats |
+|---|---|---|
+| Velocity | Attacks hitters' timing: late swings, weaker and opposite-field contact; a small strikeout bump (about +1% per 10 points) | exit speed against, hard-hit %, opposite-field % |
+| Command | Scatter around the target: walks and hitting corners | walk %, edge %, meatball % |
+| Deception | Hides pitch type and speed; the mirror of Recognition | chase %, off-speed whiff % for its grade |
+| Stamina | Pitches per outing. Weighted by role and outside the equal-value rule: it counts for starters, barely for relievers | pitches per start, innings |
+
+- **Aim** is a tendency (Nibbler, Balanced, Attacker), about value-neutral, paying off with good Command.
+- **Arsenal:** each pitch has a **grade** (movement and quality) and a **shape** (ground-ball or fly-ball tilt). Grades carry moderate weight; the pitch type stays the main driver. For balance and the overall, the arsenal counts as one usage-weighted composite. It is a section of the pitcher's profile, not its own screen. Sizes are in section 4.
+- **Put-away pitch:** the best-graded pitch, with the steep curve past 85. Strikeout aces come from here.
+- **Growth** (M6's growth function): pitch grades grow and age. A pitcher sometimes learns a new pitch in the offseason: rare, about 3–5% of pitchers a year, mostly 27 and under or with only 2–3 pitches; it starts at grade 35–50, can grow, and makes a news item. Pitches are never lost.
+
+**Defense and running**
+- **Fielders:** Range (first step and route), Hands (clean catches, transfers, quick release: errors and double plays), Arm. **Catchers** also have Framing (borderline strikes). Throwing out base stealers uses Arm plus Hands' quick release.
+- **Blocking** (wild pitches and passed balls) waits until those exist, after the release (owner's choice, Session 2), so no rating is without a job.
+- **Running:** Speed (raw sprint; also helps Range and infield hits) and Baserunning (reads, jumps, extra bases, steal success, outs on the bases).
+- **Value rule:** a point of each is worth about as much as a point of a hitting rating at its key spot (Range at shortstop and center field, Arm in right field and at catcher, Framing at catcher, Baserunning for a regular), and less elsewhere. The overall is weighted by position.
+
+**The whole set**
+- **Top end:** steep past about 85, the same shape for every rating. Bonuses from combining ratings are capped.
+- **Stars** are mostly specialists with real holes. Ratings are drawn with mild correlation; a rare few are elite across the board.
+- **Retired and renamed** (Claude's reading of the interview, confirmed by the owner in Session 2): Stuff is retired (its whiff job moves to pitch grades and the put-away pitch); Control is now Command; Eye is split into Recognition and Discipline; Power is now Raw Power; Fielding is split into Range and Hands.
+- **Diagnostics** (squared-up %, chase on strike-looking pitches, launch-angle spread, swing-decision run value) are an advanced view in the Library's Archive part (section 9). M2 stores the counts they need.
+- **Clutch** is not part of this; it stays parked (section 11).
+
+**Claude's defaults** (not decided; set and reported during calibration)
+- The equal-value check in section 7 (±20%).
+- The overall as a near-plain average of the ratings, weighted by position; M2 checks that it still tracks WAR.
+- Exact numbers: where the steep curve starts and how steep it is, the cap on combination bonuses, how strongly ratings correlate in generation, and how Speed fits the value budget.
+
+## 11. Later and parked
 - **Clutch:** parked for later (owner's choice, Nov 20, 2026).
+- **Blocking** for catchers arrives with wild pitches and passed balls (owner's choice, Session 2).
 - **After the release** (from Baseball1's longplan; re-planned after friends' feedback): deeper stats and stat pages; deeper pitching (new pitches, spin, a fastball rework); graphics tools and wiring; one development system with training and coaches; deeper injuries; playing by hand (stealing rework; a decision on balk, hit by pitch and bunt); team maps, logos and history; revenue budgets and luxury tax; hidden information ("fog"); deeper trades and free agency; minor leagues; a deeper draft and scouting; franchise difficulty; rewards; realism (archetypes, a baseball study).
 - **Parked** (owner's choices in Baseball1's longplan): owner-manager system, multiplayer, Korea and Japan, more postseason effects, fun modes. App version: not planned.

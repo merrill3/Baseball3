@@ -65,7 +65,7 @@ How the code is organized and the rules every file follows. Decisions about what
 | `tools/tests/rng.test.js`, `game.test.js`, `decisions.test.js`, `box.test.js` | the step 1.1 tests |
 
 **Planned** (names and split are settled at each milestone's plan check)
-- M1 engine, still to come in `js/core/`: `pitch.js` (pitch flight, location, swing, contact), `ball.js` (ball flight, fielding, throws, baserunning, the play script), `ratings.js` (ratings to sim numbers). `data.js` gains pitch speeds and movement and the field's size. Tools: `tools/calibrate.js`; `tools/lib/testteams.js` gains ratings.
+- M1 engine, still to come in `js/core/`: `pitch.js` (pitch flight, grade and shape, Command's scatter, the two-error swing, contact) and `ball.js` (ball flight, fielding, throws, baserunning, the play script) in step 1.2, each with an input for every rating it uses; `ratings.js` in steps 1.3–1.4 (every rating in DESIGN.md section 10 to those inputs: the steep curve past 85, the capped combination bonus, the tendencies). `data.js` gains pitch speeds and movement and the field's size. Tools: `tools/calibrate.js` (with the equal-value check); `tools/lib/testteams.js` gains ratings.
 - M2 league, in `js/core/`: `teams.js` (the 30 teams), `players.js` (generation, overall), `league.js`, `schedule.js`, `season.js`, `stats.js`, `staff.js` (rotation, bullpen rest, injuries), `war.js`, `save.js` (save format, version, upgrade steps). In `js/ui/`: `storage.js` (IndexedDB). Tools: `tools/seasontest.js`.
 
 ## The engine (M1; step 1.1 built the rules and the loop)
