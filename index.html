@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Diamond Dash</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Fixed load order: js/core/ (logic, no DOM), then js/view/, then js/ui/, with boot.js last.
+       Plain scripts only: no type="module". Node tests load the js/core/ tags below in this order. -->
+  <script src="js/core/b3.js"></script>
+  <script src="js/ui/boot.js"></script>
+</body>
+</html>

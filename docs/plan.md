@@ -1,9 +1,9 @@
-**Docs version: 1** (2026-11-20): first docs, from the Session 1 proposal the owner confirmed.
+**Docs version: 2** (2026-11-20): M0 done: the skeleton is built and tested. Next is M1 step 1.1.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 1 (M0), task 4: the five docs are written; next is task 5, the skeleton.
+**Stopped at:** Session 1 done. M0 is finished on the branch `ccr-facbd381-x31dk5` and is **not merged to `main`** (that needs the owner's OK). Next: M1 step 1.1 (Session 2), starting with its plan check.
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 
@@ -39,23 +39,6 @@ Confirmed by the owner on Nov 20, 2026 (order and sizes from `docs/proposal.md` 
 ---
 
 ## Current milestones
-
-### M0: Setup
-**Status:** in progress (Session 1).
-**Goal:** Plans agreed; an empty game page that loads from disk and a Node test command that passes.
-**Based on:** Baseball1 docs version 26 (owner's Session 1 message, Nov 20, 2026).
-
-**Decisions**
-- Owner's choices (Nov 20, 2026): the proposal's keep/change/drop list, Offseason placement and roadmap are confirmed; the working title is Diamond Dash; teams come from the owner's list (DESIGN.md section 6); clutch is parked; Baseball1's longplan is a light reference for plans.
-- Claude's defaults: namespace `B3`; the folder split `js/core/`, `js/view/`, `js/ui/`; save names starting with `baseball3`; `node tools/test.js` as the one Node test command.
-
-**Tasks**
-1. [x] Report what's in the Baseball3 repo; first commit on `main`; a working branch. **Result:** the repo was empty. One commit on `main` (a short README), then the branch `ccr-facbd381-x31dk5`.
-2. [x] Read the Baseball1 plans. **Result:** docs version 26 matches the planning copy; `docs/longplan-draft.md` is there; no Baseball1 file mentions "Baseball2"; the Nov 20 navigation isn't in any Baseball1 file. Details in `docs/proposal.md` section 1.
-3. [x] Write `docs/proposal.md`. **Result:** pushed; the owner confirmed it on Nov 20, 2026 with the answers above.
-4. [x] Write CLAUDE.md, README.md, DESIGN.md, ARCHITECTURE.md and this file.
-5. [ ] Minimal skeleton. Done when: `index.html` loads from `file://` with no console errors at 1280×800 and 390×844, and `node tools/test.js` prints `all tests passed`.
-6. [ ] Commit, push, report, stop.
 
 ### M1: Game engine, headless
 **Status:** planned; next (S2–S4).
@@ -173,3 +156,5 @@ Step 1.3 (S4): ratings and calibration
 ## Done
 
 *(Finished milestones move here, with the date and a one-line summary.)*
+
+- **M0: Setup** (done Nov 20, 2026, Session 1): the repo was empty, so `main` got one first commit (a short README) and work moved to the branch `ccr-facbd381-x31dk5`. The Baseball1 plans were read (docs version 26 matches the planning copy; `docs/longplan-draft.md` is there; no file mentions "Baseball2"; the Nov 20 navigation isn't in any Baseball1 file). The owner confirmed `docs/proposal.md` on Nov 20, 2026 (working title Diamond Dash, the owner's 30-team list, clutch parked, the longplan as a light reference). The five docs were written (Docs version 1), then the skeleton: `index.html` with a title screen, `js/core/b3.js` (namespace `B3`, save names `baseball3`), `node tools/test.js` (8 tests, including the hard-rule checks, which were confirmed to fail on planted violations) and `node tools/e2e/boot-check.js` (from `file://` at 1280×800 and 390×844: no console errors, no sideways scroll). Claude's defaults: namespace `B3`, folders `js/core/`, `js/view/`, `js/ui/`, save names starting with `baseball3`. Not merged to `main` yet.

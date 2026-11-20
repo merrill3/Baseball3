@@ -1,0 +1,50 @@
+/* Base styles. Placeholder look until the design interview before M3. */
+:root {
+  --bg: #f4f1ea;
+  --surface: #ffffff;
+  --text: #1d2430;
+  --muted: #5d6675;
+  --accent: #1f6f43;
+  --line: #d9d4c7;
+  --radius: 12px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12161d;
+    --surface: #1b212b;
+    --text: #e8e6e1;
+    --muted: #9aa3b2;
+    --accent: #4fb07a;
+    --line: #2c3442;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  line-height: 1.4;
+}
+.title-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 16px;
+  text-align: center;
+}
+.title-screen h1 { margin: 0; font-size: clamp(2rem, 8vw, 3.5rem); letter-spacing: 0.02em; }
+.title-screen .status {
+  margin: 0;
+  padding: 12px 16px;
+  max-width: 28rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.title-screen .version { margin: 0; color: var(--muted); font-size: 0.9rem; }
