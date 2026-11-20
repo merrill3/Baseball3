@@ -240,6 +240,7 @@ The owner was interviewed on a full ratings redesign in a separate chat (merrill
 **The whole set**
 - **Top end:** steep past about 85, the same shape for every rating. Bonuses from combining ratings are capped.
 - **Stars** are mostly specialists with real holes. Ratings are drawn with mild correlation; a rare few are elite across the board.
+- **Handedness** (owner's choice, Session 3, Nov 20, 2026; not from the interview): batters bat left, right or both (a switch hitter bats from the side opposite the pitcher), and pitchers throw left or right. Handedness mirrors where a hitter pulls the ball and which way a pitch breaks. There is a small platoon edge: hitters see opposite-handed pitchers a little better. Its size is set and reported at calibration (M1 step 1.4). There are no separate split ratings.
 - **Retired and renamed** (Claude's reading of the interview, confirmed by the owner in Session 2): Stuff is retired (its whiff job moves to pitch grades and the put-away pitch); Control is now Command; Eye is split into Recognition and Discipline; Power is now Raw Power; Fielding is split into Range and Hands.
 - **Diagnostics** (squared-up %, chase on strike-looking pitches, launch-angle spread, swing-decision run value) are an advanced view in the Library's Archive part (section 9). M2 stores the counts they need.
 - **Clutch** is not part of this; it stays parked (section 11).
