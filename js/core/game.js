@@ -24,8 +24,8 @@
 //           the lead runner
 //
 // Bases are an array [first, second, third] of runners { id, resp, earned } (resp: the pitcher charged
-// if he scores). Step 1.1 resolves every pitch with B3.placeholder; step 1.2 replaces it with real
-// pitches, contact and ball-in-play physics.
+// if he scores). Pitches and swings go through B3.pitch (step 1.2). Balls in play still use
+// B3.placeholder until step 1.2 task 7 brings in B3.ball.
 (function (root) {
   'use strict';
   const B3 = root.B3 = root.B3 || {};
@@ -63,6 +63,12 @@
 
   function has(obj, key) { return Object.prototype.hasOwnProperty.call(obj, key); }
 
+  function checkHands(p, id, label) {
+    const H = B3.data.HANDS;
+    if (p.bats !== undefined && H.bats.indexOf(p.bats) < 0) fail(label + ': ' + id + ' bats ' + p.bats + ' (R, L or S)');
+    if (p.throws !== undefined && H.throws.indexOf(p.throws) < 0) fail(label + ': ' + id + ' throws ' + p.throws + ' (R or L)');
+  }
+
   function checkPitcher(players, id, label) {
     if (!has(players, id)) fail(label + ': pitcher ' + id + ' is not in players');
     const p = players[id].pitches;
@@ -71,7 +77,8 @@
     }
   }
 
-  // A team as the engine keeps it. Input: { id, name, players: {id: {name, pitches?, role?}},
+  // A team as the engine keeps it. Input: { id, name, players: {id: {name, bats?, throws?, pitches?,
+  // role?, sim?}} (bats R, L or S and throws R or L, both R if missing; sim overrides the rating hooks),
   // lineup: [{ id, pos }] x 9 in batting order, pitcher: id (the starter), bullpen: [id] }.
   function makeSide(t, label) {
     if (!t || typeof t !== 'object' || !t.players || !Array.isArray(t.lineup)) fail(label + ': a team needs players and a lineup');
@@ -95,13 +102,20 @@
     }
     const live = {};
     live[t.pitcher] = newLive();
+    // The physics inputs (rating hooks) for everyone who can play: the lineup and the staff.
+    const inp = {};
+    for (const id of lineup.concat([t.pitcher], bullpen)) {
+      checkHands(t.players[id], id, label);
+      inp[id] = B3.tune.inputs(t.players[id]);
+    }
     return {
       id: t.id, name: t.name || t.id, code: t.code || t.id,
       players: t.players,
       lineup: lineup, pos: pos, byPos: byPos,
       spot: 0, // index in lineup of the batter due up
       pitcher: t.pitcher, used: [t.pitcher], bullpen: bullpen,
-      live: live // per pitcher this game: { pitches, outs, runs, bf }, for in-game choices
+      live: live, // per pitcher this game: { pitches, outs, runs, bf }, for in-game choices
+      inp: inp // per player: B3.tune.inputs (bats, throws, bat, pit, fld)
     };
   }
 
@@ -190,7 +204,7 @@
     const p = g.pitch;
     g.pending = {
       kind: 'swing', side: g.half, batter: batterId(g), balls: g.balls, strikes: g.strikes,
-      pitch: { type: p.type, speed: p.speed, x: p.x, z: p.z, zone: p.zone }
+      pitch: { type: p.type, speed: p.speed, x: p.x, z: p.z, zone: p.zone, ms: p.ms }
     };
   }
 
@@ -231,7 +245,7 @@
         if (!isObj(a) || d.pitches.indexOf(a.type) < 0) fail('pitch: the type must be one of ' + d.pitches.join(', '));
         if (!Number.isFinite(a.x) || !Number.isFinite(a.z)) fail('pitch: the target needs numbers x and z');
         g.pending = null;
-        g.pitch = B3.placeholder.throwPitch(g, a);
+        g.pitch = B3.pitch.throw(g, a);
         askSwing(g);
         break;
       }
@@ -239,7 +253,9 @@
         if (!isObj(a) || typeof a.swing !== 'boolean') fail('swing: answer { swing: false } or { swing: true, timing: ms }');
         if (a.swing && !Number.isFinite(a.timing)) fail('swing: a swing needs a timing in ms');
         g.pending = null;
-        pitchDone(g, a, B3.placeholder.resolve(g, g.pitch, a));
+        const out = B3.pitch.resolve(g, g.pitch, a);
+        if (out.r === 'X') out.play = B3.placeholder.inPlay(g, out.contact);
+        pitchDone(g, a, out);
         if (!g.pending) settle(g);
         break;
       }
@@ -278,6 +294,7 @@
     f.live[f.pitcher].pitches++;
     const ev = { e: 'pitch', p: f.pitcher, b: batterId(g), t: p.type, v: p.speed, x: round2(p.x), z: round2(p.z), c: g.balls + '-' + g.strikes, r: out.r };
     if (a.swing) ev.tm = a.timing;
+    if (out.r === 'X' && out.contact) { ev.ev = out.contact.ev; ev.la = out.contact.la; ev.sp = out.contact.sp; }
     emit(g, ev);
     g.pitch = null;
     const steal = g.steal;

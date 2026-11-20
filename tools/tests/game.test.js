@@ -6,20 +6,22 @@ const { pair } = require('../lib/testteams');
 const { check } = require('../lib/gamecheck');
 const gametest = require('../gametest');
 
-// Replaces the placeholder outcome with a script: plan['inning.half'] lists one step per plate
+// Replaces the pitch outcome with a script: plan['inning.half'] lists one step per plate
 // appearance in that half: 'K' (strikes until out), 'BB' (balls until a walk) or (g) => play.
 // Anything unlisted is a strikeout.
 function scripted(plan, stubs) {
   const B3 = loadCore();
-  B3.placeholder.resolve = function (g) {
+  const step = (g) => {
     const list = plan[g.inning + '.' + g.half] || [];
     let n = 0;
     for (const e of g.log) if (e.e === 'pa' && e.i === g.inning && e.h === g.half) n++;
-    const step = list[n] || 'K';
-    if (step === 'K') return { r: 'S' };
-    if (step === 'BB') return { r: 'B' };
-    return { r: 'X', play: step(g) };
+    return list[n] || 'K';
   };
+  B3.pitch.resolve = function (g) {
+    const s = step(g);
+    return s === 'K' ? { r: 'S' } : s === 'BB' ? { r: 'B' } : { r: 'X', contact: { ev: 90, la: 10, sp: 0 } };
+  };
+  B3.placeholder.inPlay = (g) => step(g)(g);
   Object.assign(B3.placeholder, stubs || {});
   return B3;
 }

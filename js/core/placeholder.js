@@ -1,11 +1,10 @@
-// A stand-in for pitch and ball-in-play physics, so step 1.1 can test the rules and the game loop.
-// TEMPORARY: step 1.2 replaces it with real pitches, contact and fielding, and deletes this file.
+// A stand-in for ball-in-play physics, so step 1.1 could test the rules and the game loop.
+// TEMPORARY: step 1.2 task 6 replaced its pitches with B3.pitch; task 7 replaces the rest with B3.ball
+// and deletes this file.
 // Rates are rough guesses that make baseball-like games; nothing here is calibrated. Logic file: no DOM.
 (function (root) {
   'use strict';
   const B3 = root.B3 = root.B3 || {};
-
-  const SPEED = { FF: 94, SI: 93, FC: 89, SL: 85, CU: 79, CH: 85, FS: 86 };
 
   function weighted(r, table) {
     const i = r.weighted(table.map((x) => x[1]));
@@ -63,22 +62,8 @@
   }
 
   B3.placeholder = {
-    // The pitch as thrown: it lands near the target.
-    throwPitch: function (g, a) {
-      const r = g.rng;
-      const x = a.x + r.normal(0, 0.45), z = a.z + r.normal(0, 0.45);
-      return { type: a.type, speed: Math.round((SPEED[a.type] + r.normal(0, 1)) * 10) / 10, x: x, z: z, zone: B3.data.inZone(x, z) };
-    },
-    // What happened: B ball, C called strike, S swinging strike, F foul, X in play (with a play).
-    resolve: function (g, pitch, swing) {
-      const r = g.rng;
-      if (!swing.swing) return { r: pitch.zone ? (r.chance(0.88) ? 'C' : 'B') : (r.chance(0.07) ? 'C' : 'B') };
-      const off = Math.min(1, Math.abs(swing.timing) / 120); // 0 perfect, 1 badly early or late
-      const contact = (pitch.zone ? 0.9 : 0.68) * (1 - 0.3 * off);
-      if (!r.chance(contact)) return { r: 'S' };
-      if (r.chance(0.42 + 0.3 * off)) return { r: 'F' };
-      return { r: 'X', play: ballInPlay(g, r) };
-    },
+    // A ball in play (the contact is ignored: the outcome is a weighted draw).
+    inPlay: function (g) { return ballInPlay(g, g.rng); },
     // Is the runner stealing from this base safe?
     steal: function (g, from) { return g.rng.chance(from === 1 ? 0.74 : 0.7); },
     // Is the runner tagging up from this base safe?

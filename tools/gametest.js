@@ -50,7 +50,7 @@ function run(games, seed, B3) {
 function report(r, seed) {
   const lines = [];
   lines.push(r.games + ' games, seed ' + seed);
-  lines.push('runs per team-game ' + r.runsPerTeamGame.toFixed(2) + ' (placeholder outcomes, not calibrated), pitches per PA ' + r.pitchesPerPA.toFixed(2));
+  lines.push('runs per team-game ' + r.runsPerTeamGame.toFixed(2) + ' (placeholder ball-in-play outcomes, not calibrated), pitches per PA ' + r.pitchesPerPA.toFixed(2));
   lines.push('');
   lines.push('type          games  runs/g  innings/g  final walk-off mercy  tie  extras');
   for (const k in r.byType) {

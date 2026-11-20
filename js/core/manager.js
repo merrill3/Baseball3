@@ -57,14 +57,15 @@
       return { type: type, x: r.range(-0.8, 0.8), z: r.chance(0.7) ? r.range(Z.bottom - 0.9, Z.bottom - 0.1) : r.range(Z.top + 0.1, Z.top + 0.7) };
     },
 
-    // Swings at most strikes and some balls; protects with two strikes; takes on 3-0.
+    // Swings at most strikes and some balls; protects with two strikes; takes on 3-0. The timing is the
+    // hitter's own *when* error from the physics (B3.pitch.cpuTiming).
     swing: function (d, g) {
       const r = g.rng;
       let p = d.pitch.zone ? 0.68 : 0.3;
       if (d.strikes === 2) p += 0.15;
       if (d.balls === 3 && d.strikes === 0) p *= 0.3;
       if (!r.chance(p)) return { swing: false };
-      return { swing: true, timing: Math.round(r.normal(0, 40)) };
+      return { swing: true, timing: B3.pitch.cpuTiming(g, g.pitch) };
     },
 
     // Tag from third on a fly or a liner; sometimes from second on a fly.
