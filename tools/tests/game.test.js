@@ -21,8 +21,8 @@ function scripted(plan, stubs) {
     const s = step(g);
     return s === 'K' ? { r: 'S' } : s === 'BB' ? { r: 'B' } : { r: 'X', contact: { ev: 90, la: 10, sp: 0 } };
   };
-  B3.placeholder.inPlay = (g) => step(g)(g);
-  Object.assign(B3.placeholder, stubs || {});
+  B3.ball.inPlay = (g) => step(g)(g);
+  Object.assign(B3.ball, stubs || {});
   return B3;
 }
 
@@ -138,7 +138,7 @@ module.exports = function (t) {
   t.test('a tag-up from third scores a sac fly; a runner thrown out tagging is an out', () => {
     const B3 = scripted({ '1.0': [single, (g) => ({ code: '1B', bb: 'line', fielder: 'RF', caught: false, batter: 1, runners: [3, null, null] }), flyout, flyout] });
     let tags = 0;
-    B3.placeholder.tagup = () => (++tags === 1); // safe the first time, out the second
+    B3.ball.tagup = () => (++tags === 1); // safe the first time, out the second
     const g = playGame(B3, { type: 'regular' });
     const sf = pas(g, 1, 0)[2], doubled = pas(g, 1, 0)[3];
     assert.strictEqual(sf.res, 'SF');
@@ -152,7 +152,7 @@ module.exports = function (t) {
 
   t.test('caught stealing for the third out: the same batter leads off the next inning', () => {
     const B3 = scripted({ '1.0': ['K', 'K', single] });
-    B3.placeholder.steal = () => false;
+    B3.ball.steal = () => false;
     const thief = Object.assign({}, quiet, { steal: (d, g) => (g.inning === 1 ? { runners: [1] } : null) });
     const g = playGame(B3, { type: 'quick', innings: 9 }, [thief, quiet]); // no runs: a tie after 12
     const cs = g.log.find((e) => e.e === 'cs');

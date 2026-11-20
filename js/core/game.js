@@ -21,11 +21,11 @@
 //   swing   batting side, with the pitch thrown   { swing: false }, or { swing: true, timing: ms }
 //                                                 (ms from perfect timing: below 0 early, above 0 late)
 //   tagup   batting side, after a catch, for      { go: true } or { go: false }
-//           the lead runner
+//           the lead runner (pending.dist: how deep the catch was, in feet)
 //
 // Bases are an array [first, second, third] of runners { id, resp, earned } (resp: the pitcher charged
-// if he scores). Pitches and swings go through B3.pitch (step 1.2). Balls in play still use
-// B3.placeholder until step 1.2 task 7 brings in B3.ball.
+// if he scores). Pitches and swings go through B3.pitch; balls in play, steals and tag-ups through
+// B3.ball (step 1.2). After each ball in play, g.lastPlay holds its play script (not in the log).
 (function (root) {
   'use strict';
   const B3 = root.B3 = root.B3 || {};
@@ -152,6 +152,7 @@
       steal: null, // runners going on this pitch: [{ from: base index, runner }]
       pitch: null, // the pitch thrown, waiting on the swing decision
       play: null, // a caught ball waiting on the tag-up decision
+      lastPlay: null, // the last ball in play: { i, h, b, res, script } (the script is for the field view)
       rng: opts.rng
     };
     if (g.teams[0].id === g.teams[1].id) fail('the two teams need different ids');
@@ -254,7 +255,11 @@
         if (a.swing && !Number.isFinite(a.timing)) fail('swing: a swing needs a timing in ms');
         g.pending = null;
         const out = B3.pitch.resolve(g, g.pitch, a);
-        if (out.r === 'X') out.play = B3.placeholder.inPlay(g, out.contact);
+        if (out.r === 'X') {
+          const play = B3.ball.inPlay(g, out.contact, g.steal);
+          if (play.foul) { out.r = 'F'; g.lastPlay = { i: g.inning, h: g.half, b: batterId(g), res: 'F', script: play.script }; }
+          else out.play = play;
+        }
         pitchDone(g, a, out);
         if (!g.pending) settle(g);
         break;
@@ -264,7 +269,7 @@
         g.pending = null;
         const play = g.play;
         g.play = null;
-        const tag = a.go ? { from: d.from - 1, ok: B3.placeholder.tagup(g, play, d.from) } : null;
+        const tag = a.go ? { from: d.from - 1, ok: B3.ball.tagup(g, play, d.from) } : null;
         finishPlay(g, play, tag);
         settle(g);
         break;
@@ -302,18 +307,18 @@
     switch (out.r) {
       case 'B': // ball
         g.balls++;
-        if (g.balls === 4) walk(g, steal); else runSteal(g, steal);
+        if (g.balls === 4) walk(g, steal, p); else runSteal(g, steal, p);
         break;
       case 'C': // called strike
       case 'S': // swinging strike
         g.strikes++;
         if (g.strikes === 3) strikeout(g); // no dropped third strike (Claude's default)
-        runSteal(g, steal);
+        runSteal(g, steal, p);
         break;
       case 'F': // foul: runners go back
         if (g.strikes < 2) g.strikes++;
         break;
-      case 'X': // in play (runners who were stealing get nothing extra in step 1.1)
+      case 'X': // in play (runners who were stealing got their jump in B3.ball)
         inPlay(g, out.play);
         break;
       default:
@@ -358,7 +363,7 @@
     finishPA(g, pa);
   }
 
-  function walk(g, steal) {
+  function walk(g, steal, pitch) {
     const pa = newPA(g, 'BB');
     const b = g.bases;
     if (b[0]) {
@@ -370,17 +375,17 @@
     }
     b[0] = { id: pa.b, resp: pa.p, earned: true };
     finishPA(g, pa);
-    runSteal(g, steal); // a runner who wasn't forced can still be thrown out
+    runSteal(g, steal, pitch); // a runner who wasn't forced can still be thrown out
   }
 
   // Steals of the runners still on the base they left. In a double steal the catcher throws to the lead
   // runner; if he is out, the trailing runner moves up without a stolen base (the scoring rule).
-  function runSteal(g, steal) {
+  function runSteal(g, steal, pitch) {
     if (!steal || g.outs >= 3 || g.walkoff || g.over) return;
     const going = steal.filter((s) => g.bases[s.from] === s.runner).sort((a, b) => b.from - a.from);
     if (!going.length) return;
     const f = fld(g), lead = going[0];
-    const safe = B3.placeholder.steal(g, lead.from + 1);
+    const safe = B3.ball.steal(g, lead.from + 1, pitch);
     if (safe) {
       for (const s of going) {
         g.bases[s.from] = null;
@@ -451,7 +456,8 @@
       for (let i = 2; i >= 0; i--) if (g.bases[i] && play.runners[i] === i + 1) { lead = i; break; }
       if (lead >= 0) {
         g.play = play;
-        g.pending = { kind: 'tagup', side: g.half, runner: g.bases[lead].id, from: lead + 1, code: play.code, fielder: play.fielder };
+        g.pending = { kind: 'tagup', side: g.half, runner: g.bases[lead].id, from: lead + 1, code: play.code, fielder: play.fielder,
+          dist: play.meta ? play.meta.dist : null }; // dist: feet from home plate where the ball was caught
         return;
       }
     }
@@ -509,6 +515,7 @@
       if (br && play.batter <= 3) g.bases[play.batter - 1] = br;
     }
     finishPA(g, pa);
+    g.lastPlay = { i: pa.i, h: pa.h, b: pa.b, res: pa.res, script: play.script || null };
   }
 
   // ---- Innings and the end of the game ----

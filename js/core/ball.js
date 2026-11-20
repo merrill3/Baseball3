@@ -1,0 +1,876 @@
+// Balls in play, steals and tag-ups: the ball's flight, fielders, throws and runners. Logic file: no DOM.
+//
+//   B3.ball.inPlay(g, contact, steal)  a play for B3.game (shape in game.js "Balls in play") plus
+//                                      script, or { foul: true, script } for a foul nobody caught.
+//                                      contact is { ev, la, sp } from B3.pitch; steal lists the runners
+//                                      who were going on the pitch ([{ from, runner }] or null).
+//   B3.ball.steal(g, from, pitch)      true if the runner stealing from base `from` (1 or 2) is safe
+//   B3.ball.tagup(g, play, from)       true if the runner tagging from `from` is safe; adds to the script
+//   B3.ball.flight(contact)            the ball's path: { pts: [[t, x, y, z]], land, hr, wall, stop }
+//
+// Every rating hook it uses is an input from B3.tune.inputs: fielders' Range (react, route), Hands
+// (hands, release), Arm (arm) and catchers' arm and release on steals; runners' Speed (speed) and
+// Baserunning (read, jump, judge); the tendency dare. Times are seconds from contact; positions are
+// feet on the field (B3.data.FIELD: home at 0, 0; y toward center; x toward first base).
+//
+// The play script (for the field view in M4): timed positions for the ball, every fielder and every
+// runner, plus events, all from the same times that decide the play:
+//   { t, ball: [[t, x, y, z]], fielders: { pos: [[t, x, y]] }, runners: [{ id, from, end, path: [[t, x, y]] }],
+//     events: [{ t, e, pos?, id?, base? }] }
+// Between two points everything moves in a straight line, and a track holds its last point until the
+// script's end t. Runners' `from` is 0 for the batter, `end` is the base they end on (4 scored) or 0 (out).
+(function (root) {
+  'use strict';
+  const B3 = root.B3 = root.B3 || {};
+
+  const MPH = 5280 / 3600, G = 32.174, D2R = Math.PI / 180;
+
+  function T() { return B3.tune; }
+  function dist(a, b) { const x = a[0] - b[0], y = a[1] - b[1]; return Math.sqrt(x * x + y * y); }
+  function len(x, y) { return Math.sqrt(x * x + y * y); }
+  function lerp(a, b, u) { return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u]; }
+  function base(n) { return B3.data.FIELD.bases[n % 4]; } // 1 first, 2 second, 3 third, 0 or 4 home
+  function r2(x) { return Math.round(x * 100) / 100; }
+  function r1(x) { return Math.round(x * 10) / 10; }
+  function logistic(x) { return 1 / (1 + Math.exp(-x)); }
+  function isNum(x) { return typeof x === 'number'; }
+
+  // Seconds to cover d feet, reaching top speed v at the accel rate, starting at speed v0.
+  function runTime(d, v, v0) {
+    if (d <= 0) return 0;
+    const a = T().BALL.accel;
+    v0 = Math.min(v0 || 0, v);
+    const dAcc = (v * v - v0 * v0) / (2 * a);
+    if (d <= dAcc) return (Math.sqrt(v0 * v0 + 2 * a * d) - v0) / a;
+    return (v - v0) / a + (d - dAcc) / v;
+  }
+
+  // Feet covered in t seconds, starting at speed v0 (the inverse of runTime).
+  function runDist(t, v, v0) {
+    if (t <= 0) return 0;
+    const a = T().BALL.accel;
+    v0 = Math.min(v0 || 0, v);
+    const tA = (v - v0) / a;
+    return t <= tA ? v0 * t + a * t * t / 2 : (v * v - v0 * v0) / (2 * a) + v * (t - tA);
+  }
+
+  // Seconds for a throw of d feet at arm mph (long throws arc or bounce, so they average slower).
+  function throwTime(d, arm) {
+    const B = T().BALL;
+    return 0.05 + d / (arm * MPH * (d > 150 ? B.throwLong : B.throwShort));
+  }
+
+  // ---- The ball's flight ----
+
+  // Integrates the batted ball in the air (drag, backspin lift) and through its bounces; once it rolls,
+  // it slows at a steady rate (worked out exactly). It travels along its spray direction (no sideways
+  // curve), stops at the wall, and is kept every BALL.sample seconds as [t, x, y, z, r] (r: feet from
+  // home plate; raw numbers, which the script rounds).
+  function flight(c) {
+    const B = T().BALL, F = B3.data.FIELD;
+    const v = c.ev * MPH, la = c.la * D2R, dir = c.sp * D2R;
+    const ux = Math.sin(dir), uy = Math.cos(dir);
+    const fair = Math.abs(c.sp) <= 45;
+    const fence = B3.data.fenceAt(c.sp);
+    const lift = c.la > 0 ? B.lift : 0;
+    let vr = v * Math.cos(la), vh = v * Math.sin(la), r = 0, h = B.startHeight, t = 0;
+    let land = null, hr = null, wall = null, stop = null;
+    const pts = [[0, 0, 0, h, 0]];
+    const dt = B.dt, every = B.sample;
+    let next = every;
+    const keep = () => pts.push([t, r * ux, r * uy, h, Math.abs(r)]);
+    // In the air and bouncing.
+    while (t < B.maxTime) {
+      const s = Math.sqrt(vr * vr + vh * vh);
+      const up = land ? 0 : lift; // spin's lift counts only before the first bounce
+      vr += (-B.drag * s * vr - up * s * vh) * dt;
+      vh += (-B.drag * s * vh + up * s * vr - G) * dt;
+      r += vr * dt; h += vh * dt; t += dt;
+      if (fair && !hr && !wall && r >= fence) {
+        if (h > F.wall && !land) hr = { t: t, h: h };
+        else { wall = { t: t, h: h }; r = fence; vr = -Math.abs(vr) * B.wallBack; vh = Math.min(vh, 0); }
+      }
+      if (h <= 0) {
+        h = 0;
+        if (!land) land = { t: t, r: r, x: r * ux, y: r * uy };
+        if (hr || !fair) { keep(); break; } // out of play
+        vh = -vh * B.bounceUp; vr *= B.bounceOn;
+        if (vh < B.rolling) break; // it rolls from here
+      }
+      if (t >= next - 1e-9) { keep(); next += every; }
+    }
+    if (fair && !hr) {
+      // Rolling: speed falls at rollDecel until it stops (or reaches the wall and dies there).
+      const a = B.rollDecel, v0 = Math.abs(vr), sign = vr < 0 ? -1 : 1;
+      const tStop = v0 / a, r0 = r, t0 = t;
+      const at = (tt) => r0 + sign * (v0 * tt - a * tt * tt / 2);
+      let end = tStop, rEnd = at(tStop);
+      if (!wall && sign > 0 && rEnd > fence) {
+        // It rolls to the wall: stopped there (a rolling ball barely comes off it).
+        end = (v0 - Math.sqrt(Math.max(0, v0 * v0 - 2 * a * (fence - r0)))) / a;
+        rEnd = fence;
+        wall = { t: t0 + end, h: 0 };
+      }
+      while (next < t0 + end) { const rr = at(next - t0); pts.push([next, rr * ux, rr * uy, 0, Math.abs(rr)]); next += every; }
+      t = t0 + end; r = rEnd; h = 0;
+      stop = { t: t, r: r };
+      keep();
+    }
+    return { pts: pts, land: land, hr: hr, wall: wall, stop: stop, fair: fair, fence: fence, ux: ux, uy: uy };
+  }
+
+  // ---- The players on this play ----
+
+  // The fielders, where they stand for this batter (shaded toward his pull side), and their inputs.
+  function defense(g, bats) {
+    const f = g.teams[1 - g.half], F = B3.data.FIELD, POS = T().POS;
+    const pull = bats === 'L' ? 1 : -1; // right-handed batters pull to left field (minus spray)
+    const out = {};
+    for (const pos of B3.data.FIELDERS) {
+      const id = pos === 'P' ? f.pitcher : f.byPos[pos];
+      const inp = f.inp[id];
+      let at = F.pos[pos];
+      if (pos !== 'P' && pos !== 'C') {
+        const d = (B3.data.OUTFIELD.indexOf(pos) >= 0 ? F.shade.outfield : F.shade.infield) * pull;
+        const r = len(at[0], at[1]), a = Math.atan2(at[0], at[1]) / D2R + d;
+        at = B3.data.polar(r, a);
+      }
+      const P = POS[pos];
+      out[pos] = {
+        pos: pos, id: id, at: at,
+        react: isNum(inp.fld.react) ? inp.fld.react : P[0],
+        speed: inp.run.speed * inp.fld.route,
+        arm: isNum(inp.fld.arm) ? inp.fld.arm : P[1],
+        xfer: Math.max(0.2, P[2] - inp.fld.release),
+        release: inp.fld.release,
+        hands: inp.fld.hands
+      };
+    }
+    return out;
+  }
+
+  // Seconds for a fielder to get to a point.
+  function reachT(fd, pt) { return fd.react + runTime(dist(fd.at, pt), fd.speed, 0); }
+
+  // The batter and the runners at contact. Runners who were stealing are already on their way.
+  function offense(g, steal, pitch) {
+    const B = T().BALL, bt = g.teams[g.half];
+    const id = bt.lineup[bt.spot];
+    const w = B3.pitch.who(g);
+    const out = [];
+    for (let i = 0; i < 3; i++) {
+      const rn = g.bases[i];
+      if (!rn) { out.push(null); continue; }
+      const inp = bt.inp[rn.id].run;
+      const going = !!(steal && steal.some((s) => s.from === i && s.runner === rn));
+      let s0 = B.lead[i], v0 = 0;
+      if (going) {
+        // He broke with the pitcher's first move: by contact he is well down the line at full speed.
+        const tRun = T().STEAL.delivery + (pitch ? pitch.ms / 1000 : 0.4) - inp.jump;
+        s0 = Math.min(80, B.lead[i] + T().STEAL.secondLead[Math.min(i, 1)] + runDist(tRun, inp.speed));
+        v0 = inp.speed;
+      }
+      out.push({ from: i + 1, id: rn.id, run: inp, going: going, s0: s0, v0: v0 });
+    }
+    const inp = bt.inp[id].run;
+    const batter = { from: 0, id: id, run: inp, going: false, s0: 0, v0: 0, box: B.batterBox - (w.bats === 'L' ? B.lefty : 0) };
+    return { runners: out, batter: batter };
+  }
+
+  // Seconds for a runner who starts at time t0 (at s feet past his base, moving at v0) to reach base b.
+  function arrive(rn, b, t0, s, v0) {
+    const B = T().BALL;
+    const d = (b - rn.from) * 90 - s;
+    return t0 + runTime(d, rn.run.speed, v0) + Math.max(0, b - rn.from - 1) * B.turn;
+  }
+
+  // A point s feet past base n toward the next one.
+  function pathPt(n, s) {
+    const k = Math.floor(s / 90), u = (s - 90 * k) / 90;
+    return lerp(base(n + k), base(n + k + 1), u);
+  }
+
+  // ---- The play script ----
+
+  function Script(fielders) {
+    this.ball = [[0, 0, 0, T().BALL.startHeight]];
+    this.fielders = {};
+    for (const pos in fielders) this.fielders[pos] = [[0, r1(fielders[pos].at[0]), r1(fielders[pos].at[1])]];
+    this.runners = [];
+    this.events = [{ t: 0, e: 'contact' }];
+    this.t = 0;
+  }
+  Script.prototype = {
+    // Adds a point to a track, keeping time in order.
+    put: function (track, t, p) {
+      const last = track[track.length - 1];
+      t = r2(Math.max(t, last[0]));
+      const q = [t, r1(p[0]), r1(p[1])];
+      if (p.length > 2) q.push(r1(p[2]));
+      if (last[0] === t && last[1] === q[1] && last[2] === q[2]) return;
+      track.push(q);
+      if (t > this.t) this.t = t;
+    },
+    fielder: function (pos, t, p) { this.put(this.fielders[pos], t, p); },
+    ballAt: function (t, p, z) { this.put(this.ball, t, [p[0], p[1], z || 0]); },
+    flight: function (path, until) {
+      for (const p of path.pts) {
+        if (p[0] > until + 1e-9) break;
+        this.put(this.ball, p[0], [p[1], p[2], p[3]]);
+      }
+    },
+    // The ball travels from its last point to p, arriving at time t (a throw or a carry).
+    throwTo: function (t, p, z) { this.put(this.ball, t, [p[0], p[1], z || 4]); },
+    event: function (t, e, extra) {
+      const ev = { t: r2(t), e: e };
+      for (const k in extra) ev[k] = extra[k];
+      this.events.push(ev);
+      if (ev.t > this.t) this.t = ev.t;
+    },
+    runner: function (rn, start) {
+      const tr = { id: rn.id, from: rn.from, end: null, path: [[0, r1(start[0]), r1(start[1])]] };
+      this.runners.push(tr);
+      return tr;
+    },
+    done: function () {
+      this.events.sort((a, b) => a.t - b.t);
+      return { t: r2(this.t), ball: this.ball, fielders: this.fielders, runners: this.runners, events: this.events };
+    }
+  };
+
+  // A runner's track: from his start (s feet past his base, moving at v0, from time t0) to each base he
+  // reaches, ending on base endBase, or put out on the way to base out.base at time out.t.
+  function runTrack(S, rn, t0, times, endBase, out, s, v0) {
+    s = s === undefined ? rn.s0 : s;
+    v0 = v0 === undefined ? rn.v0 : v0;
+    const begin = rn.from === 0 ? base(0) : pathPt(rn.from, rn.s0);
+    const tr = S.runner(rn, begin);
+    if (s !== rn.s0) S.put(tr.path, t0, pathPt(rn.from, s));
+    else S.put(tr.path, t0, begin);
+    let lastT = t0, lastS = s;
+    for (let b = rn.from + 1; b <= endBase; b++) {
+      lastT = times(b); lastS = (b - rn.from) * 90;
+      S.put(tr.path, lastT, base(b));
+    }
+    if (out) {
+      // Where he is when the tag or force is made (never past the base).
+      const cap = (out.base - rn.from) * 90 - 1.5;
+      const moved = lastT === t0 ? runDist(out.t - t0, rn.run.speed, v0) : rn.run.speed * Math.max(0, out.t - lastT);
+      S.put(tr.path, out.t, pathPt(rn.from, Math.max(lastS, Math.min(cap, lastS + moved))));
+      tr.end = 0;
+    } else {
+      tr.end = endBase;
+    }
+    if (tr.end === 4 && endBase > rn.from) S.event(times(4), 'score', { id: rn.id });
+    return tr;
+  }
+
+  // ---- Catching a ball in the air ----
+
+  // Can a ball at this point be caught in foul ground?
+  function foulCatchable(x, y) {
+    const B = T().BALL;
+    const r = len(x, y);
+    if (y < 0) return r <= B.backstop;
+    const off = Math.abs(Math.atan2(x, y)) / D2R - 45; // degrees past the line
+    return off <= 0 || (r * Math.sin(off * D2R) <= B.foulRoom && r <= 330);
+  }
+
+  // The fielder with the best chance at the ball before it lands: { fd, margin, k } or null.
+  function bestCatch(path, D, foul) {
+    const B = T().BALL;
+    const landT = path.land ? path.land.t : Infinity;
+    let best = null;
+    for (const pos in D) {
+      const fd = D[pos];
+      let m = -Infinity, at = -1, first = -1;
+      for (let k = 1; k < path.pts.length; k++) {
+        const p = path.pts[k];
+        if (p[0] > landT + 1e-9) break;
+        const r = p[4];
+        const reach = path.fair && r > path.fence - 6 ? B.wallReach : B.reach;
+        if (p[3] > reach) continue;
+        if (path.fair && r > path.fence + 1) continue; // over the wall
+        if (foul && !foulCatchable(p[1], p[2])) continue;
+        const mk = p[0] - reachT(fd, [p[1], p[2]]);
+        if (mk >= 0 && first < 0) first = k;
+        if (mk > m) { m = mk; at = k; }
+      }
+      if (at < 0) continue;
+      const pref = (B3.data.OUTFIELD.indexOf(pos) >= 0 ? 0.3 : 0) - (pos === 'P' ? 0.4 : 0) - (pos === 'C' ? 0.2 : 0);
+      const cand = { fd: fd, margin: m, k: first >= 0 ? first : at, score: Math.min(m, 1.5) + pref };
+      if (!best || cand.score > best.score) best = cand;
+    }
+    return best;
+  }
+
+  // ---- Fielding the ball once it is on the ground ----
+
+  // The first fielder to the ball after it lands (or as it rolls): { fd, t, p, k }. A fielder who
+  // dove and missed, or tried to catch it, loses time (penalty).
+  function firstToBall(path, D, penalty, minR) {
+    const B = T().BALL;
+    const startT = path.land ? path.land.t : 0;
+    let best = null;
+    for (const pos in D) {
+      const fd = D[pos];
+      const extra = penalty[pos] || 0;
+      for (let k = 1; k < path.pts.length; k++) {
+        const p = path.pts[k];
+        if (p[0] < startT - 1e-9 || p[3] > B.fieldHeight) continue;
+        if (minR && p[4] < minR) continue;
+        const need = reachT(fd, [p[1], p[2]]) + extra;
+        if (need <= p[0]) {
+          if (!best || p[0] < best.t) best = { fd: fd, t: p[0], p: [p[1], p[2]], k: k };
+          break;
+        }
+      }
+    }
+    if (!best) {
+      // Nobody beat the ball to a point: whoever gets to where it stopped first.
+      const p = path.pts[path.pts.length - 1];
+      for (const pos in D) {
+        const fd = D[pos], t = Math.max(p[0], reachT(fd, [p[1], p[2]]) + (penalty[pos] || 0));
+        if (!best || t < best.t) best = { fd: fd, t: t, p: [p[1], p[2]], k: path.pts.length - 1 };
+      }
+    }
+    return best;
+  }
+
+  // A grounder an infielder can get to before it leaves the infield: { fd, t, p, k, dive } or null.
+  function infieldStop(g, path, D) {
+    const B = T().BALL;
+    let best = null, near = null;
+    for (const pos of ['P', 'C', '1B', '2B', '3B', 'SS']) {
+      const fd = D[pos];
+      for (let k = 1; k < path.pts.length; k++) {
+        const p = path.pts[k];
+        const r = p[4];
+        if (r > B.infield + 45) break;
+        if (p[3] > B.fieldHeight) continue;
+        if (pos === 'C' && r > 40) break;
+        const mk = p[0] - reachT(fd, [p[1], p[2]]);
+        if (mk >= 0) {
+          if (!best || p[0] < best.t) best = { fd: fd, t: p[0], p: [p[1], p[2]], k: k, dive: false };
+          break;
+        }
+        if (pos !== 'C' && pos !== 'P' && (!near || mk > near.m)) near = { fd: fd, t: p[0], p: [p[1], p[2]], k: k, m: mk, dive: true };
+      }
+    }
+    if (best) return best;
+    // A diving stop on a ball just out of reach.
+    if (near && near.m > -0.35 && g.rng.chance(logistic((near.m + 0.12) / 0.06))) return near;
+    return null;
+  }
+
+  // ---- Plays ----
+
+  function bbType(la) { return la < 10 ? 'ground' : la < 25 ? 'line' : la <= 50 ? 'fly' : 'popup'; }
+
+  // A close play at a base: true if the runner is safe. margin is ball time (+ tag) minus runner time.
+  function safeBy(g, margin) { return g.rng.chance(logistic(margin / T().BALL.playSd)); }
+
+  // The fielder who takes a throw at a base, and when he can be there.
+  function cover(D, b, busy) {
+    const order = { 1: ['1B', '2B', 'P'], 2: ['SS', '2B'], 3: ['3B', 'SS'], 4: ['C', 'P'] }[b];
+    for (const pos of order) {
+      if (busy.indexOf(pos) >= 0) continue;
+      const fd = D[pos];
+      return { fd: fd, t: reachT(fd, base(b)) - fd.react * 0.5 }; // he moves as soon as he sees the play
+    }
+    return { fd: D.P, t: reachT(D.P, base(b)) };
+  }
+
+  function forcedOn(g) {
+    const b = g.bases;
+    return [!!b[0], !!(b[0] && b[1]), !!(b[0] && b[1] && b[2])];
+  }
+
+  // The result of a play: runners' end bases and the batter's.
+  function result(code, bb, fd, caught, batter, runners, extra) {
+    const p = { code: code, bb: bb, fielder: fd.pos, caught: caught, batter: batter, runners: runners };
+    for (const k in extra) p[k] = extra[k];
+    return p;
+  }
+
+  // A home run: everyone scores at a trot.
+  function homeRun(g, c, path, D, off, S) {
+    const B = T().BALL;
+    S.flight(path, Infinity);
+    S.event(path.hr.t, 'hr');
+    const runners = [], trot = 22;
+    for (let i = 0; i < 3; i++) {
+      const rn = off.runners[i];
+      if (!rn) { runners.push(null); continue; }
+      runners.push(4);
+      const t0 = B.batterBox + 0.5;
+      runTrack(S, rn, t0, (b) => t0 + ((b - rn.from) * 90 - rn.s0) / trot, 4, null);
+    }
+    const bt = off.batter, t0 = bt.box;
+    runTrack(S, bt, t0, (b) => t0 + b * 90 / trot, 4, null);
+    const fd = c.sp < -15 ? D.LF : c.sp > 15 ? D.RF : D.CF;
+    return result('HR', bbType(c.la), fd, false, 4, runners, {});
+  }
+
+  // A ball caught in the air. Runners who were going must get back (they can be doubled off).
+  function caughtBall(g, c, path, D, off, S, best) {
+    const B = T().BALL, E = T().ERR;
+    const fd = best.fd, p = path.pts[best.k];
+    const tc = p[0], at = [p[1], p[2]];
+    const hard = best.margin < 0.35;
+    S.flight(path, tc);
+    S.fielder(fd.pos, reachT(fd, at), at);
+    S.fielder(fd.pos, tc, at);
+    const bb = bbType(c.la);
+    // A dropped routine fly is an error: the batter reaches, runners move up.
+    if (!hard && g.rng.chance(E.fly * fd.hands)) {
+      S.event(tc, 'error', { pos: fd.pos });
+      return droppedBall(g, c, path, D, off, S, fd, tc, at, bb);
+    }
+    S.event(tc, 'catch', { pos: fd.pos });
+    const code = bb === 'popup' ? 'PO' : bb === 'line' || bb === 'ground' ? 'LO' : 'FO';
+    const runners = [], back = [null, null, null];
+    let outs = g.outs + 1, ballFree = tc; // the ball can be thrown once
+    for (let i = 2; i >= 0; i--) {
+      const rn = off.runners[i];
+      if (!rn) { runners[i] = null; continue; }
+      if (!rn.going) {
+        runners[i] = i + 1;
+        back[i] = 0;
+        const tr = runTrack(S, rn, 0, null, rn.from, null);
+        S.put(tr.path, Math.max(tc, 0.3 + rn.s0 / (0.8 * rn.run.speed)), base(rn.from)); // back to the bag to tag
+        continue;
+      }
+      // He sees the catch, stops and turns back.
+      const sAt = Math.min(rn.s0 + rn.run.speed * Math.max(0, tc - rn.run.read), 88);
+      const tBack = tc + 0.3 + runTime(sAt, rn.run.speed, 0);
+      back[i] = tBack;
+      const tr = S.runner(rn, pathPt(rn.from, rn.s0));
+      S.put(tr.path, tc, pathPt(rn.from, sAt));
+      if (outs < 3) {
+        const cv = cover(D, rn.from, [fd.pos]);
+        const tBall = Math.max(ballFree + fd.xfer + throwTime(dist(at, base(rn.from)), fd.arm), cv.t);
+        if (tBall < tBack + 0.6 && !safeBy(g, tBall + B.tag - tBack)) {
+          runners[i] = 0;
+          outs++;
+          const sOut = Math.max(1.5, sAt - runDist(tBall + B.tag - tc - 0.3, rn.run.speed, 0));
+          S.put(tr.path, tc + 0.3, pathPt(rn.from, sAt));
+          S.put(tr.path, tBall + B.tag, pathPt(rn.from, Math.min(sAt, sOut)));
+          tr.end = 0;
+          S.ballAt(ballFree + fd.xfer, at, 6);
+          S.throwTo(tBall, base(rn.from));
+          S.fielder(cv.fd.pos, cv.t, base(rn.from));
+          S.event(tBall + B.tag, 'out', { id: rn.id, base: rn.from });
+          ballFree = tBall + 0.5;
+          continue;
+        }
+      }
+      runners[i] = i + 1;
+      S.put(tr.path, tc + 0.3, pathPt(rn.from, sAt));
+      S.put(tr.path, tBack, base(rn.from));
+      tr.end = rn.from;
+    }
+    return result(code, bb, fd, true, 0, runners, {
+      meta: { catchT: r2(tc), catchAt: at, fielder: fd.pos, back: back, dist: Math.round(len(at[0], at[1])) }
+    });
+  }
+
+  // An error on a ball in the air: the batter reaches, runners move up a base (two from second or
+  // third on a ball dropped in the outfield).
+  function droppedBall(g, c, path, D, off, S, fd, tc, at, bb) {
+    const outfield = B3.data.OUTFIELD.indexOf(fd.pos) >= 0;
+    const bExtra = outfield && g.rng.chance(0.35) ? 2 : 1;
+    const runners = [];
+    const taken = {};
+    let last = 5;
+    for (let i = 2; i >= 0; i--) {
+      const rn = off.runners[i];
+      if (!rn) { runners[i] = null; continue; }
+      let to = Math.min(4, i + 1 + (outfield && i >= 1 ? 2 : 1));
+      if (to < 4 && to >= last) to = last - 1;
+      runners[i] = to; last = to; taken[to] = true;
+      const t0 = rn.going ? 0 : tc;
+      runTrack(S, rn, t0, (b) => arrive(rn, b, t0, rn.s0, rn.v0), to, null);
+    }
+    let bTo = bExtra;
+    while (bTo > 1 && (taken[bTo] || bTo >= last)) bTo--;
+    const bt = off.batter;
+    runTrack(S, bt, bt.box, (b) => arrive(bt, b, bt.box, 0, 0), bTo, null);
+    S.ballAt(tc + 1, at, 1);
+    return result('E', bb, fd, false, bTo, runners, {});
+  }
+
+  // A ground ball an infielder fields: throws to first, force plays, double plays, infield hits.
+  function groundBall(g, c, path, D, off, S, stop) {
+    const B = T().BALL, E = T().ERR;
+    const fd = stop.fd, T0 = stop.t, P0 = stop.p;
+    const bb = bbType(c.la);
+    S.flight(path, T0);
+    S.fielder(fd.pos, reachT(fd, P0), P0);
+    S.fielder(fd.pos, T0, P0);
+    S.event(T0, 'field', { pos: fd.pos });
+    const forced = forcedOn(g);
+    const R = off.runners, bt = off.batter;
+    const tb = arrive(bt, 1, bt.box, 0, 0); // batter to first
+    // A fumble: everyone safe, a base each.
+    if (g.rng.chance(E.ground * fd.hands * (stop.dive ? E.hard : 1))) {
+      S.event(T0, 'error', { pos: fd.pos });
+      return errorPlay(g, c, D, off, S, fd, T0 + 1, P0, bb, 1);
+    }
+    const ready = T0 + fd.xfer + (stop.dive ? B.diveLoss : 0);
+    // When the ball can be at base b: thrown, or carried if he is close to the bag.
+    const busy = [fd.pos];
+    const ballAt = (b, from, t, thrower) => {
+      const d = dist(from, base(b));
+      if (d < 22) return t - (thrower.xfer) + runTime(d, thrower.speed, 0) * 0.9; // steps on the bag
+      const cv = cover(D, b, busy.concat([thrower.pos]));
+      return Math.max(t + throwTime(d, thrower.arm), cv.t);
+    };
+    // Runners: forced runners go on contact; the rest go only if they can beat a throw.
+    const tGo = (rn) => (rn.going ? 0 : rn.run.read);
+    const runT = (rn, b) => arrive(rn, b, tGo(rn), rn.s0, rn.v0);
+    const twoOut = g.outs === 2;
+    const plan = [null, null, null]; // each runner's base if the play goes to first
+    for (let i = 2; i >= 0; i--) {
+      const rn = R[i];
+      if (!rn) continue;
+      if (forced[i] || twoOut || rn.going) { plan[i] = Math.min(4, i + 2); continue; }
+      // Not forced: he goes if he thinks he beats a throw to his next base.
+      const est = ballAt(i + 2, P0, ready, fd) + B.tag - runT(rn, i + 2) + g.rng.normal(0, rn.run.judge);
+      const ahead = plan[i + 1];
+      const open = i === 2 || ahead === null || ahead > i + 2 || ahead === 4;
+      plan[i] = open && est > rn.run.dare ? i + 2 : i + 1;
+    }
+    // The defense's choice: the lead forced runner (or a runner breaking for home) if it's a sure out,
+    // with a relay to first for two; else the batter at first; with two outs, the easiest out.
+    const options = [];
+    for (let i = 2; i >= 0; i--) {
+      const rn = R[i];
+      if (!rn || plan[i] !== i + 2) continue;
+      const b = i + 2;
+      const tBall = ballAt(b, P0, ready, fd);
+      const tag = forced[i] ? 0 : B.tag;
+      options.push({ i: i, b: b, rn: rn, tBall: tBall, margin: runT(rn, b) - (tBall + tag), force: forced[i] });
+    }
+    const t1 = ballAt(1, P0, ready, fd);
+    const first = { i: -1, b: 1, rn: bt, tBall: t1, margin: tb - t1, force: true };
+    let choice = first;
+    if (twoOut) {
+      for (const o of options) if (o.force && o.margin > choice.margin) choice = o;
+    } else {
+      for (const o of options) if (o.margin > 0.12 && (choice === first || o.b > choice.b)) choice = o;
+    }
+    // A wild throw: the out isn't made and everyone moves up.
+    const throwD = dist(P0, base(choice.b));
+    if (throwD >= 22 && g.rng.chance(E.throw * fd.hands * throwD / 100 * (stop.dive ? E.hard : 1))) {
+      S.event(ready, 'throw', { pos: fd.pos, base: choice.b });
+      S.event(choice.tBall, 'error', { pos: fd.pos });
+      return errorPlay(g, c, D, off, S, fd, choice.tBall, base(choice.b), bb, 1);
+    }
+    const runners = [null, null, null];
+    let outs = 0, batterTo = 1, outAt = null;
+    const outsList = [];
+    S.event(ready, 'throw', { pos: fd.pos, base: choice.b });
+    S.ballAt(ready, P0, 4);
+    S.throwTo(choice.tBall, base(choice.b));
+    const firstOut = !safeBy(g, -choice.margin);
+    let relay = null;
+    if (firstOut) {
+      outs++;
+      outsList.push({ who: choice.i, b: choice.b, t: choice.tBall + (choice.force ? 0 : B.tag) });
+      // A relay to first for a double play (or a triple-play-free second out).
+      if (choice !== first && g.outs + 1 < 3) {
+        const pivot = cover(D, choice.b, [fd.pos]).fd;
+        const piv = choice.b === 2 && dist(P0, base(2)) < 22 ? fd : pivot;
+        const release = choice.tBall + Math.max(0.2, B.pivot - piv.release);
+        const t1b = Math.max(release + throwTime(dist(base(choice.b), base(1)), piv.arm), cover(D, 1, [fd.pos, piv.pos]).t);
+        relay = { t: t1b, release: release };
+        if (tb > t1b - 0.25 && !safeBy(g, t1b - tb)) {
+          outs++;
+          outsList.push({ who: -1, b: 1, t: t1b });
+          batterTo = 0;
+        }
+      } else if (choice === first) {
+        batterTo = 0;
+      }
+    }
+    // Where everyone ends.
+    for (let i = 2; i >= 0; i--) {
+      if (!R[i]) continue;
+      runners[i] = plan[i];
+      if (firstOut && choice.i === i) runners[i] = 0;
+    }
+    if (choice === first && !firstOut) batterTo = 1; // an infield hit
+    // Code.
+    let code;
+    const runnerOut = runners.some((x) => x === 0);
+    if (batterTo === 0 && runnerOut) code = 'DP';
+    else if (batterTo === 0) code = 'GO';
+    else if (runnerOut) code = 'FC';
+    else code = '1B';
+    // The third out on a force or on the batter: no runs count (game.js applies it). Runs never count
+    // on these plays, so runsCount stays unset.
+    // Script: the throw(s), the runners.
+    if (relay) { S.ballAt(relay.release, base(choice.b), 4); S.throwTo(relay.t, base(1)); }
+    for (const o of outsList) S.event(o.t, 'out', { id: o.who < 0 ? bt.id : R[o.who].id, base: o.b });
+    for (let i = 2; i >= 0; i--) {
+      const rn = R[i];
+      if (!rn) continue;
+      const o = outsList.find((x) => x.who === i);
+      runTrack(S, rn, tGo(rn), (b) => runT(rn, b), o ? o.b - 1 : runners[i], o ? { base: o.b, t: o.t } : null);
+    }
+    const bo = outsList.find((x) => x.who === -1);
+    runTrack(S, bt, bt.box, (b) => arrive(bt, b, bt.box, 0, 0), bo ? 0 : batterTo, bo ? { base: 1, t: bo.t } : null);
+    if (code === '1B') S.event(tb, 'safe', { id: bt.id, base: 1 });
+    return result(code, bb, fd, false, batterTo, runners, {});
+  }
+
+  // An error: the batter is safe at first (or second), and runners move up `extra` bases past where they
+  // were.
+  function errorPlay(g, c, D, off, S, fd, t, at, bb, extra) {
+    const runners = [null, null, null];
+    let last = 5;
+    for (let i = 2; i >= 0; i--) {
+      const rn = off.runners[i];
+      if (!rn) continue;
+      let to = Math.min(4, i + 1 + extra);
+      if (to < 4 && to >= last) to = last - 1;
+      runners[i] = to; last = to;
+      const t0 = rn.going ? 0 : rn.run.read;
+      runTrack(S, rn, t0, (b) => arrive(rn, b, t0, rn.s0, rn.v0), to, null);
+    }
+    let bTo = g.rng.chance(0.25) ? 2 : 1;
+    if (bTo >= last) bTo = 1;
+    const bt = off.batter;
+    runTrack(S, bt, bt.box, (b) => arrive(bt, b, bt.box, 0, 0), bTo, null);
+    S.ballAt(t + 0.8, [at[0] + 15, at[1] + 10], 0);
+    return result('E', bb, fd, false, bTo, runners, {});
+  }
+
+  // A hit to the outfield (or a ball that drops in): runners take what the throw allows.
+  function hit(g, c, path, D, off, S, got, inAir) {
+    const B = T().BALL;
+    const fd = got.fd, tp = got.t, pp = got.p;
+    const bb = bbType(c.la);
+    S.flight(path, tp);
+    S.fielder(fd.pos, reachT(fd, pp), pp);
+    S.fielder(fd.pos, tp, pp);
+    S.event(tp, 'field', { pos: fd.pos });
+    if (path.wall && path.wall.t < tp) S.event(path.wall.t, 'wall');
+    const ready = tp + B.gather + fd.xfer;
+    S.ballAt(ready, pp, 5);
+    const tBall = (b) => Math.max(ready + throwTime(dist(pp, base(b)), fd.arm), cover(D, b, [fd.pos]).t);
+    const R = off.runners, bt = off.batter;
+    const twoOut = g.outs === 2;
+    const landT = path.land ? path.land.t : 0;
+    // When each runner really starts: with two outs on contact; on a ball in the air that might be
+    // caught, from halfway when it lands; on a ground ball, after his read.
+    const start = (rn) => {
+      if (rn.going) return { t: 0, s: rn.s0, v: rn.v0 };
+      if (twoOut) return { t: rn.run.read, s: rn.s0, v: 0 };
+      if (inAir) return { t: landT, s: Math.max(rn.s0, B.halfway * 90), v: rn.run.speed * 0.4 };
+      return { t: rn.run.read, s: rn.s0, v: 0 };
+    };
+    const forced = forcedOn(g);
+    const plans = [];
+    let aheadEnd = 5;
+    for (let i = 2; i >= 0; i--) {
+      const rn = R[i];
+      if (!rn) { plans[i] = null; continue; }
+      const st = start(rn);
+      const at = (b) => arrive(rn, b, st.t, st.s, st.v);
+      let to = forced[i] ? i + 2 : i + 1;
+      // He keeps going while he judges he'll make the next base with his margin to spare.
+      while (to < 4) {
+        const nb = to + 1;
+        if (nb >= aheadEnd && nb < 4) break;
+        const est = tBall(nb) + B.tag - at(nb) + g.rng.normal(0, rn.run.judge);
+        if (est > rn.run.dare) to = nb; else break;
+      }
+      if (to < 4 && to >= aheadEnd) to = aheadEnd - 1;
+      plans[i] = { rn: rn, to: to, at: at, st: st };
+      aheadEnd = to;
+    }
+    // The batter-runner (never thrown out trying to stretch it: Claude's default for M1).
+    const bAt = (b) => arrive(bt, b, bt.box, 0, 0);
+    let bTo = 1;
+    while (bTo < 4) {
+      const nb = bTo + 1;
+      if (nb >= aheadEnd && nb < 4) break;
+      const margin = tBall(nb) + B.tag - bAt(nb);
+      if (margin > bt.run.dare * 0.5 && margin + g.rng.normal(0, bt.run.judge) > bt.run.dare) bTo = nb; else break;
+    }
+    // The throw: to the runner with the closest play, if there is one.
+    let target = null;
+    for (let i = 2; i >= 0; i--) {
+      const pl = plans[i];
+      if (!pl) continue;
+      const free = forced[i] ? i + 2 : i + 1;
+      if (pl.to <= free && pl.to < 4) continue;
+      const m = tBall(pl.to) + B.tag - pl.at(pl.to);
+      if (m < 0.4 && (!target || m < target.m)) target = { i: i, pl: pl, m: m };
+    }
+    const runners = [null, null, null];
+    let outT = null, outIdx = -1;
+    if (target) {
+      const tb = tBall(target.pl.to);
+      S.event(ready, 'throw', { pos: fd.pos, base: target.pl.to });
+      S.throwTo(tb, base(target.pl.to));
+      if (!safeBy(g, target.m) && g.outs < 3) { outIdx = target.i; outT = tb + B.tag; }
+      // The batter takes an extra base on a throw home or to third, if it is open.
+      if (target.pl.to >= 3 && bTo < 3) {
+        const nb = bTo + 1;
+        const blocked = plans.some((pl, j) => pl && j !== outIdx && pl.to === nb);
+        if (!blocked && nb < target.pl.to && bAt(nb) < tb + 0.7) bTo = nb;
+      }
+    } else {
+      S.throwTo(ready + throwTime(dist(pp, base(2)) * 0.7, fd.arm), lerp(pp, base(2), 0.7), 5);
+    }
+    let runsCount;
+    for (let i = 2; i >= 0; i--) {
+      const pl = plans[i];
+      if (!pl) continue;
+      runners[i] = i === outIdx ? 0 : pl.to;
+      if (i === outIdx) {
+        runTrack(S, pl.rn, pl.st.t, pl.at, pl.to - 1, { base: pl.to, t: outT }, pl.st.s, pl.st.v);
+        S.event(outT, 'out', { id: pl.rn.id, base: pl.to });
+      } else {
+        runTrack(S, pl.rn, pl.st.t, pl.at, pl.to, null, pl.st.s, pl.st.v);
+      }
+    }
+    if (outIdx >= 0 && g.outs + 1 === 3) {
+      // A timing play: runs that crossed before the tag count.
+      runsCount = plans.every((pl, j) => !pl || j === outIdx || pl.to !== 4 || pl.at(4) < outT);
+    }
+    runTrack(S, bt, bt.box, bAt, bTo, null);
+    const code = ['', '1B', '2B', '3B', 'HR'][bTo];
+    const extra = {};
+    if (runsCount !== undefined) extra.runsCount = runsCount;
+    // An inside-the-park home run is still a home run, so every runner scores.
+    return result(code, bb, fd, false, bTo, runners, extra);
+  }
+
+  // ---- Entry points ----
+
+  function inPlay(g, contact, steal) {
+    const B = T().BALL;
+    const pitch = g.pitch;
+    const w = B3.pitch.who(g);
+    const D = defense(g, w.bats);
+    const off = offense(g, steal, pitch);
+    const path = flight(contact);
+    const S = new Script(D);
+    if (!path.fair) {
+      // A foul: caught in foul ground for an out, or dead.
+      const best = path.land ? bestCatch(path, D, true) : null;
+      if (best && best.margin > -0.3 && g.rng.chance(logistic((best.margin - T().BALL.catchAt) / T().BALL.catchSd))) {
+        const play = caughtBall(g, contact, path, D, off, S, best);
+        play.script = S.done();
+        return play;
+      }
+      S.flight(path, path.land ? path.land.t : Infinity);
+      S.event(path.land ? path.land.t : 0, 'foul');
+      for (let i = 0; i < 3; i++) if (off.runners[i]) S.runner(off.runners[i], pathPt(i + 1, off.runners[i].s0));
+      return { foul: true, script: S.done() };
+    }
+    if (path.hr) {
+      // A leap at the wall can take one back.
+      const rob = bestCatch(path, D, false);
+      if (rob && rob.margin > 0 && path.pts[rob.k][4] > path.fence - 6 && g.rng.chance(0.35)) {
+        const play = caughtBall(g, contact, path, D, off, S, rob);
+        play.script = S.done();
+        return play;
+      }
+      const play = homeRun(g, contact, path, D, off, S);
+      play.script = S.done();
+      return play;
+    }
+    const inAir = !path.land || path.land.r > 40 || contact.la >= 10;
+    const penalty = {};
+    if (inAir) {
+      const best = bestCatch(path, D, false);
+      if (best && best.margin > -0.4) {
+        const p = best.margin >= 0.35 ? 1 : logistic((best.margin - B.catchAt) / B.catchSd);
+        if (g.rng.chance(p)) {
+          const play = caughtBall(g, contact, path, D, off, S, best);
+          play.script = S.done();
+          return play;
+        }
+        penalty[best.fd.pos] = best.margin < 0 ? B.getUp : 0.3; // he dove or reached and missed
+        if (path.wall) S.event(path.wall.t, 'wall');
+      }
+    }
+    const ground = !path.land || path.land.r < 110 || contact.la < 10;
+    if (ground) {
+      const stop = infieldStop(g, path, D);
+      if (stop && !penalty[stop.fd.pos]) {
+        const play = groundBall(g, contact, path, D, off, S, stop);
+        play.script = S.done();
+        return play;
+      }
+    }
+    if (path.land) S.event(path.land.t, 'land');
+    const got = firstToBall(path, D, penalty, ground ? B.infield : 0);
+    const play = hit(g, contact, path, D, off, S, got, inAir && !ground);
+    play.script = S.done();
+    return play;
+  }
+
+  // A steal: the runner's jump and speed against the delivery, the pitch's flight and the catcher's
+  // release and arm (Arm plus Hands' quick release).
+  function steal(g, from, pitch) {
+    const B = T().BALL, ST = T().STEAL;
+    const rn = g.bases[from - 1];
+    const run = g.teams[g.half].inp[rn.id].run;
+    const D = defense(g, 'R');
+    const c = D.C;
+    const lead = B.lead[from - 1] + ST.secondLead[from - 1];
+    const tRun = run.jump + runTime(90 - lead, run.speed, 0);
+    const cv = cover(D, from + 1, ['C']);
+    const tBall = Math.max(ST.delivery + (pitch ? pitch.ms / 1000 : 0.4) + c.xfer + throwTime(dist(c.at, base(from + 1)), c.arm), cv.t);
+    return g.rng.chance(logistic((tBall + B.tag - tRun + g.rng.normal(0, ST.sd)) / B.playSd));
+  }
+
+  // A tag-up after a catch: the runner leaves when the ball is caught (or when he is back on the bag).
+  function tagup(g, play, from) {
+    const B = T().BALL;
+    const m = play.meta;
+    const rn = g.bases[from - 1];
+    const run = g.teams[g.half].inp[rn.id].run;
+    const D = defense(g, 'R');
+    const fd = D[m.fielder];
+    const leave = Math.max(m.catchT, m.back[from - 1] || 0) + run.read * 0.5;
+    const tRun = leave + runTime(90, run.speed, 0);
+    const cv = cover(D, from + 1, [fd.pos]);
+    const tBall = Math.max(m.catchT + fd.xfer + throwTime(dist(m.catchAt, base(from + 1)), fd.arm), cv.t);
+    const safe = safeBy(g, tBall + B.tag - tRun);
+    // The script: the runner leaves the bag and the throw comes in.
+    const S = play.script;
+    if (S) {
+      const tr = S.runners.find((r) => r.id === rn.id);
+      const end = safe ? tRun : tBall + B.tag;
+      const p = safe ? base(from + 1) : lerp(base(from), base(from + 1), 0.96);
+      if (tr) {
+        tr.path.push([r2(Math.max(leave, tr.path[tr.path.length - 1][0])), r1(base(from)[0]), r1(base(from)[1])]);
+        tr.path.push([r2(end), r1(p[0]), r1(p[1])]);
+        tr.end = safe ? from + 1 : 0;
+      }
+      S.ball.push([r2(m.catchT + fd.xfer), r1(m.catchAt[0]), r1(m.catchAt[1]), 6]);
+      S.ball.push([r2(tBall), r1(base(from + 1)[0]), r1(base(from + 1)[1]), 4]);
+      S.events.push({ t: r2(m.catchT + fd.xfer), e: 'throw', pos: fd.pos, base: from + 1 });
+      S.events.push({ t: r2(end), e: safe ? (from + 1 === 4 ? 'score' : 'safe') : 'out', id: rn.id, base: from + 1 });
+      S.events.sort((a, b) => a.t - b.t);
+      S.t = r2(Math.max(S.t, end, tBall));
+    }
+    return safe;
+  }
+
+  B3.ball = {
+    inPlay: inPlay,
+    steal: steal,
+    tagup: tagup,
+    flight: flight,
+    runTime: runTime,
+    throwTime: throwTime
+  };
+})(typeof globalThis !== 'undefined' ? globalThis : this);

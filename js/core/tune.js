@@ -39,9 +39,30 @@
   };
   const STAMINA = { SP: 92, LR: 50, other: 28 }; // placeholder Stamina by role, in pitches
 
-  // Fielding. (Step 1.2 task 7 adds Range, Hands and Arm.)
+  // Fielding. A null takes the position's value from POS below (a fielder's inputs don't move with
+  // his position in a game: there are no defensive substitutions in M1).
   const FLD = {
+    react: null,       // Range: first step, seconds before he moves after contact
+    route: 0.92,       // Range: share of his top speed he keeps on the way to the ball (the route)
+    hands: 1,          // Hands: error rate multiplier (0.5 is half as many fumbles, drops and wild throws)
+    release: 0,        // Hands: seconds taken off every catch-and-throw (quick release; double-play pivots)
+    arm: null,         // Arm: throw speed in mph
     framing: 0         // Framing (catchers): feet the borderline edge of the zone moves toward strikes
+  };
+  // Position values: [react s, arm mph, catch-to-throw s]. Shortstops and center fielders start quickest.
+  const POS = {
+    P: [0.55, 80, 0.75], C: [0.45, 80, 0.72], '1B': [0.32, 76, 0.6], '2B': [0.28, 78, 0.55],
+    '3B': [0.28, 84, 0.7], SS: [0.26, 85, 0.62], LF: [0.42, 85, 0.95], CF: [0.36, 87, 0.9], RF: [0.42, 89, 0.95],
+    DH: [0.4, 80, 0.8]
+  };
+
+  // Running.
+  const RUN = {
+    speed: 27,         // Speed: top sprint speed, feet per second (also a fielder's speed to the ball)
+    read: 0.2,         // Baserunning: seconds to read a ball in play and break
+    jump: 0.12,        // Baserunning: seconds lost on the jump when stealing
+    judge: 0.14,       // Baserunning: seconds of error when he judges an extra base (lower is better)
+    dare: 0.2          // tendency: seconds of margin he wants before taking an extra base
   };
 
   // ---- Physics and rules numbers ----
@@ -108,6 +129,58 @@
     contactSd: 0.03    // share of the *where* spread taken off against an opposite-handed pitcher (added against same)
   };
 
+  // Ball flight, fielding, throws and running (M1 step 1.2 task 7).
+  const BALL = {
+    drag: 0.0019,      // air drag per foot (sets carry: 100 mph at 28 degrees goes about 390 ft)
+    lift: 0.0009,      // backspin lift per foot on balls hit in the air
+    dt: 0.02,          // integration step in the air, seconds
+    sample: 0.1,       // the ball's path is kept every this many seconds (fielding and the play script)
+    startHeight: 3,    // feet: the ball's height at contact
+    bounceUp: 0.42,    // share of the downward speed kept on a bounce
+    bounceOn: 0.78,    // share of the forward speed kept on a bounce
+    rolling: 4,        // ft/s of bounce below which the ball rolls (slowing at a steady rate)
+    rollDecel: 9,      // ft/s per second a rolling ball slows (grass)
+    wallBack: 0.2,     // share of speed a ball keeps bouncing off the wall
+    maxTime: 12,       // seconds: a guard
+    reach: 8,          // feet: a fielder can catch a ball this high (with a reach or jump)
+    wallReach: 10.5,   // feet: a leap at the wall
+    fieldHeight: 3.5,  // feet: a bouncing ball this low can be fielded
+    catchSd: 0.09,     // seconds: how sharply a catch's chance falls off with the margin
+    catchAt: 0.05,     // seconds of margin for an even chance at a running or diving catch
+    diveLoss: 0.6,     // seconds a diving stop adds before the throw
+    getUp: 1.0,        // seconds a fielder loses chasing a ball he dove for and missed
+    gather: 0.25,      // seconds to pick up a ball in the outfield
+    accel: 20,         // ft/s per second: how fast runners and fielders reach top speed
+    throwShort: 0.9,   // average speed of a throw as a share of release speed, up to 150 ft
+    throwLong: 0.8,    // ... for longer throws (an arc or a bounce)
+    tag: 0.12,         // seconds to apply a tag (a force needs none)
+    playSd: 0.07,      // seconds: how sharply a close play's chance falls off
+    turn: 0.12,        // seconds a runner loses rounding a base
+    batterBox: 0.3,    // seconds out of the box after the swing
+    lefty: 0.08,       // seconds a left-handed batter saves to first
+    pivot: 0.45,       // seconds for the pivot man to catch and throw on a double play
+    infield: 125,      // feet: grounders past this have left the infield
+    lead: [12, 18, 12], // feet: leads off first, second and third
+    halfway: 0.45,     // share of the way a runner goes on a fly ball that may be caught
+    foulRoom: 28,      // feet of foul ground beyond the lines where a foul fly can be caught
+    backstop: 55       // feet behind home plate to the backstop
+  };
+
+  // Errors (Hands sets the multiplier). About 0.5 errors a team-game is the target (DESIGN.md section 7).
+  const ERR = {
+    ground: 0.016,     // a fumbled ground ball
+    throw: 0.009,      // a wild throw, per 100 ft of throw
+    fly: 0.006,        // a dropped fly ball or line drive
+    hard: 2            // multiplier on a diving or running play
+  };
+
+  // Steals: the runner against the pitcher's delivery, the pitch's flight and the catcher's throw.
+  const STEAL = {
+    delivery: 1.05,    // seconds from the pitcher's first move to release (from the stretch)
+    secondLead: [5, 9], // extra feet of lead a stealing runner takes off first and off second
+    sd: 0.12           // seconds of noise on a steal play
+  };
+
   function has(o, k) { return o && Object.prototype.hasOwnProperty.call(o, k); }
 
   function merge(base, over) {
@@ -116,7 +189,7 @@
     return out;
   }
 
-  // One player's inputs for the physics: { bats, throws, bat, pit, fld }. The game makes these at start.
+  // One player's inputs for the physics: { bats, throws, bat, pit, fld, run }. The game makes these at start.
   function inputs(player) {
     const sim = player.sim || {};
     const pit = merge(PIT, sim.pit);
@@ -128,12 +201,13 @@
       throws: player.throws || 'R',
       bat: merge(BAT, sim.bat),
       pit: pit,
-      fld: merge(FLD, sim.fld)
+      fld: merge(FLD, sim.fld),
+      run: merge(RUN, sim.run)
     };
   }
 
   B3.tune = {
-    BAT: BAT, PIT: PIT, STAMINA: STAMINA, FLD: FLD,
+    BAT: BAT, PIT: PIT, STAMINA: STAMINA, FLD: FLD, POS: POS, RUN: RUN, BALL: BALL, ERR: ERR, STEAL: STEAL,
     PITCH: PITCH, TYPE: TYPE, SWING: SWING, TIMING: TIMING, PLATOON: PLATOON,
     inputs: inputs
   };

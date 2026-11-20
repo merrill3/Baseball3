@@ -1,9 +1,9 @@
-**Docs version: 10** (2026-11-20): Session 3, M1 task 6: pitches, the two-error swing and contact (`tune.js`, `pitch.js`, `tools/contact.js`).
+**Docs version: 11** (2026-11-20): Session 3: task 7 in progress (ball.js written, placeholder.js removed); `state.md` holds the resume notes.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 3 (M1 step 1.2) is in progress on the branch `claude/baseball3-session-3-m1-u6m8f7` (it holds all of Sessions 1–2 from `ccr-6e229fc2-je0w02`). The plan check is done and reported (below, before task 6); the owner chose handedness with a small platoon edge. Task 6 is done. Next: task 7. Nothing is merged to `main` yet (that needs the owner's OK). If this session stops early, resume with: "Continue Session 3 of Baseball3 (merrill3/Baseball3) on the branch claude/baseball3-session-3-m1-u6m8f7. Read CLAUDE.md, then the "Stopped at:" line in docs/plan.md. Finish M1 step 1.2 only (tasks 6–8). Baseball1 is reference only; never change it."
+**Stopped at:** Session 3 (M1 step 1.2) paused mid task 7 on the branch `claude/baseball3-session-3-m1-u6m8f7` because the usage window was nearly full. The plan check and task 6 are done; task 7's `ball.js` is written and committed as work in progress (all tests and the 1,000-game check pass), with fixes, tests and docs still to do. **Read `state.md`** for the details and the next steps. Nothing is merged to `main`. Resume with: "Continue Session 3 of Baseball3 (merrill3/Baseball3) on the branch claude/baseball3-session-3-m1-u6m8f7. Read CLAUDE.md, then the "Stopped at:" line in docs/plan.md, then state.md. Finish M1 step 1.2 only (the rest of task 7, then task 8). Baseball1 is reference only; never change it."
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 

@@ -68,11 +68,13 @@
       return { swing: true, timing: B3.pitch.cpuTiming(g, g.pitch) };
     },
 
-    // Tag from third on a fly or a liner; sometimes from second on a fly.
+    // Tag from third on a catch in the outfield; sometimes from second on a deep fly (placeholder
+    // depths until step 1.3; dist is null when unknown).
     tagup: function (d, g) {
       if (d.code === 'PO') return { go: false };
-      if (d.from === 3) return { go: true };
-      if (d.from === 2) return { go: d.code === 'FO' && g.rng.chance(0.35) };
+      const deep = (ft) => d.dist === null || d.dist === undefined || d.dist >= ft;
+      if (d.from === 3) return { go: deep(220) };
+      if (d.from === 2) return { go: d.code === 'FO' && deep(300) && g.rng.chance(0.5) };
       return { go: false };
     }
   };

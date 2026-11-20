@@ -130,8 +130,8 @@
     const pull = S.pullAt0 + S.sprayPerMs * tm - S.insidePull * inside + r.normal(0, w.b.bat.sprayNoise);
     const sp = w.bats === 'R' ? pull : -pull;
     out.contact = { ev: Math.round(Math.max(20, ev) * 10) / 10, la: Math.round(clamp(la, -80, 89) * 10) / 10, sp: Math.round(sp * 10) / 10 };
-    // A ball outside the foul lines is a foul for now (step 1.2 task 7 lets fielders catch foul flies).
-    out.r = Math.abs(sp) > S.foulLine ? 'F' : 'X';
+    // A ground ball outside the lines is a foul; a ball in the air goes to B3.ball, which may catch it.
+    out.r = Math.abs(sp) > S.foulLine && la < 10 ? 'F' : 'X';
     return out;
   }
 

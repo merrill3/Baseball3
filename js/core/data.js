@@ -37,7 +37,36 @@
     return Math.max(Math.abs(x) - ZONE.halfWidth, ZONE.bottom - z, z - ZONE.top);
   }
 
+  // The field in feet, from above: home plate at (0, 0), y toward center field, x toward the first-base
+  // side. One standard park in M1 (Claude's default; park sizes come with the league in M2).
+  const D2R = Math.PI / 180;
+  function polar(r, sp) { return [r * Math.sin(sp * D2R), r * Math.cos(sp * D2R)]; }
+  const FIELD = {
+    bases: [[0, 0], [63.64, 63.64], [0, 127.28], [-63.64, 63.64]], // home, first, second, third
+    fence: [[0, 400], [25, 375], [45, 330]], // [degrees from center, feet], straight lines between
+    wall: 8, // feet
+    // Where fielders stand for an average batter (spray in degrees, plus toward right field; feet from home).
+    pos: {
+      P: [0, 56], C: [0, -3],
+      '1B': polar(104, 37), '2B': polar(148, 14), SS: polar(148, -13), '3B': polar(104, -36),
+      LF: polar(290, -27), CF: polar(318, 0), RF: polar(290, 27)
+    },
+    shade: { infield: 3, outfield: 4 } // degrees fielders shift toward a batter's pull side
+  };
+  // The fence's distance at a spray angle.
+  function fenceAt(sp) {
+    const a = Math.min(45, Math.abs(sp)), f = FIELD.fence;
+    for (let i = 1; i < f.length; i++) {
+      if (a <= f[i][0]) return f[i - 1][1] + (f[i][1] - f[i - 1][1]) * (a - f[i - 1][0]) / (f[i][0] - f[i - 1][0]);
+    }
+    return f[f.length - 1][1];
+  }
+
   B3.data = {
+    FIELD: FIELD,
+    FIELDERS: ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'],
+    polar: polar,
+    fenceAt: fenceAt,
     // Lineup positions with the designated hitter (pitchers don't bat).
     LINEUP_POS: ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'],
     OUTFIELD: ['LF', 'CF', 'RF'],
