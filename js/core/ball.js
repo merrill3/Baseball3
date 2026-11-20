@@ -8,7 +8,7 @@
 //   B3.ball.tagup(g, play, from)       true if the runner tagging from `from` is safe; adds to the script
 //   B3.ball.flight(contact)            the ball's path: { pts: [[t, x, y, z]], land, hr, wall, stop }
 //
-// Every rating hook it uses is an input from B3.tune.inputs: fielders' Range (react, route), Hands
+// Every rating hook it uses is an input from B3.ratings.inputs (B3.tune.inputs): fielders' Range (react, route), Hands
 // (hands, release), Arm (arm) and catchers' arm and release on steals; runners' Speed (speed) and
 // Baserunning (read, jump, judge). Times are seconds from contact; positions are
 // feet on the field (B3.data.FIELD: home at 0, 0; y toward center; x toward first base).

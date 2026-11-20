@@ -1,6 +1,6 @@
 # Diamond Dash (Baseball3): design decisions
 
-Every product decision for Baseball3, with who made it. So far the rules, the game loop, pitches, swings and balls in play are built (M1 steps 1.1–1.2, headless); this file says what will be built. `docs/plan.md` says when.
+Every product decision for Baseball3, with who made it. So far the rules, the game loop, pitches, swings, balls in play, the hitting and pitching ratings and the CPU's choices are built (M1 steps 1.1–1.3, headless); this file says what will be built. `docs/plan.md` says when.
 
 **Labels**
 - **Owner's choice:** the owner decided it.
@@ -209,7 +209,7 @@ League games, over several simulated seasons. M1 tunes the league-wide rates; M2
 
 ## 10. Ratings (owner's choices, Nov 20, 2026, from the ratings interview)
 
-The owner was interviewed on a full ratings redesign in a separate chat (merrill3/Baseball1, branch `ccr-a97b9715-fnzb96`, `docs/ratings-interview.md`; that branch is not merged and Baseball1 is unchanged). In Session 2 the owner chose to build it in Baseball3, answered the open points, and confirmed this summary. The interview's three rules: each rating has a unique job; a point of each rating is worth about the same (curves allowed); each rating ties to stats that track performance over the long run. M1 step 1.2 built the physical inputs each rating will set (the "rating hooks" in ARCHITECTURE.md), one per job below; the ratings themselves (20–99, the curve, the overall) come in steps 1.3–1.4 and M2.
+The owner was interviewed on a full ratings redesign in a separate chat (merrill3/Baseball1, branch `ccr-a97b9715-fnzb96`, `docs/ratings-interview.md`; that branch is not merged and Baseball1 is unchanged). In Session 2 the owner chose to build it in Baseball3, answered the open points, and confirmed this summary. The interview's three rules: each rating has a unique job; a point of each rating is worth about the same (curves allowed); each rating ties to stats that track performance over the long run. M1 step 1.2 built the physical inputs each rating sets (the "rating hooks" in ARCHITECTURE.md), one per job below; step 1.3 maps the hitting and pitching ratings onto them (step 1.4 the defense and running ones; the overall comes in M2).
 
 **Hitting.** A swing has two errors: *when* (timing, in ms) and *where* (bat height against the ball). Six hitting ratings, plus Speed (under running):
 
@@ -258,6 +258,16 @@ The owner was interviewed on a full ratings redesign in a separate chat (merrill
 - The equal-value check in section 7 (±20%).
 - The overall as a near-plain average of the ratings, weighted by position; M2 checks that it still tracks WAR.
 - Exact numbers: where the steep curve starts and how steep it is, the cap on combination bonuses, how strongly ratings correlate in generation, and how Speed fits the value budget.
+
+**How the ratings and the CPU's choices work** (Claude's defaults, M1 step 1.3; the numbers are in `B3.tune` and get calibrated in step 1.4)
+- **Scale:** each rating sets its own physical inputs; 60 gives the average big-leaguer's value. +10 points is one step: a spread or noise shrinks by a fixed share, a speed or share grows by a fixed amount.
+- **The steep curve:** past 85 a rating plays higher: 90 like 91.25, 95 like 100, 99 like 108.8. **The cap:** in each group (the hitting ratings; the pitching ratings with every pitch grade) only the biggest such extra counts in full, the others at half, and together they add at most 12 points. Stamina is outside the cap.
+- **Stamina:** one scale for every role, in pitches before fatigue: 30 is 28 pitches, 60 is 92, 80 is 110. Relievers are low-Stamina pitchers.
+- **The arsenal:** a pitch's grade (20–99) scales its movement and bite; its shape (−1 fly-ball tilt to +1 ground-ball tilt) tilts the launch angle by up to 4°, without adding movement. The put-away pitch is the best grade (a tie goes to the type that misses the most bats).
+- **Swing or take (CPU hitters):** the hitter judges where the pitch will cross. He reads part of its movement (Recognition against Deception) and takes the rest for a fastball's, so a slider off the plate or a curve in the dirt can look like a strike. Discipline sets the noise in that judgment and a lean toward seeing balls as strikes (poor Discipline shows mostly as chasing). He swings when it looks inside a line set by the count (he takes the corners early and protects with two strikes), and early in the count he sometimes takes all the way. Aggressiveness skips some of those takes and moves the line out in step with his lean (Patient: the reverse).
+- **The pitch (CPU pitchers):** the type by its usual share and its grade, fastballs when behind, the put-away pitch with two strikes; in the zone by a chance set by the count, or just off the plate (low for pitches that sink or break). Aim moves both: a nibbler works the corners and the edges, an attacker comes in toward the middle.
+- **Pitching changes (CPU):** a starter leaves when tired (past his Stamina) or hit hard; relievers by fatigue, runs and role (closers and setup men pitch one inning). Steals and tag-ups keep step 1.1's simple choices until step 1.4.
+- **Physics added in step 1.3** so each rating's job shows: a mistimed swing has less of the bat in the ball's path and misses more; pitches faster than a hitter's comfort make him late (Velocity against Timing); a pitch away from the middle is harder to square up and comes off the bat slower, so swinging at balls costs.
 
 ## 11. Later and parked
 - **Clutch:** parked for later (owner's choice, Nov 20, 2026).
