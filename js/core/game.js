@@ -348,10 +348,12 @@
     f.live[f.pitcher].outs += n;
   }
 
-  function scoreRun(g, pa, runner) {
+  // A run is earned unless its runner reached on an error, was the placed runner, or scored on an error
+  // play (unearned: true). The full rule (replaying the inning without the errors) waits for M2.
+  function scoreRun(g, pa, runner, unearned) {
     g.score[g.half]++;
     g.halfRuns++;
-    pa.sc.push({ r: runner.id, p: runner.resp, er: runner.earned ? 1 : 0 });
+    pa.sc.push({ r: runner.id, p: runner.resp, er: runner.earned && !unearned ? 1 : 0 });
     fld(g).live[runner.resp].runs++;
     if (g.half === 1 && g.inning >= g.rules.innings && g.score[1] > g.score[0]) g.walkoff = true;
   }
@@ -496,7 +498,7 @@
     if (runsCount) {
       for (const s of scorers) {
         if (g.walkoff && play.code !== 'HR') break;
-        scoreRun(g, pa, s.runner);
+        scoreRun(g, pa, s.runner, play.code === 'E');
         if (g.walkoff && winFrom === null) winFrom = s.from;
       }
     }

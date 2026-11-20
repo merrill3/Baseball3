@@ -164,6 +164,7 @@
     infield: 125,      // feet: grounders past this have left the infield
     lead: [12, 18, 12], // feet: leads off first, second and third
     halfway: 0.45,     // share of the way a runner goes on a fly ball that may be caught
+    dropRead: 1,       // a runner at halfway breaks this many reads (RUN.read) after the ball drops
     foulRoom: 28,      // feet of foul ground beyond the lines where a foul fly can be caught
     backstop: 55       // feet behind home plate to the backstop
   };

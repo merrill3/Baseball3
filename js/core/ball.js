@@ -679,11 +679,11 @@
     const twoOut = g.outs === 2;
     const landT = path.land ? path.land.t : 0;
     // When each runner really starts: with two outs on contact; on a ball in the air that might be
-    // caught, from halfway when it lands; on a ground ball, after his read.
+    // caught, from halfway once he reads that it drops (Baserunning); on a ground ball, after his read.
     const start = (rn) => {
       if (rn.going) return { t: 0, s: rn.s0, v: rn.v0 };
       if (twoOut) return { t: rn.run.read, s: rn.s0, v: 0 };
-      if (inAir) return { t: landT, s: Math.max(rn.s0, B.halfway * 90), v: rn.run.speed * 0.4 };
+      if (inAir) return { t: landT + rn.run.read * B.dropRead, s: Math.max(rn.s0, B.halfway * 90), v: rn.run.speed * 0.4 };
       return { t: rn.run.read, s: rn.s0, v: 0 };
     };
     const forced = forcedOn(g);

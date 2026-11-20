@@ -41,9 +41,15 @@ Baseball1 (merrill3/Baseball1, also called "Diamond Dash") is the reference. Its
   - Official scoring rules: on a walk-off only the runs needed to win count, except on a home run, and the batter gets only as many bases as the winning run moved; runs don't count on a play that makes the third out by a force or on the batter; runners keep their order.
   - Runners can steal second and third, not home. In a double steal the catcher throws to the lead runner.
   - On a tag-up only the lead runner can go (the owner's choice: you send the lead runner); trailing runners hold.
-  - No dropped third strike. No RBI on a run that scores on an error or a ground-ball double play. Until errors are real (step 1.2), a run is earned unless its runner reached on an error or was the placed runner.
+  - No dropped third strike. No RBI on a run that scores on an error or a ground-ball double play. A run is earned unless its runner reached on an error, scored on an error play, or was the placed runner (a simple rule, extended in step 1.2; the full rule, replaying the inning without the errors, comes with ERA in M2 step 2.2).
   - The CPU changes pitchers only between batters; you can change between any two pitches. No three-batter minimum for relievers.
   - Hit by pitch, bunts, balks, wild pitches, pickoffs, pinch hitters and defensive substitutions are out (after the release, as in docs/plan.md). Catchers' Blocking waits for wild pitches (section 10).
+- **Ball-in-play details** (Claude's defaults, set in M1 step 1.2):
+  - One standard park in M1: 330 ft down the lines, 375 ft in the gaps, 400 ft to center, an 8 ft wall. Park sizes come with the league in M2.
+  - Foul flies and pop-ups can be caught for outs, only in foul ground near the lines and behind the plate. No foul tips and no ground-rule doubles: a ball that bounces stays in play. A leap at the wall can take back a home run.
+  - Errors always put the batter on base (a fumble, a wild throw or a dropped fly), charged to the fielder. Errors that only give runners an extra base on a hit come later.
+  - The batter-runner is never thrown out stretching a hit in M1: he takes an extra base only when he judges he'll make it. Runners already on base can be thrown out taking one.
+  - Runners who were stealing get their jump on a ball in play, and must go back on a ball caught in the air, so they can be doubled off.
 
 ## 3. Look and motion (confirmed Nov 20, 2026)
 - Starting idea: sleek near-black silhouettes with team-color trim (cap, sleeves, number), a light rim highlight, belt and sock trim, dark hands. Drawn simply. The final look is settled at the interview before M4 [19].

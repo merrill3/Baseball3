@@ -121,6 +121,20 @@ module.exports = function (t) {
     assert.strictEqual(g.line[1].length, 8);
   });
 
+  t.test('earned runs: unearned when the runner reached on an error or scored on an error play', () => {
+    const err = (g) => ({ code: 'E', bb: 'ground', fielder: 'SS', caught: false, batter: 1, runners: up(1)(g) });
+    const g = playGame(scripted({
+      '1.0': [single, double, 'K', 'K', 'K'],     // the runner on first scores on the double: earned
+      '2.0': [single, single2, err, 'K', 'K', 'K'], // single; single moves him to third; he scores on the error: unearned
+      '3.0': [err, double, 'K', 'K', 'K']           // he reached on an error and scores on a hit: unearned
+    }), { type: 'regular' });
+    const runs = (i) => pas(g, i, 0).flatMap((e) => e.sc);
+    eq(runs(1).map((x) => x.er), [1]);
+    eq(runs(2).map((x) => x.er), [0]);
+    eq(runs(3).map((x) => x.er), [0]);
+    assert.strictEqual(pas(g, 2, 0)[2].rbi, 0, 'no RBI on an error');
+  });
+
   t.test('runs do not count on a double play that makes the third out', () => {
     const dp = (g) => ({ code: 'DP', bb: 'ground', fielder: 'SS', caught: false, batter: 0, runners: [0, null, 4] });
     // Top 1st: runners on first and third, one out, double play: no run. Top 2nd: the same with none out: the run counts, no RBI.
