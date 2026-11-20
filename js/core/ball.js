@@ -54,10 +54,12 @@
     return t <= tA ? v0 * t + a * t * t / 2 : (v * v - v0 * v0) / (2 * a) + v * (t - tA);
   }
 
-  // Seconds for a throw of d feet at arm mph (long throws arc or bounce, so they average slower).
+  // Seconds for a throw of d feet at arm mph. Long throws arc, bounce or go through a cutoff man, so
+  // their average speed falls smoothly from throwShort (up to 100 ft) to throwLong (300 ft and more).
   function throwTime(d, arm) {
     const B = T().BALL;
-    return 0.05 + d / (arm * MPH * (d > 150 ? B.throwLong : B.throwShort));
+    const u = Math.min(1, Math.max(0, (d - 100) / 200));
+    return 0.05 + d / (arm * MPH * (B.throwShort + (B.throwLong - B.throwShort) * u));
   }
 
   // ---- The ball's flight ----
@@ -72,7 +74,7 @@
     const ux = Math.sin(dir), uy = Math.cos(dir);
     const fair = Math.abs(c.sp) <= 45;
     const fence = B3.data.fenceAt(c.sp);
-    const lift = c.la > 0 ? B.lift : 0;
+    const lift = c.la > 0 ? B.lift * Math.min(1, c.la / B.liftFull) : 0; // backspin grows with launch angle
     let vr = v * Math.cos(la), vh = v * Math.sin(la), r = 0, h = B.startHeight, t = 0;
     let land = null, hr = null, wall = null, stop = null;
     const pts = [[0, 0, 0, h, 0]];
@@ -149,8 +151,21 @@
     return out;
   }
 
-  // Seconds for a fielder to get to a point.
-  function reachT(fd, pt) { return fd.react + runTime(dist(fd.at, pt), fd.speed, 0); }
+  // Seconds for a fielder to get the ball at a point: he runs until it is within his glove's reach.
+  function reachT(fd, pt) { return fd.react + runTime(dist(fd.at, pt) - T().BALL.glove, fd.speed, 0); }
+
+  // Where he stands when he gets it: on his line to the ball, a glove's reach short of it.
+  function reachPt(fd, pt) {
+    const d = dist(fd.at, pt), g = T().BALL.glove;
+    return d <= g ? fd.at : lerp(fd.at, pt, (d - g) / d);
+  }
+
+  // The script: the fielder runs to the ball at pt and has it at time t.
+  function fieldAt(S, fd, pt, t) {
+    const q = reachPt(fd, pt);
+    S.fielder(fd.pos, reachT(fd, pt), q);
+    S.fielder(fd.pos, t, q);
+  }
 
   // The batter and the runners at contact. Runners who were stealing are already on their way.
   function offense(g, steal, pitch) {
@@ -370,15 +385,18 @@
   // A close play at a base: true if the runner is safe. margin is ball time (+ tag) minus runner time.
   function safeBy(g, margin) { return g.rng.chance(logistic(margin / T().BALL.playSd)); }
 
+  // Seconds for a fielder to get to base b (on the bag: no glove's reach).
+  function toBase(fd, b) { return fd.react + runTime(dist(fd.at, base(b)), fd.speed, 0); }
+
   // The fielder who takes a throw at a base, and when he can be there.
   function cover(D, b, busy) {
     const order = { 1: ['1B', '2B', 'P'], 2: ['SS', '2B'], 3: ['3B', 'SS'], 4: ['C', 'P'] }[b];
     for (const pos of order) {
       if (busy.indexOf(pos) >= 0) continue;
       const fd = D[pos];
-      return { fd: fd, t: reachT(fd, base(b)) - fd.react * 0.5 }; // he moves as soon as he sees the play
+      return { fd: fd, t: toBase(fd, b) - fd.react * 0.5 }; // he moves as soon as he sees the play
     }
-    return { fd: D.P, t: reachT(D.P, base(b)) };
+    return { fd: D.P, t: toBase(D.P, b) };
   }
 
   function forcedOn(g) {
@@ -419,8 +437,7 @@
     const tc = p[0], at = [p[1], p[2]];
     const hard = best.margin < 0.35;
     S.flight(path, tc);
-    S.fielder(fd.pos, reachT(fd, at), at);
-    S.fielder(fd.pos, tc, at);
+    fieldAt(S, fd, at, tc);
     const bb = bbType(c.la);
     // A dropped routine fly is an error: the batter reaches, runners move up.
     if (!hard && g.rng.chance(E.fly * fd.hands)) {
@@ -506,8 +523,7 @@
     const fd = stop.fd, T0 = stop.t, P0 = stop.p;
     const bb = bbType(c.la);
     S.flight(path, T0);
-    S.fielder(fd.pos, reachT(fd, P0), P0);
-    S.fielder(fd.pos, T0, P0);
+    fieldAt(S, fd, P0, T0);
     S.event(T0, 'field', { pos: fd.pos });
     const forced = forcedOn(g);
     const R = off.runners, bt = off.batter;
@@ -653,8 +669,7 @@
     const fd = got.fd, tp = got.t, pp = got.p;
     const bb = bbType(c.la);
     S.flight(path, tp);
-    S.fielder(fd.pos, reachT(fd, pp), pp);
-    S.fielder(fd.pos, tp, pp);
+    fieldAt(S, fd, pp, tp);
     S.event(tp, 'field', { pos: fd.pos });
     if (path.wall && path.wall.t < tp) S.event(path.wall.t, 'wall');
     const ready = tp + B.gather + fd.xfer;

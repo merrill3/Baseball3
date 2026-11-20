@@ -131,8 +131,9 @@
 
   // Ball flight, fielding, throws and running (M1 step 1.2 task 7).
   const BALL = {
-    drag: 0.0019,      // air drag per foot (sets carry: 100 mph at 28 degrees goes about 390 ft)
+    drag: 0.00175,     // air drag per foot (sets carry: 100 mph at 28 degrees goes about 390 ft)
     lift: 0.0009,      // backspin lift per foot on balls hit in the air
+    liftFull: 35,      // degrees of launch angle at which backspin (and lift) is full; less below it
     dt: 0.02,          // integration step in the air, seconds
     sample: 0.1,       // the ball's path is kept every this many seconds (fielding and the play script)
     startHeight: 3,    // feet: the ball's height at contact
@@ -143,6 +144,7 @@
     wallBack: 0.2,     // share of speed a ball keeps bouncing off the wall
     maxTime: 12,       // seconds: a guard
     reach: 8,          // feet: a fielder can catch a ball this high (with a reach or jump)
+    glove: 4,          // feet: a fielder gets a ball this far from where he stands (arm, glove, lean)
     wallReach: 10.5,   // feet: a leap at the wall
     fieldHeight: 3.5,  // feet: a bouncing ball this low can be fielded
     catchSd: 0.09,     // seconds: how sharply a catch's chance falls off with the margin
@@ -151,8 +153,8 @@
     getUp: 1.0,        // seconds a fielder loses chasing a ball he dove for and missed
     gather: 0.25,      // seconds to pick up a ball in the outfield
     accel: 20,         // ft/s per second: how fast runners and fielders reach top speed
-    throwShort: 0.9,   // average speed of a throw as a share of release speed, up to 150 ft
-    throwLong: 0.8,    // ... for longer throws (an arc or a bounce)
+    throwShort: 0.9,   // average speed of a throw as a share of release speed, up to 100 ft
+    throwLong: 0.68,   // ... at 300 ft and more (an arc, a bounce or a relay); in between it slides
     tag: 0.12,         // seconds to apply a tag (a force needs none)
     playSd: 0.07,      // seconds: how sharply a close play's chance falls off
     turn: 0.12,        // seconds a runner loses rounding a base
@@ -168,9 +170,9 @@
 
   // Errors (Hands sets the multiplier). About 0.5 errors a team-game is the target (DESIGN.md section 7).
   const ERR = {
-    ground: 0.016,     // a fumbled ground ball
-    throw: 0.009,      // a wild throw, per 100 ft of throw
-    fly: 0.006,        // a dropped fly ball or line drive
+    ground: 0.032,     // a fumbled ground ball
+    throw: 0.018,      // a wild throw, per 100 ft of throw
+    fly: 0.009,        // a dropped fly ball or line drive
     hard: 2            // multiplier on a diving or running play
   };
 

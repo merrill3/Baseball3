@@ -73,8 +73,8 @@
     tagup: function (d, g) {
       if (d.code === 'PO') return { go: false };
       const deep = (ft) => d.dist === null || d.dist === undefined || d.dist >= ft;
-      if (d.from === 3) return { go: deep(220) };
-      if (d.from === 2) return { go: d.code === 'FO' && deep(300) && g.rng.chance(0.5) };
+      if (d.from === 3) return { go: deep(260) };
+      if (d.from === 2) return { go: d.code === 'FO' && deep(330) && g.rng.chance(0.5) };
       return { go: false };
     }
   };
