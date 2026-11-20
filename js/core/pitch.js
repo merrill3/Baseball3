@@ -7,6 +7,8 @@
 //                                      X (in play, with contact { ev, la, sp })
 //   B3.pitch.cpuTiming(g, pitch)       a CPU hitter's *when* error in ms (Timing, Velocity, Recognition)
 //   B3.pitch.expect(g, pitch)          the *where* error's mean and spread, in inches (for tests and tools)
+//   B3.pitch.look(g, pitch)            where a CPU hitter thinks it will cross, for swing or take
+//                                      (Recognition, Deception, Discipline)
 //
 // The swing has two errors (DESIGN.md section 10):
 //   *when*  ms from perfect timing (below 0 early, above 0 late), the same number the game view will
@@ -63,13 +65,12 @@
     const x = a.x + r.normal(0, sd), z = a.z + r.normal(0, sd);
     const speed = Math.round((fastball(w.p, f) * type.v + r.normal(0, P.speedSd)) * 10) / 10;
     const grade = w.p.pit.grades[a.type] === undefined ? 1 : w.p.pit.grades[a.type];
-    const shape = w.p.pit.shapes[a.type] || 0;
     const mirror = w.throws === 'L' ? -1 : 1;
     return {
       type: a.type, speed: speed, x: x, z: z, zone: B3.data.inZone(x, z),
       ms: Math.round(flightMs(speed)),
-      hx: mirror * type.hx * grade, vz: type.vz * grade - shape, // movement as thrown, inches
-      grade: grade, throws: w.throws, fatigue: f
+      hx: mirror * type.hx * grade, vz: type.vz * grade, // movement as thrown, inches
+      grade: grade, shape: w.p.pit.shapes[a.type] || 0, throws: w.throws, fatigue: f
     };
   }
 
@@ -125,9 +126,13 @@
     // Exit speed: bat speed and pitch speed, less for an off-center hit and for bad timing.
     const u = off / (radius * S.foulBack);
     const top = S.collision * pitch.speed * S.plateShare + (1 + S.collision) * w.b.bat.batSpeed;
-    const ev = top * (1 - S.offLoss * u * u) * (1 - S.timeLoss * v * v) + r.normal(0, S.evSd);
+    // A pitch away from the middle is hit off the end of the bat or jammed: less exit speed (step 1.3).
+    const away = Math.max(0, B3.data.zoneEdge(pitch.x, pitch.z) + 0.4);
+    const ev = top * (1 - S.offLoss * u * u) * (1 - S.timeLoss * v * v) * (1 - S.locLoss * away) + r.normal(0, S.evSd);
     // Launch angle: over the ball drives it down; high pitches go up. Launch sets the band.
-    const la = S.attack + T().TYPE[pitch.type].lift - w.b.bat.launchK * off + S.heightLA * (pitch.z - 2.55) + r.normal(0, w.b.bat.launchSd);
+    // The pitch's shape tilts it: a ground-ball shape (above 0) lowers the launch angle (step 1.3: a tilt,
+    // not a quality, so it adds no movement for the hitter to misread).
+    const la = S.attack + T().TYPE[pitch.type].lift - (pitch.shape || 0) - w.b.bat.launchK * off + S.heightLA * (pitch.z - 2.55) + r.normal(0, w.b.bat.launchSd);
     // Spray: worked out for the pull side (minus), then turned for the batter's side.
     const inside = w.bats === 'R' ? -pitch.x : pitch.x; // feet toward the batter
     const pull = S.pullAt0 + S.sprayPerMs * tm - S.insidePull * inside + r.normal(0, w.b.bat.sprayNoise);
@@ -151,7 +156,24 @@
     return Math.round(late - early + g.rng.normal(0, sd));
   }
 
+  // A CPU hitter's read of where the pitch will cross, for swing or take. He reads a share of the
+  // pitch's movement (Recognition against Deception) and takes the rest for a fastball's, so a slider
+  // off the plate or a curve in the dirt can look like a strike; then his judgment (Discipline) adds
+  // noise and a lean toward seeing balls as strikes (poor Discipline shows mostly as chasing). Returns
+  // the spot he sees { x, z } and edge, its distance from the zone's edge in feet as he judges it
+  // (below 0: it looks like a strike).
+  function look(g, pitch) {
+    const w = who(g), C = T().CPU.swing;
+    const rec = readOf(w).rec;
+    const type = B3.data.PITCH[pitch.type], ff = B3.data.PITCH.FF;
+    const mirror = pitch.throws === 'L' ? -1 : 1;
+    const hx = mirror * (rec * type.hx + (1 - rec) * ff.hx), vz = rec * type.vz + (1 - rec) * ff.vz;
+    const x = pitch.x + C.lookShare * (hx - pitch.hx) / 12, z = pitch.z + C.lookShare * (vz - pitch.vz) / 12;
+    return { x: x, z: z, edge: B3.data.zoneEdge(x, z) - w.b.bat.judgeLean + g.rng.normal(0, w.b.bat.judgeSd) };
+  }
+
   B3.pitch = {
+    look: look,
     throw: throwPitch,
     call: call,
     resolve: resolve,

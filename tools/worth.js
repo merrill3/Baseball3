@@ -1,5 +1,5 @@
 // "10 points are worth": what +10 rating points do to the stats, one rating at a time (M1 step 1.3).
-// Usage: node tools/worth.js [games=800] [seed=1] [--from=60] [--only=contact,velocity] [--pairs]
+// Usage: node tools/worth.js [games=800] [seed=1] [--from=60] [--only=contact,velocity] [--styles] [--pairs]
 //
 // Every condition plays the same seeded regular-season games between two average teams (every rating
 // 60, tools/lib/testteams.js average()). A hitting rating is raised for all 18 hitters, a pitching
@@ -7,9 +7,10 @@
 // +10 points for a whole lineup or staff (divide by 9 for one player). --from=40 starts from 40 instead
 // (everyone at 40, the row at 50), and so on. Each row prints the change from the base; the stats
 // marked * are the rating's own (DESIGN.md section 10). --pairs adds the synergy check: two ratings at
-// +20 together against the sum of each alone (the combination bonus). It checks nothing: it is for
+// +20 together against the sum of each alone (the combination bonus). --styles adds the tendencies:
+// Aggressiveness at Discipline 40, 60 and 80, and Aim at Command 40, 60 and 80. It checks nothing: it is for
 // reading, and tools/calibrate.js (step 1.4) reuses it for the equal-value check. From code,
-// run(games, seed, { from, only, pairs, tweak }) returns the numbers; tweak(B3) can change B3.tune first.
+// run(games, seed, { from, only, pairs, styles, tweak }) returns the numbers; tweak(B3) can change B3.tune first.
 'use strict';
 const { loadCore } = require('./lib/load');
 const { averagePair, HIT, PIT } = require('./lib/testteams');
@@ -161,10 +162,26 @@ function run(games, seed, opts) {
     if (opts.only && opts.only.indexOf(c.name) < 0) continue;
     out.rows.push({ name: c.name, own: c.own, v: values(play(B3, games, seed, () => teams(B3, from, c.set))) });
   }
+  if (opts.styles) {
+    // The tendencies against the rating they pay off with (owner's choices, Session 4): Aggressiveness
+    // with Discipline, Aim with Command. Each cell is runs per team-game against the Balanced cell at the
+    // same rating (for Aim, runs allowed: below 0 is better).
+    const cells = [['discipline', 'aggressiveness', ['Patient', 'Aggressive'], 'hitter'], ['command', 'aim', ['Nibbler', 'Attacker'], 'pitcher']];
+    for (const [rating, tend, words, kind] of cells) {
+      if (typeof opts.styles === 'string' && opts.styles !== kind) continue;
+      for (const at of [from - 20, from, from + 20]) {
+        const at0 = (p, k) => { if (k === kind) p.ratings[rating] = at; };
+        const lw = (word) => values(play(B3, games, seed, () => teams(B3, from, (p, k) => { at0(p, k); if (word && k === kind) p.tendencies[tend] = word; })));
+        const bal = lw(null);
+        out.styles = out.styles || [];
+        out.styles.push({ rating: rating, at: at, words: words, cells: words.map((w) => { const v = lw(w); return { word: w, runs: v.runs - bal.runs, lw: v.LW - bal.LW, bb: v.BB - bal.BB, k: v.K - bal.K }; }) });
+      }
+    }
+  }
   if (opts.pairs) {
     const PAIRS = [['contact', 'rawPower'], ['contact', 'launch'], ['rawPower', 'launch'], ['timing', 'recognition'], ['velocity', 'command'], ['command', 'deception']];
     const at = from + 20, cache = {};
-    const one = (k) => cache[k] || (cache[k] = values(play(B3, games, seed, () => teams(B3, from, (p) => { if (k in p.ratings) p.ratings[k] = at; })))).runs;
+    const one = (k) => (cache[k] || (cache[k] = values(play(B3, games, seed, () => teams(B3, from, (p) => { if (k in p.ratings) p.ratings[k] = at; }))))).runs;
     for (const [a, b] of PAIRS) {
       const both = values(play(B3, games, seed, () => teams(B3, from, (p) => { if (a in p.ratings) p.ratings[a] = at; if (b in p.ratings) p.ratings[b] = at; }))).runs;
       out.pairs.push({ a: a, b: b, at: at, da: one(a) - out.base.runs, db: one(b) - out.base.runs, both: both - out.base.runs });
@@ -190,6 +207,14 @@ function report(r) {
       return txt.padStart(Math.max(6, n.length + 1) + 1).slice(0, Math.max(7, n.length + 2));
     }).join(''));
   }
+  if (r.styles) {
+    lines.push('');
+    lines.push('Tendencies against the rating they pay off with: change from Balanced at the same rating (runs and LW per team-game, BB and K in points)');
+    for (const st of r.styles) {
+      lines.push(('  ' + st.rating + ' ' + st.at).padEnd(18) + st.cells.map((c) => c.word.padEnd(11) + 'runs ' + (c.runs >= 0 ? '+' : '') + c.runs.toFixed(2) +
+        ' LW ' + (c.lw >= 0 ? '+' : '') + c.lw.toFixed(2) + ' BB ' + (c.bb >= 0 ? '+' : '') + c.bb.toFixed(1) + ' K ' + (c.k >= 0 ? '+' : '') + c.k.toFixed(1)).join('   '));
+    }
+  }
   if (r.pairs.length) {
     lines.push('');
     lines.push('Synergy (runs per team-game, each rating ' + r.from + ' -> ' + r.pairs[0].at + '): together against the sum of each alone');
@@ -212,6 +237,7 @@ if (require.main === module) {
   console.log(report(run(parseInt(pos[0] || '800', 10), pos[1] || '1', {
     from: opt('from') === undefined ? 60 : parseInt(opt('from'), 10),
     only: only ? only.split(',') : null,
-    pairs: args.includes('--pairs')
+    pairs: args.includes('--pairs'),
+    styles: args.includes('--styles') || opt('styles')
   })));
 }

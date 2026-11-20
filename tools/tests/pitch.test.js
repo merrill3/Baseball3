@@ -150,7 +150,7 @@ module.exports = function (t) {
     assert.ok(whiff(100) > whiff(90), 'more whiffs against velocity');
   });
 
-  t.test('pitch grades and shapes: more break, more whiffs; more drop, more ground balls', () => {
+  t.test('pitch grades and shapes: more break, more whiffs; a ground-ball shape, more ground balls', () => {
     const whiff = (grade) => rate(trial(setup({ pit: { grades: { SL: grade } } }), { type: 'SL', x: 0.3, z: 2.3 }, 'cpu'), (x) => x.r.r === 'S');
     assert.ok(whiff(1.4) > whiff(0.7) + 0.04, 'a better slider misses more bats');
     const env = setup({ pit: { grades: { SL: 1.5 } } });

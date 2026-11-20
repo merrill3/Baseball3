@@ -38,7 +38,7 @@ module.exports = function (t) {
     // rating -> { hook: +1 (rises with the rating) or -1 (falls) }
     const own = {
       contact: { contactSd: -1 }, timing: { timingSd: -1, timingTop: 1 }, launch: { launchK: -1, launchSd: -1, sprayNoise: -1 },
-      rawPower: { batSpeed: 1 }, recognition: { recognition: 1 }, discipline: { judgeSd: -1 },
+      rawPower: { batSpeed: 1 }, recognition: { recognition: 1 }, discipline: { judgeSd: -1, judgeLean: -1 },
       velocity: { velo: 1 }, command: { commandSd: -1 }, deception: { deception: 1 }, stamina: { stamina: 1 }
     };
     const base = B3.ratings.inputs(pitcher(Object.assign({ stamina: 60 })));

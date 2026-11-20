@@ -1,0 +1,173 @@
+// The CPU's choices (M1 step 1.3, task 10): swing or take (Discipline, Recognition, Deception,
+// Aggressiveness, the count), the pitch (grades, the put-away pitch, the count, Aim) and pitching changes
+// (Stamina, getting hit hard, roles). Each choice is asked directly, many times, on a game waiting at its
+// first pitch: the away leadoff man (AWY-CF) against the home starter (HOM-SP).
+'use strict';
+const assert = require('assert');
+const { loadCore } = require('../lib/load');
+const { averagePair, ratedPair } = require('../lib/testteams');
+
+const N = 4000;
+
+// opts: { bat, pit } rating overrides for the batter and the pitcher, tendencies, arsenal, sim hooks.
+function setup(opts, seed) {
+  opts = opts || {};
+  const B3 = loadCore();
+  const t = averagePair();
+  const b = t.away.players['AWY-CF'], p = t.home.players['HOM-SP'];
+  Object.assign(b.ratings, opts.bat || {});
+  Object.assign(p.ratings, opts.pit || {});
+  if (opts.agg) b.tendencies.aggressiveness = opts.agg;
+  if (opts.aim) p.tendencies.aim = opts.aim;
+  if (opts.arsenal) Object.assign(p.arsenal, opts.arsenal);
+  if (opts.bats) b.bats = opts.bats;
+  const g = B3.game.create(Object.assign(t, { type: 'regular', rng: B3.rng.create(seed || 'manager test') }));
+  return { B3, g };
+}
+
+// Swing rate on pitches thrown at a target, in a count.
+function swings(env, target, balls, strikes, n) {
+  const { B3, g } = env;
+  let sw = 0;
+  for (let i = 0; i < (n || N); i++) {
+    g.pitch = B3.pitch.throw(g, target);
+    const d = { kind: 'swing', side: 0, batter: 'AWY-CF', balls: balls || 0, strikes: strikes || 0, pitch: g.pitch };
+    if (B3.manager.cpu.swing(d, g).swing) sw++;
+  }
+  g.pitch = null;
+  return sw / (n || N);
+}
+
+// The pitches the CPU picks in a count: { types: {type: share}, zone: share of targets in the zone, mid }.
+function picks(env, balls, strikes, n) {
+  const { B3, g } = env;
+  const d = { kind: 'pitch', side: 1, pitcher: 'HOM-SP', batter: 'AWY-CF', pitches: g.teams[1].players['HOM-SP'].pitches.slice(), balls: balls, strikes: strikes };
+  const types = {};
+  let zone = 0, edge = 0;
+  for (let i = 0; i < (n || N); i++) {
+    const a = B3.manager.cpu.pitch(d, g);
+    types[a.type] = (types[a.type] || 0) + 1 / (n || N);
+    if (B3.data.inZone(a.x, a.z)) { zone++; edge += -B3.data.zoneEdge(a.x, a.z); }
+  }
+  return { types, zone: zone / (n || N), inset: edge / zone };
+}
+
+
+module.exports = function (t) {
+  t.test('swing or take: strikes down the middle get swung at, balls far off get taken; the count matters', () => {
+    const env = setup({ pit: { command: 99 } }); // pitches land close to the target
+    const mid = { type: 'FF', x: 0, z: 2.55 }, far = { type: 'FF', x: 2.2, z: 4.6 };
+    assert.ok(swings(env, mid, 1, 1) > 0.75 && swings(env, mid, 0, 2) > 0.88, 'middle');
+    assert.ok(swings(env, far, 1, 1) < 0.05, 'far off');
+    const edge = { type: 'FF', x: 0.95, z: 2.4 };
+    assert.ok(swings(env, edge, 0, 2) > swings(env, edge, 0, 0) + 0.2, 'two strikes: protect the plate');
+    assert.ok(swings(env, mid, 3, 0) < 0.15, '3-0: take');
+    assert.ok(swings(env, mid, 0, 0) < swings(env, mid, 1, 1) - 0.1, 'more first-pitch takes');
+  });
+
+  t.test('Recognition and Deception: unread break makes a pitch off the plate look like a strike', () => {
+    const low = { type: 'CU', x: 0.2, z: 1.05 }; // a curve in the dirt
+    const chase = (o) => swings(setup(o), low, 1, 2);
+    assert.ok(chase({ bat: { recognition: 30 } }) > chase({ bat: { recognition: 90 } }) + 0.12, 'poor recognizers chase the curve');
+    assert.ok(chase({ pit: { deception: 90 } }) > chase({ pit: { deception: 30 } }) + 0.12, 'deceptive pitchers get the chase');
+    // A fastball has no break to misread: Recognition doesn't change its chase rate much.
+    const ff = { type: 'FF', x: 0.2, z: 1.2 };
+    const fchase = (r) => swings(setup({ bat: { recognition: r } }), ff, 1, 2);
+    assert.ok(Math.abs(fchase(30) - fchase(90)) < 0.05, 'fastball chase ' + fchase(30) + ' / ' + fchase(90));
+    // look() sees the curve higher than it is, and less so with better Recognition.
+    const e = setup({ bat: { recognition: 30 } }), e2 = setup({ bat: { recognition: 90 } });
+    const p = e.B3.pitch.throw(e.g, low);
+    assert.ok(e.B3.pitch.look(e.g, p).z > e2.B3.pitch.look(e2.g, p).z + 0.1);
+  });
+
+  t.test('Discipline: fewer chases, and a sharper line between strikes and balls', () => {
+    const off = { type: 'FF', x: 1.1, z: 2.4 }, inside = { type: 'FF', x: 0.55, z: 2.4 };
+    const z = (r) => { const env = setup({ bat: { discipline: r }, pit: { command: 99 } }); return [swings(env, off, 1, 1), swings(env, inside, 1, 1)]; };
+    const poor = z(30), good = z(90);
+    assert.ok(good[0] < poor[0] - 0.08, 'chases ' + poor[0] + ' -> ' + good[0]);
+    assert.ok(good[1] - good[0] > poor[1] - poor[0] + 0.08, 'sharper: ' + (poor[1] - poor[0]) + ' -> ' + (good[1] - good[0]));
+    assert.ok(Math.abs(good[1] - poor[1]) < 0.06, 'about the same swings at strikes just inside');
+  });
+
+  t.test('Aggressiveness: aggressive hitters swing more, most of all early in the count, and expand more with poor Discipline', () => {
+    const mid = { type: 'FF', x: 0.3, z: 2.3 }, edge = { type: 'SL', x: 0.95, z: 2.0 };
+    const at = (agg, target, b, s) => swings(setup({ agg }), target, b, s);
+    for (const [target, b, s] of [[mid, 0, 0], [edge, 1, 0], [mid, 2, 1]]) {
+      assert.ok(at('Aggressive', target, b, s) > at('Balanced', target, b, s) && at('Balanced', target, b, s) > at('Patient', target, b, s), JSON.stringify(target) + ' ' + b + '-' + s);
+    }
+    // The difference is early in the count; with two strikes everyone protects the plate alike.
+    const gap = (b, s) => at('Aggressive', mid, b, s) - at('Patient', mid, b, s);
+    assert.ok(gap(0, 0) > gap(1, 2) + 0.1, 'gaps ' + gap(0, 0) + ' / ' + gap(1, 2));
+    // The less disciplined, the more an aggressive hitter expands his zone.
+    const off = { type: 'FF', x: 1.15, z: 2.4 };
+    const widen = (d) => swings(setup({ agg: 'Aggressive', bat: { discipline: d } }), off, 1, 1) - swings(setup({ bat: { discipline: d } }), off, 1, 1);
+    assert.ok(widen(30) > widen(90) + 0.04, 'chases added ' + widen(30) + ' / ' + widen(90));
+  });
+
+  t.test('the pitch: better grades get thrown more, the put-away pitch with two strikes, fastballs when behind', () => {
+    const base = picks(setup(), 1, 1);
+    const slGood = picks(setup({ arsenal: { SL: { grade: 85, shape: 0 } } }), 1, 1);
+    assert.ok(slGood.types.SL > base.types.SL + 0.05, 'a better slider gets thrown more');
+    const chGood = setup({ arsenal: { CH: { grade: 80, shape: 0 } } });
+    assert.strictEqual(chGood.g.teams[1].inp['HOM-SP'].pit.putAway, 'CH');
+    assert.ok(picks(chGood, 0, 2).types.CH > picks(chGood, 0, 0).types.CH + 0.15, 'the put-away pitch with two strikes');
+    const behind = picks(setup(), 3, 1), even = picks(setup(), 1, 1);
+    assert.ok((behind.types.FF || 0) > (even.types.FF || 0) + 0.1, 'fastballs when behind');
+    assert.ok(behind.zone > even.zone + 0.1 && picks(setup(), 0, 2).zone < even.zone - 0.1, 'the count moves the zone rate');
+  });
+
+  t.test('Aim: attackers aim in the zone and toward the middle, nibblers at the corners', () => {
+    const nib = picks(setup({ aim: 'Nibbler' }), 1, 1), bal = picks(setup(), 1, 1), att = picks(setup({ aim: 'Attacker' }), 1, 1);
+    assert.ok(att.zone > bal.zone && bal.zone > nib.zone, 'zone targets ' + [nib.zone, bal.zone, att.zone]);
+    assert.ok(att.inset > bal.inset + 0.04 && bal.inset > nib.inset + 0.04, 'inset ' + [nib.inset, bal.inset, att.inset]);
+  });
+
+  t.test('pitching changes: Stamina sets when a starter tires; runs take him out; relievers by role', () => {
+    const { B3, g } = setup({ pit: { stamina: 60 } });
+    const cpu = B3.manager.cpu, team = g.teams[1];
+    const d = () => ({ kind: 'change', side: 1, pitcher: team.pitcher, bullpen: team.bullpen.slice() });
+    const live = team.live['HOM-SP'];
+    live.pitches = 60;
+    assert.strictEqual(cpu.change(d(), g), null, 'a fresh starter stays');
+    live.pitches = team.inp['HOM-SP'].pit.stamina + 10;
+    assert.ok(cpu.change(d(), g), 'a tired starter comes out');
+    live.pitches = 50; live.runs = 6;
+    assert.ok(cpu.change(d(), g), 'a starter hit hard comes out');
+    live.runs = 0;
+    // A higher Stamina rating keeps him in longer.
+    const s70 = setup({ pit: { stamina: 75 } });
+    s70.g.teams[1].live['HOM-SP'].pitches = team.inp['HOM-SP'].pit.stamina + 10;
+    assert.strictEqual(s70.B3.manager.cpu.change({ kind: 'change', side: 1, pitcher: 'HOM-SP', bullpen: s70.g.teams[1].bullpen.slice() }, s70.g), null, 'Stamina 75 is not tired yet');
+    // A setup man pitches one inning: out when a new inning starts after his 3 outs.
+    team.pitcher = 'HOM-SU1'; team.used.push('HOM-SU1'); team.bullpen.splice(team.bullpen.indexOf('HOM-SU1'), 1);
+    team.live['HOM-SU1'] = { pitches: 14, outs: 3, runs: 0, bf: 4 };
+    assert.ok(cpu.change(d(), g), 'a setup man after his inning');
+    team.live['HOM-SU1'].outs = 1; g.outs = 1;
+    assert.strictEqual(cpu.change(d(), g), null, 'a setup man in the middle of his inning');
+    g.outs = 0;
+    // The count: never during a plate appearance.
+    live.pitches = 200; team.pitcher = 'HOM-SP'; g.balls = 1;
+    assert.strictEqual(cpu.change(d(), g), null, 'not in the middle of a plate appearance');
+  });
+
+  t.test('simulated games stay sane with rated teams and with average teams', () => {
+    for (const make of [averagePair, (B3, n) => ratedPair(B3.rng.create('teams:' + n))]) {
+      const B3 = loadCore();
+      let pa = 0, k = 0, bb = 0, runs = 0, spPitches = 0, pitches = 0;
+      const games = 150;
+      for (let n = 0; n < games; n++) {
+        const g = B3.game.sim(Object.assign(make(B3, n), { type: 'regular', rng: B3.rng.create('sane:' + n) }));
+        runs += g.score[0] + g.score[1];
+        for (const e of g.log) {
+          if (e.e === 'pa') { pa++; if (e.res === 'K') k++; if (e.res === 'BB') bb++; }
+          if (e.e === 'pitch') { pitches++; if (e.p === g.teams[1 - e.h].used[0]) spPitches++; }
+        }
+      }
+      const rpg = runs / games / 2, kp = k / pa, bbp = bb / pa, sp = spPitches / games / 2, ppa = pitches / pa;
+      const msg = 'runs ' + rpg.toFixed(2) + ' K ' + kp.toFixed(3) + ' BB ' + bbp.toFixed(3) + ' SP pitches ' + sp.toFixed(1) + ' P/PA ' + ppa.toFixed(2);
+      assert.ok(rpg > 3.2 && rpg < 5.8, msg);
+      assert.ok(kp > 0.16 && kp < 0.27 && bbp > 0.05 && bbp < 0.12, msg);
+      assert.ok(sp > 75 && sp < 102 && ppa > 3.3 && ppa < 4.2, msg);
+    }
+  });
+};
