@@ -56,14 +56,15 @@
     },
 
     // Steals (step 1.4): the lead runner who can go judges his chance (B3.ball.stealOdds: his jump and
-    // Speed against the delivery and the catcher). Below CPU.steal.min he stays; above it he goes on
+    // Speed against the delivery and the catcher), with an error from his Baserunning. Below CPU.steal.min he stays; above it he goes on
     // this pitch with a chance that rises to `rate` at `full`. With two outs he goes less often. A
     // runner on first goes with the runner on second (a double steal) or alone.
     steal: function (d, g) {
       const S = C().steal;
       const lead = d.runners.indexOf(2) >= 0 ? 2 : 1;
       const k = lead - 1;
-      const p = B3.ball.stealOdds(g, lead);
+      const run = g.teams[d.side].inp[g.bases[lead - 1].id].run;
+      const p = B3.ball.stealOdds(g, lead, g.rng.normal(0, S.judge * run.judge)); // as he judges it (Baserunning)
       if (p < S.min[k]) return null;
       let go = S.rate[k] * Math.min(1, (p - S.min[k]) / (S.full[k] - S.min[k]));
       if (g.outs === 2) go *= S.twoOut;

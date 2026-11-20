@@ -68,7 +68,8 @@
     speed: 27,         // Speed: top sprint speed, feet per second (also a fielder's speed to the ball)
     read: 0.2,         // Baserunning: seconds to read a ball in play and break
     jump: 0.12,        // Baserunning: seconds lost on the jump when stealing
-    judge: 0.14        // Baserunning: seconds of error when he judges an extra base (lower is better)
+    judge: 0.14,       // Baserunning: seconds of error when he judges an extra base (lower is better)
+    lead: 0            // Baserunning: feet added to his lead off every base, and when he steals (step 1.4)
   };
 
   // ---- Ratings to hook inputs (M1 step 1.3; B3.ratings) ----
@@ -76,6 +77,8 @@
   // through the top-end curve, then becomes u, tens of points from 60 (70 is u = 1). Each hook is then
   //   'mul': placeholder x step^u   (spreads and noise: they shrink as the rating rises, never below 0)
   //   'add': placeholder + step x u (speeds, shares and offsets)
+  //   'up':  1 - (1 - placeholder) x step^u (a share that nears 1: what is left shrinks by a fixed share)
+  // u is the rating's steps from 60, from its table in RATE.steps below (step 1.4), else tens of points.
   // Steps are Claude's defaults (step 1.3), aimed at +10 points for a whole lineup or staff being worth
   // about 0.3 runs per team-game; step 1.4's equal-value check tunes them.
   const RATE = {
@@ -93,7 +96,7 @@
       launchSd: ['launch', 'mul', 0.87],
       sprayNoise: ['launch', 'mul', 0.87],
       batSpeed: ['rawPower', 'add', 1.2],
-      recognition: ['recognition', 'add', 0.07],
+      recognition: ['recognition', 'up', 0.75],
       judgeSd: ['discipline', 'mul', 0.85],
       judgeLean: ['discipline', 'mul', 0.7]
     },
@@ -110,9 +113,10 @@
     },
     run: {
       speed: ['speed', 'add', 0.8],
-      read: ['baserunning', 'mul', 0.85],
-      jump: ['baserunning', 'mul', 0.85],
-      judge: ['baserunning', 'mul', 0.85]
+      read: ['baserunning', 'mul', 0.8],
+      jump: ['baserunning', 'mul', 0.8],
+      judge: ['baserunning', 'mul', 0.8],
+      lead: ['baserunning', 'add', 1.0]
     },
     pit: {
       velo: ['velocity', 'add', 1.6],
@@ -120,6 +124,23 @@
       deception: ['deception', 'add', 0.07] // the mirror of Recognition: the same step, taken off the read
     },
     grade: { step: 0.12, min: 0.3 }, // a pitch grade: movement multiplier 1 + step x u (at least min)
+    // Step tables (step 1.4): for each rating, [points after the curve, steps from 60], straight lines
+    // between rows. Set by node tools/calibrate.js --part=fit so that +10 points are worth about the same
+    // runs at every level and for every rating (the equal-value check); a rating without a table steps
+    // one per 10 points.
+    steps: {
+      contact: [[20, -2.86], [30, -2.215], [40, -1.528], [50, -0.792], [60, 0], [70, 0.855], [80, 1.783], [90, 2.793], [100, 3.893], [110, 5.085]],
+      timing: [[20, -1.937], [30, -1.526], [40, -1.075], [50, -0.573], [60, 0], [70, 0.677], [80, 1.532], [90, 2.796], [100, 4.07], [110, 5.34]],
+      launch: [[20, -2.978], [30, -2.181], [40, -1.435], [50, -0.713], [60, 0], [70, 0.721], [80, 1.468], [90, 2.265], [100, 3.156], [110, 4.254]],
+      rawPower: [[20, -2.016], [30, -1.481], [40, -0.971], [50, -0.478], [60, 0], [70, 0.466], [80, 0.923], [90, 1.372], [100, 1.815], [110, 2.254]],
+      discipline: [[20, -5.206], [30, -3.721], [40, -2.39], [50, -1.176], [60, 0], [70, 1.194], [80, 2.473], [90, 3.968], [100, 5.988], [110, 8.132]],
+      command: [[20, -2.158], [30, -1.754], [40, -1.285], [50, -0.722], [60, 0], [70, 1.047], [80, 2.987], [90, 5.178], [100, 6.888], [110, 8.598]],
+      deception: [[20, -5.632], [30, -3.296], [40, -1.959], [50, -0.924], [60, 0], [70, 0.879], [80, 1.752], [90, 2.656], [100, 3.644], [110, 4.84]],
+      range: [[20, -2.043], [30, -1.556], [40, -1.055], [50, -0.536], [60, 0], [70, 0.556], [80, 1.134], [90, 1.737], [100, 2.367], [110, 3.027]],
+      hands: [[20, -2.329], [30, -1.817], [40, -1.262], [50, -0.66], [60, 0], [70, 0.725], [80, 1.523], [90, 2.399], [100, 3.346], [110, 4.344]],
+      framing: [[20, -1.2], [30, -0.908], [40, -0.61], [50, -0.307], [60, 0], [70, 0.311], [80, 0.627], [90, 0.945], [100, 1.266], [110, 1.589]],
+      speed: [[20, -1.639], [30, -1.225], [40, -0.813], [50, -0.405], [60, 0], [70, 0.401], [80, 0.797], [90, 1.188], [100, 1.575], [110, 1.956]]
+    },
     shape: 4,          // degrees off the launch angle at shape +1 (ground-ball tilt); -1 is a fly-ball tilt
     // Stamina: pitches before fatigue sets in, by rating (straight lines between; past 100 the last
     // slope). One scale for every role: relievers are low-Stamina pitchers. 60 is the placeholder starter.
@@ -240,6 +261,8 @@
     pivot: 0.45,       // seconds for the pivot man to catch and throw on a double play
     infield: 125,      // feet: grounders past this have left the infield
     lead: [12, 18, 12], // feet: leads off first, second and third
+    armBlind: 0.5,     // share of a fielder's arm above (or below) his position's that runners don't see when they
+                       // judge a throw (step 1.4: so a strong arm throws out runners who test it, not only holds them)
     dare: 0.08,        // seconds of margin a runner wants before taking an extra base: one number for every
                        // runner, not a player trait (owner's choice, Session 3)
     halfway: 0.45,     // share of the way a runner goes on a fly ball that may be caught
@@ -259,7 +282,7 @@
   // Steals: the runner against the pitcher's delivery, the pitch's flight and the catcher's throw.
   const STEAL = {
     delivery: 1.05,    // seconds from the pitcher's first move to release (from the stretch)
-    secondLead: [5, 9], // extra feet of lead a stealing runner takes off first and off second
+    secondLead: [3, 7], // extra feet of lead a stealing runner takes off first and off second
     sd: 0.12           // seconds of noise on a steal play
   };
 
@@ -267,8 +290,9 @@
   const CPU = {
     // Steals (step 1.4): before each pitch the CPU judges the runner's chance (B3.ball.stealOdds: his jump
     // and Speed against the delivery and the catcher's release and Arm). Below `min` he stays; from there
-    // to `full` his chance of going on this pitch rises to `rate`. Steals of third need more.
-    steal: { min: [0.68, 0.78], full: [0.85, 0.92], rate: [0.05, 0.03], twoOut: 0.6 },
+    // to `full` his chance of going on this pitch rises to `rate`. Steals of third need more. He judges
+    // his chance with an error of `judge` x his Baserunning's judge seconds on the margin.
+    steal: { min: [0.68, 0.78], full: [0.85, 0.92], rate: [0.09, 0.05], twoOut: 0.6, judge: 0.8 },
     // Tag-ups (step 1.4): the lead runner goes when he judges his chance (B3.ball.tagupOdds, plus his own
     // Baserunning error) is at least this, from second or from third.
     tagup: { need: { 2: 0.8, 3: 0.6 } },

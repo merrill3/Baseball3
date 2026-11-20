@@ -158,7 +158,9 @@
     const read = readOf(w);
     const ff = fastball(w.p, pitch.fatigue);
     const expected = read.rec * pitch.speed + (1 - read.rec) * Math.max(pitch.speed, ff);
-    const early = M.readShare * (flightMs(pitch.speed) - flightMs(expected)); // ms early: he swings for a faster pitch
+    // ms early: he swings for a faster pitch. Measured against a fastball at refMph (step 1.4), so the speed
+    // change counts as a share: a soft-tossing pitcher's change-up doesn't fool more than a hard thrower's.
+    const early = M.readShare * (flightMs(pitch.speed) - flightMs(expected)) * ff / M.refMph;
     // Late: rising smoothly with the pitch's speed over his timingTop (step 1.4: a soft step, so every mph of
     // Velocity counts, not only those past timingTop). The spread grows with speed as a power of it.
     // He also gears up for this pitcher's fastball: he starts earlier by `gearUp` of the lateness that
@@ -181,7 +183,9 @@
     const type = B3.data.PITCH[pitch.type], ff = B3.data.PITCH.FF;
     const mirror = pitch.throws === 'L' ? -1 : 1;
     const hx = mirror * (rec * type.hx + (1 - rec) * ff.hx), vz = rec * type.vz + (1 - rec) * ff.vz;
-    const x = pitch.x + C.lookShare * (hx - pitch.hx) / 12, z = pitch.z + C.lookShare * (vz - pitch.vz) / 12;
+    // Only movement beyond the type's average fools him (step 1.4): a below-average pitch looks like what it is.
+    const gm = Math.max(1, pitch.grade || 1);
+    const x = pitch.x + C.lookShare * (hx - mirror * type.hx * gm) / 12, z = pitch.z + C.lookShare * (vz - type.vz * gm) / 12;
     return { x: x, z: z, edge: B3.data.zoneEdge(x, z) - w.b.bat.judgeLean + g.rng.normal(0, w.b.bat.judgeSd) };
   }
 

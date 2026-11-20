@@ -4,6 +4,7 @@
 //   B3.ratings.hooks(player)      just the mapped part, { bat, pit, fld, run } (for tests and tools)
 //   B3.ratings.effective(player)  each rating after the top-end curve and the combination cap
 //   B3.ratings.curve(r)           one rating through the top-end curve, alone (no cap)
+//   B3.ratings.steps(k, points)   steps from 60 for rating k at these points (its table in RATE.steps)
 //   B3.ratings.stamina(r)         pitches before fatigue for a Stamina rating
 //
 // A player can carry (every part optional; anything missing is average, 60):
@@ -95,8 +96,24 @@
 
   function u(points) { return (points - 60) / 10; }
 
+  // Steps from 60 for a rating's points (after the curve), from its table in RATE.steps (step 1.4: set by
+  // calibration so that +10 points are worth the same runs everywhere, tools/calibrate.js --part=fit);
+  // straight lines between the table's rows and past its ends. Without a table: tens of points from 60.
+  function steps(k, points) {
+    const t = R().steps && R().steps[k];
+    if (!t || t.length < 2) return u(points);
+    let i = 1;
+    while (i < t.length - 1 && points > t[i][0]) i++;
+    const a = t[i - 1], b = t[i];
+    if (points === b[0]) return b[1];
+    return a[1] + (b[1] - a[1]) * (points - a[0]) / (b[0] - a[0]);
+  }
+
   function hook(base, rule, points) {
-    return rule[1] === 'mul' ? base * Math.pow(rule[2], u(points)) : base + rule[2] * u(points);
+    const x = steps(rule[0], points);
+    if (rule[1] === 'mul') return base * Math.pow(rule[2], x);
+    if (rule[1] === 'up') return 1 - (1 - base) * Math.pow(rule[2], x); // a share that nears 1, never reaching it
+    return base + rule[2] * x;
   }
 
   // Pitches before fatigue for a Stamina rating (after the curve), along RATE.stamina's lines.
@@ -137,7 +154,7 @@
       pit.grades = {}; pit.shapes = {};
       const arsenal = player.arsenal || {};
       for (const type of pitches) {
-        pit.grades[type] = Math.max(rate.grade.min, 1 + rate.grade.step * u(e.grades[type]));
+        pit.grades[type] = Math.max(rate.grade.min, 1 + rate.grade.step * steps('grade', e.grades[type]));
         const shape = has(arsenal, type) && has(arsenal[type], 'shape') ? arsenal[type].shape : 0;
         if (typeof shape !== 'number' || !(shape >= -1 && shape <= 1)) fail((player.id || 'player') + ' ' + type + ' shape must be from -1 to 1, not ' + shape);
         pit.shapes[type] = rate.shape * shape;
@@ -165,6 +182,7 @@
     hooks: hooks,
     effective: effective,
     curve: curve,
+    steps: steps,
     stamina: stamina,
     putAway: putAway
   };

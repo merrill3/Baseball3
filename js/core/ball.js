@@ -5,7 +5,7 @@
 //                                      contact is { ev, la, sp } from B3.pitch; steal lists the runners
 //                                      who were going on the pitch ([{ from, runner }] or null).
 //   B3.ball.steal(g, from, pitch)      true if the runner stealing from base `from` (1 or 2) is safe
-//   B3.ball.stealOdds(g, from)         his chance before the pitch, for the CPU's choice (step 1.4)
+//   B3.ball.stealOdds(g, from, err)    his chance before the pitch (err: his misjudgment, s), for the CPU (step 1.4)
 //   B3.ball.tagup(g, play, from)       true if the runner tagging from `from` is safe; adds to the script
 //   B3.ball.tagupOdds(g, play, from, err)  his chance (err: his judgment's error, s), for the CPU (step 1.4)
 //   B3.ball.flight(contact)            the ball's path: { pts: [[t, x, y, z]], land, hr, wall, stop }
@@ -153,6 +153,8 @@
         react: (isNum(inp.fld.react) ? inp.fld.react : P[0]) * (isNum(inp.fld.first) ? inp.fld.first : 1),
         speed: inp.run.speed * inp.fld.route,
         arm: (isNum(inp.fld.arm) ? inp.fld.arm : P[1]) + (isNum(inp.fld.armPlus) ? inp.fld.armPlus : 0),
+        // The arm runners judge him by: they see only part of how far his arm is from his position's (step 1.4).
+        armSeen: (isNum(inp.fld.arm) ? inp.fld.arm : P[1]) + (1 - T().BALL.armBlind) * (isNum(inp.fld.armPlus) ? inp.fld.armPlus : 0),
         xfer: Math.max(0.2, P[2] - inp.fld.release),
         release: inp.fld.release,
         hands: inp.fld.hands
@@ -204,11 +206,12 @@
       if (!rn) { out.push(null); continue; }
       const inp = bt.inp[rn.id].run;
       const going = !!(steal && steal.some((s) => s.from === i && s.runner === rn));
-      let s0 = B.lead[i], v0 = 0;
+      const lead = B.lead[i] + (inp.lead || 0); // Baserunning: a bigger lead (step 1.4)
+      let s0 = lead, v0 = 0;
       if (going) {
         // He broke with the pitcher's first move: by contact he is well down the line at full speed.
         const tRun = T().STEAL.delivery + (pitch ? pitch.ms / 1000 : 0.4) - inp.jump;
-        s0 = Math.min(80, B.lead[i] + T().STEAL.secondLead[Math.min(i, 1)] + runDist(tRun, inp.speed));
+        s0 = Math.min(80, lead + T().STEAL.secondLead[Math.min(i, 1)] + runDist(tRun, inp.speed));
         v0 = inp.speed;
       }
       out.push({ from: i + 1, id: rn.id, run: inp, going: going, s0: s0, v0: v0 });
@@ -578,7 +581,7 @@
     const ready = up + fd.xfer;
     // When the ball can be at base b: thrown, or carried if he is close to the bag (he runs it there).
     const carries = (b) => dist(P0, base(b)) < 22;
-    const ballAt = (b) => (carries(b) ? up + runTime(dist(Q0, base(b)), fd.speed, 0) : Math.max(ready + throwTime(dist(P0, base(b)), fd.arm), cover(D, b, [fd.pos]).t));
+    const ballAt = (b, seen) => (carries(b) ? up + runTime(dist(Q0, base(b)), fd.speed, 0) : Math.max(ready + throwTime(dist(P0, base(b)), seen ? fd.armSeen : fd.arm), cover(D, b, [fd.pos]).t));
     // Runners: forced runners go on contact; the rest go only if they can beat a throw.
     const tGo = (rn) => (rn.going ? 0 : rn.run.read);
     const runT = (rn, b) => arrive(rn, b, tGo(rn), rn.s0, rn.v0);
@@ -589,7 +592,7 @@
       if (!rn) continue;
       if (forced[i] || twoOut || rn.going) { plan[i] = Math.min(4, i + 2); continue; }
       // Not forced: he goes if he thinks he beats a throw to his next base.
-      const est = ballAt(i + 2) + B.tag - runT(rn, i + 2) + g.rng.normal(0, rn.run.judge);
+      const est = ballAt(i + 2, true) + B.tag - runT(rn, i + 2) + g.rng.normal(0, rn.run.judge);
       const ahead = plan[i + 1];
       const open = i === 2 || ahead === null || ahead > i + 2 || ahead === 4;
       plan[i] = open && est > B.dare ? i + 2 : i + 1;
@@ -726,7 +729,7 @@
     if (path.wall && path.wall.t < tp) S.event(path.wall.t, 'wall');
     const ready = tp + B.gather + fd.xfer;
     S.ballAt(ready, pp, 5);
-    const tBall = (b) => Math.max(ready + throwTime(dist(pp, base(b)), fd.arm), cover(D, b, [fd.pos]).t);
+    const tBall = (b, seen) => Math.max(ready + throwTime(dist(pp, base(b)), seen ? fd.armSeen : fd.arm), cover(D, b, [fd.pos]).t);
     const R = off.runners, bt = off.batter;
     const twoOut = g.outs === 2;
     const landT = path.land ? path.land.t : 0;
@@ -751,7 +754,7 @@
       while (to < 4) {
         const nb = to + 1;
         if (nb >= aheadEnd && nb < 4) break;
-        const est = tBall(nb) + B.tag - at(nb) + g.rng.normal(0, rn.run.judge);
+        const est = tBall(nb, true) + B.tag - at(nb) + g.rng.normal(0, rn.run.judge);
         if (est > B.dare) to = nb; else break;
       }
       if (to < 4 && to >= aheadEnd) to = aheadEnd - 1;
@@ -764,7 +767,7 @@
     while (bTo < 4) {
       const nb = bTo + 1;
       if (nb >= aheadEnd && nb < 4) break;
-      const margin = tBall(nb) + B.tag - bAt(nb);
+      const margin = tBall(nb, true) + B.tag - bAt(nb);
       if (margin > B.dare * 0.5 && margin + g.rng.normal(0, bt.run.judge) > B.dare) bTo = nb; else break;
     }
     // The throw: to the runner with the closest play, if there is one.
@@ -887,16 +890,16 @@
   // A steal: the runner's jump and speed against the delivery, the pitch's flight and the catcher's
   // release and arm (Arm plus Hands' quick release). margin is the ball's time (plus the tag) minus the
   // runner's, in seconds, for a pitch of `ms` flight time.
-  function stealMargin(g, from, ms) {
+  function stealMargin(g, from, ms, seen) {
     const B = T().BALL, ST = T().STEAL;
     const rn = g.bases[from - 1];
     const run = g.teams[g.half].inp[rn.id].run;
     const D = defense(g, 'R');
     const c = D.C;
-    const lead = B.lead[from - 1] + ST.secondLead[from - 1];
+    const lead = B.lead[from - 1] + ST.secondLead[from - 1] + (run.lead || 0);
     const tRun = run.jump + runTime(90 - lead, run.speed, 0);
     const cv = cover(D, from + 1, ['C']);
-    const tBall = Math.max(ST.delivery + ms / 1000 + c.xfer + throwTime(dist(c.at, base(from + 1)), c.arm), cv.t);
+    const tBall = Math.max(ST.delivery + ms / 1000 + c.xfer + throwTime(dist(c.at, base(from + 1)), seen ? c.armSeen : c.arm), cv.t);
     return tBall + B.tag - tRun;
   }
 
@@ -907,17 +910,18 @@
   }
 
   // The chance a steal from `from` is safe, as the runner sees it before the pitch: an average pitch
-  // from this pitcher (93% of his fastball's speed), with the play's noise folded in. For the CPU's choice.
-  function stealOdds(g, from) {
+  // from this pitcher (93% of his fastball's speed), with the play's noise folded in, and `err` seconds
+  // (his own misjudgment) added to the margin. For the CPU's choice.
+  function stealOdds(g, from, err) {
     const B = T().BALL, ST = T().STEAL;
     const p = g.teams[1 - g.half].inp[g.teams[1 - g.half].pitcher].pit;
-    const m = stealMargin(g, from, B3.pitch.flightMs(p.velo * 0.93));
+    const m = stealMargin(g, from, B3.pitch.flightMs(p.velo * 0.93), true) + (err || 0);
     return logistic(m / Math.sqrt(B.playSd * B.playSd + (ST.sd / 1.7) * (ST.sd / 1.7)));
   }
 
   // A tag-up after a catch: the runner leaves when the ball is caught (or when he is back on the bag).
   // The throw comes from whoever has the ball once the catch play is over (meta.free).
-  function tagTimes(g, play, from) {
+  function tagTimes(g, play, from, seen) {
     const m = play.meta;
     const rn = g.bases[from - 1];
     const run = g.teams[g.half].inp[rn.id].run;
@@ -928,14 +932,14 @@
     const tRun = leave + runTime(90, run.speed, 0);
     const cv = cover(D, from + 1, [m.fielder, free.pos]);
     const tRel = free.t + fd.xfer;
-    const tBall = Math.max(tRel + throwTime(dist(free.at, base(from + 1)), fd.arm), cv.t);
+    const tBall = Math.max(tRel + throwTime(dist(free.at, base(from + 1)), seen ? fd.armSeen : fd.arm), cv.t);
     return { rn: rn, run: run, free: free, fd: fd, leave: leave, tRun: tRun, cv: cv, tRel: tRel, tBall: tBall };
   }
 
   // The chance a tag-up from `from` is safe, as the runner judges it: `err` seconds (his own error) added
   // to the margin. For the CPU's choice.
   function tagupOdds(g, play, from, err) {
-    const t = tagTimes(g, play, from);
+    const t = tagTimes(g, play, from, true);
     return logistic((t.tBall + T().BALL.tag - t.tRun + (err || 0)) / T().BALL.playSd);
   }
 

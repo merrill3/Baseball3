@@ -12,6 +12,12 @@
 //   styles   the tendencies against Balanced: Aggressiveness at Discipline 40, 60, 80; Aim at Command
 //            40, 60, 80. Target: within about +-0.1 runs at 60, and paying off the owner's way
 //   shape    a ground-ball and a fly-ball shape on every pitch: about 0 (owner's choice: value-neutral)
+//   speed    (not in the default parts) times a season's 2,430 games in this one process, alone
+//            (the rated test teams; DESIGN.md's budget is about 10 s, the owner accepted about 13 s)
+//   fit      (not in the default parts) measures each rating's run value from 20 to 99 and fits its step
+//            table (B3.tune.RATE.steps) so that +10 points are worth TARGET runs everywhere (defense and
+//            running: TARGET / 9 for one player at the key spot). Prints the tables for tune.js;
+//            --fitout=file.js also writes them as a --tweak module, to check them before pasting.
 //
 // value, defense, styles and shape use tools/lib/value.js: --samples games of plate appearances between
 // average teams, each replayed under every condition with the same random numbers. Work is spread over
@@ -38,7 +44,8 @@ function args() {
     seed: opt('seed', '1'),
     jobs: parseInt(opt('jobs', String(os.cpus().length)), 10),
     only: opt('only', null),
-    tweak: opt('tweak', null) ? path.resolve(opt('tweak')) : null
+    tweak: opt('tweak', null) ? path.resolve(opt('tweak')) : null,
+    fitout: opt('fitout', null)
   };
 }
 
@@ -79,6 +86,7 @@ function worker() {
 
 function pool(jobs, n, tweak, onDone) {
   const res = {};
+  if (!jobs.length) { onDone(res); return; }
   let next = 0, active = 0;
   for (let w = 0; w < Math.min(n, jobs.length); w++) {
     const c = fork(__filename, ['--worker', tweak || '-']);
@@ -180,7 +188,6 @@ function targetReport(c) {
   lines.push('  Also: OBP ' + ((c.h + c.bb) / (c.ab + c.bb + c.sf)).toFixed(3) + '; steal attempts ' + (att / tg).toFixed(2) + ' a team-game, ' + (100 * c.sb / Math.max(1, att)).toFixed(0) + '% safe');
   lines.push('  Platoon edge: OBP ' + obp(c.plat.opp).toFixed(3) + ' / SLG ' + slg(c.plat.opp).toFixed(3) + ' against opposite-handed pitchers, ' +
     obp(c.plat.same).toFixed(3) + ' / ' + slg(c.plat.same).toFixed(3) + ' against same-handed');
-  lines.push('  Speed: ' + (c.ms / c.games).toFixed(2) + ' ms a game in one process, so 2,430 games take about ' + (2430 * c.ms / c.games / 1000).toFixed(1) + ' s');
   lines.push('  (Per-player targets, such as standouts, .300 hitters and the batting champion, need a league and full seasons: M2.)');
   return lines.join('\n');
 }
@@ -206,6 +213,63 @@ const DEFENSE = [
   ['Speed at DH', { kind: 'hitter', pos: 'DH', k: 'speed', L: 70, away: true }, false, 'both'],
   ['Baserunning (lineup / 9)', { kind: 'hitter', k: 'baserunning', L: 70 }, true, 'lineup']
 ];
+
+// The fit (--part=fit): each table and how its value is read. read: 'hit' runs scored for a whole lineup,
+// 'pit' runs saved for a whole staff, 'def' runs saved by one fielder (the mean over its key spots),
+// 'both' one away player's runs scored minus runs allowed. slope: runs per 10 points.
+const FIT_LEVELS = [20, 30, 40, 50, 70, 80, 90, 99];
+const FIT = [
+  ...HIT.map((k) => ({ key: k, read: 'hit', slope: TARGET, conds: (L) => [ratingCond(k, L)] })),
+  ...['velocity', 'command', 'deception'].map((k) => ({ key: k, read: 'pit', slope: TARGET, conds: (L) => [ratingCond(k, L)] })),
+  { key: 'grade', read: 'pit', slope: TARGET, conds: (L) => [ratingCond('grades', L)] },
+  { key: 'range', read: 'def', slope: TARGET / 9, conds: (L) => ['SS', 'CF'].map((pos) => ({ kind: 'hitter', pos: pos, k: 'range', L: L })) },
+  { key: 'hands', read: 'def', slope: TARGET / 9, conds: (L) => [{ kind: 'hitter', pos: 'SS', k: 'hands', L: L }] },
+  { key: 'arm', read: 'def', slope: TARGET / 9, conds: (L) => ['RF', 'C'].map((pos) => ({ kind: 'hitter', pos: pos, k: 'arm', L: L })) },
+  { key: 'framing', read: 'def', slope: TARGET / 9, conds: (L) => [{ kind: 'hitter', pos: 'C', k: 'framing', L: L }] },
+  { key: 'speed', read: 'both', slope: TARGET / 9, conds: (L) => [{ kind: 'hitter', pos: 'CF', k: 'speed', L: L, away: true }] },
+  { key: 'baserunning', read: 'hit', slope: TARGET, conds: (L) => [{ kind: 'hitter', k: 'baserunning', L: L }] }
+];
+
+// Weighted least squares for V(u) = a u + b u^2 + c u^3 (through 0), then the u where V reaches each target.
+function fitCubic(pts) {
+  const X = pts.map((p) => [p.u, p.u * p.u, p.u * p.u * p.u]);
+  const w = pts.map((p) => 1 / Math.max(1e-6, p.se * p.se));
+  const A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], y = [0, 0, 0];
+  pts.forEach((p, i) => { for (let r = 0; r < 3; r++) { y[r] += w[i] * X[i][r] * p.v; for (let c = 0; c < 3; c++) A[r][c] += w[i] * X[i][r] * X[i][c]; } });
+  // Solve the 3x3 system (Gaussian elimination).
+  for (let i = 0; i < 3; i++) {
+    let m = i; for (let r = i + 1; r < 3; r++) if (Math.abs(A[r][i]) > Math.abs(A[m][i])) m = r;
+    [A[i], A[m]] = [A[m], A[i]]; [y[i], y[m]] = [y[m], y[i]];
+    for (let r = i + 1; r < 3; r++) { const f = A[r][i] / A[i][i]; for (let c = i; c < 3; c++) A[r][c] -= f * A[i][c]; y[r] -= f * y[i]; }
+  }
+  const x = [0, 0, 0];
+  for (let i = 2; i >= 0; i--) { let t = y[i]; for (let c = i + 1; c < 3; c++) t -= A[i][c] * x[c]; x[i] = t / A[i][i]; }
+  return x;
+}
+
+function solveTable(pts, slope) {
+  const [a, b, c] = fitCubic(pts);
+  const lo = Math.min(...pts.map((p) => p.u)), hi = Math.max(...pts.map((p) => p.u));
+  const V = (u) => a * u + b * u * u + c * u * u * u;
+  const dV = (u) => a + 2 * b * u + 3 * c * u * u;
+  // Past the measured range, straight lines with the end slopes (a cubic can turn back).
+  const Vx = (u) => (u < lo ? V(lo) + dV(lo) * (u - lo) : u > hi ? V(hi) + dV(hi) * (u - hi) : V(u));
+  let mono = true;
+  for (let u = lo; u <= hi; u += (hi - lo) / 50) if (dV(u) <= 0) mono = false;
+  const rows = [];
+  for (let e = 20; e <= 110; e += 10) {
+    const want = slope * (e - 60) / 10;
+    let l = -40, h = 40;
+    for (let it = 0; it < 80; it++) { const m = (l + h) / 2; if (Vx(m) < want) l = m; else h = m; }
+    rows.push([e, Math.round(((l + h) / 2) * 1000) / 1000]);
+  }
+  // A guard where the value runs out (a fit can ask for huge steps): each 10 points' step is at most 1.6
+  // times the one before it, going out from 60.
+  const mid = rows.findIndex((r) => r[0] === 60);
+  for (let i = mid + 2; i < rows.length; i++) rows[i][1] = Math.min(rows[i][1], rows[i - 1][1] + 1.6 * (rows[i - 1][1] - rows[i - 2][1]));
+  for (let i = mid - 2; i >= 0; i--) rows[i][1] = Math.max(rows[i][1], rows[i + 1][1] - 1.6 * (rows[i + 2][1] - rows[i + 1][1]));
+  return { rows: rows, coef: [a, b, c], mono: mono, lo: lo, hi: hi };
+}
 
 const STYLES = [
   ['discipline', 'aggressiveness', ['Patient', 'Aggressive'], 'hitter'],
@@ -234,7 +298,7 @@ function main() {
   const want = (k) => !o.only || o.only.split(',').indexOf(k) >= 0;
   const plan = { value: [], defense: [], styles: [], shape: [], targets: [] };
   const add = (cond) => { const j = { id: id++, cond: cond, samples: o.samples, seed: o.seed }; jobs.push(j); return j.id; };
-  const needReplays = o.parts.some((p) => p !== 'targets');
+  const needReplays = o.parts.some((p) => ['value', 'defense', 'styles', 'shape', 'fit'].indexOf(p) >= 0);
   const base = needReplays ? add(null) : null;
   if (o.parts.indexOf('value') >= 0) {
     for (const k of HIT.concat(PIT)) {
@@ -256,6 +320,28 @@ function main() {
     }
   }
   if (o.parts.indexOf('shape') >= 0) for (const sh of [0.5, -0.5, 1, -1]) plan.shape.push({ sh, id: add({ kind: 'pitcher', shape: sh }) });
+  plan.fit = [];
+  if (o.parts.indexOf('fit') >= 0) {
+    const { loadCore } = require('./lib/load');
+    const { averagePair } = require('./lib/testteams');
+    const B3 = loadCore();
+    if (o.tweak) require(o.tweak)(B3);
+    for (const f of FIT) {
+      if (!want(f.key)) continue;
+      const lv = FIT_LEVELS.map((L) => {
+        // The steps this level gives now: through the curve (and, for grades, the cap) and the current table.
+        const t = averagePair();
+        const c0 = Object.assign({}, f.conds(L)[0], { away: false });
+        const pitcher = f.key === 'grade' || PIT.indexOf(f.key) >= 0;
+        const pl = pitcher ? t.home.players['HOM-SP'] : t.home.players['HOM-' + (c0.pos || 'CF')];
+        setFrom(c0)(pl, pitcher ? 'pitcher' : 'hitter', pitcher ? 'P' : c0.pos || 'CF');
+        const e = B3.ratings.effective(pl);
+        const pts = f.key === 'grade' ? pl.pitches.reduce((s2, ty) => s2 + e.grades[ty], 0) / pl.pitches.length : e[f.key];
+        return { L: L, eff: pts, u: B3.ratings.steps(f.key, pts), ids: f.conds(L).map((c) => add(c)) };
+      });
+      plan.fit.push({ f: f, lv: lv });
+    }
+  }
   if (o.parts.indexOf('targets') >= 0) {
     const per = Math.ceil(o.games / o.jobs);
     for (let f = 0; f < o.games; f += per) { const j = { id: id++, targets: true, from: f, to: Math.min(o.games, f + per), seed: o.seed }; jobs.push(j); plan.targets.push(j.id); }
@@ -288,6 +374,14 @@ function main() {
         out.push('  ' + row.k.padEnd(12) + steps.map((s) => (s.v.toFixed(3) + '±' + s.se.toFixed(3)).padStart(15)).join('') + '   ' + (ok ? 'ok' : 'MISS'));
       }
       if (all.length) lineupValue = all.reduce((a, b) => a + b, 0) / all.length;
+      // DESIGN.md section 7: Contact moves AVG more than Raw Power does (+10 from 60, hits per at-bat).
+      const avgOf = (c) => c.H / (c.pa - c.BB);
+      const row = (k) => plan.value.find((r) => r.k === k);
+      if (row('contact') && row('rawPower')) {
+        const dc = avgOf(res[row('contact').ids[3]].counts) - avgOf(B.counts), dp = avgOf(res[row('rawPower').ids[3]].counts) - avgOf(B.counts);
+        out.push('');
+        out.push('  Contact against Raw Power in AVG (+10 from 60): Contact ' + fmt(dc, 3) + ', Raw Power ' + fmt(dp, 3) + '   ' + (dc > dp ? 'ok' : 'MISS'));
+      }
       out.push('');
     }
     if (plan.defense.length) {
@@ -323,6 +417,50 @@ function main() {
     if (plan.shape.length) {
       out.push('Pitch shape on every pitch (owner\'s choice: value-neutral), runs allowed per team-game against shape 0:');
       out.push('  ' + plan.shape.map((p) => 'shape ' + fmt(p.sh, 1) + ' ' + fmt(diff(B, res[p.id]).v, 3) + '±' + diff(B, res[p.id]).se.toFixed(3)).join('    '));
+      out.push('');
+    }
+    if (plan.fit.length) {
+      out.push('Fit (' + B.vals.length + ' plate appearances per condition): each rating\'s run value by level, and its new step table');
+      const tables = {};
+      for (const { f, lv } of plan.fit) {
+        const pts = [];
+        for (const l of lv) {
+          const ds = l.ids.map((i) => {
+            if (f.read === 'both') { const a = diff(B, res[i], 0), b = diff(B, res[i], 1); return { v: a.v - b.v, se: Math.sqrt(a.se * a.se + b.se * b.se) }; }
+            const d = diff(B, res[i]);
+            return f.read === 'hit' ? d : { v: -d.v, se: d.se };
+          });
+          const v = ds.reduce((x, d) => x + d.v, 0) / ds.length, se = Math.sqrt(ds.reduce((x, d) => x + d.se * d.se, 0)) / ds.length;
+          pts.push({ L: l.L, eff: l.eff, u: l.u, v: v, se: se });
+        }
+        const sol = solveTable(pts, f.slope);
+        tables[f.key] = sol.rows;
+        out.push('  ' + f.key.padEnd(12) + pts.map((p) => p.L + ':' + fmt(p.v, 3)).join(' ') + (sol.mono ? '' : '   (fit not monotone: check)'));
+        out.push('  ' + ''.padEnd(12) + 'steps ' + sol.rows.map((r) => r[0] + ':' + r[1].toFixed(2)).join(' '));
+      }
+      out.push('');
+      out.push('    steps: {');
+      const keys = Object.keys(tables);
+      keys.forEach((k, i) => out.push('      ' + k + ': ' + JSON.stringify(tables[k]).replace(/,/g, ', ') + (i < keys.length - 1 ? ',' : '')));
+      out.push('    },');
+      if (o.fitout) {
+        require('fs').writeFileSync(o.fitout, '// Step tables from tools/calibrate.js --part=fit\nmodule.exports = (B3) => { const prev = ' + (o.tweak ? 'require(' + JSON.stringify(o.tweak) + ')' : 'null') +
+          '; if (prev) prev(B3); B3.tune.RATE.steps = Object.assign(B3.tune.RATE.steps || {}, ' + JSON.stringify(tables) + '); };\n');
+        out.push('(wrote ' + o.fitout + ')');
+      }
+      out.push('');
+    }
+    if (o.parts.indexOf('speed') >= 0) {
+      // One process, nothing else running: a season's worth of games.
+      const { loadCore } = require('./lib/load');
+      const { ratedPair } = require('./lib/testteams');
+      const B3 = loadCore();
+      if (o.tweak) require(o.tweak)(B3);
+      const teams = [];
+      for (let n = 0; n < 2430; n++) teams.push(ratedPair(B3.rng.create('speed teams:' + n)));
+      const s0 = Date.now();
+      for (let n = 0; n < 2430; n++) B3.game.sim(Object.assign(teams[n], { type: 'regular', rng: B3.rng.create('speed:' + n) }));
+      out.push('Speed: 2,430 games (a season) took ' + ((Date.now() - s0) / 1000).toFixed(1) + ' s in one process (budget about 10 s; the owner accepted about 13 s for now).');
       out.push('');
     }
     out.push('(' + ((Date.now() - t0) / 1000).toFixed(0) + ' s, ' + o.jobs + ' processes' + (o.tweak ? ', tweak ' + o.tweak : '') + ')');

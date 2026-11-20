@@ -45,7 +45,7 @@ module.exports = function (t) {
       // and a quicker release, Arm more mph, Framing a wider edge, Speed sprint speed, Baserunning a quicker
       // read and jump and a smaller error in judging an extra base.
       range: { 'fld.first': -1, 'fld.route': 1 }, hands: { 'fld.hands': -1, 'fld.release': 1 }, arm: { 'fld.armPlus': 1 },
-      framing: { 'fld.framing': 1 }, speed: { 'run.speed': 1 }, baserunning: { 'run.read': -1, 'run.jump': -1, 'run.judge': -1 }
+      framing: { 'fld.framing': 1 }, speed: { 'run.speed': 1 }, baserunning: { 'run.read': -1, 'run.jump': -1, 'run.judge': -1, 'run.lead': 1 }
     };
     const PITR = ['velocity', 'command', 'deception', 'stamina'];
     const base = B3.ratings.inputs(pitcher(Object.assign({ stamina: 60 })));
@@ -65,12 +65,19 @@ module.exports = function (t) {
         }
       }
     }
-    // The scales: +10 points is one step.
     const R = B3.tune.RATE;
-    near(B3.ratings.inputs(hitter({ contact: 70 })).bat.contactSd, B3.tune.BAT.contactSd * R.bat.contactSd[2], 1e-12, 'contact step');
-    near(B3.ratings.inputs(pitcher({ velocity: 50 })).pit.velo, B3.tune.PIT.velo - R.pit.velo[2], 1e-12, 'velocity step');
-    near(B3.ratings.inputs(hitter({ arm: 70 })).fld.armPlus, R.fld.armPlus[2], 1e-12, 'arm step');
-    near(B3.ratings.inputs(hitter({ speed: 50 })).run.speed, B3.tune.RUN.speed - R.run.speed[2], 1e-12, 'speed step');
+    // The scales: each hook moves by its step per step from 60 (the rating's table in RATE.steps).
+    const st = (k, r) => B3.ratings.steps(k, r);
+    near(B3.ratings.inputs(hitter({ contact: 70 })).bat.contactSd, B3.tune.BAT.contactSd * Math.pow(R.bat.contactSd[2], st('contact', 70)), 1e-12, 'contact step');
+    near(B3.ratings.inputs(pitcher({ velocity: 50 })).pit.velo, B3.tune.PIT.velo + R.pit.velo[2] * st('velocity', 50), 1e-12, 'velocity step');
+    near(B3.ratings.inputs(hitter({ arm: 70 })).fld.armPlus, R.fld.armPlus[2] * st('arm', 70), 1e-12, 'arm step');
+    near(B3.ratings.inputs(hitter({ speed: 50 })).run.speed, B3.tune.RUN.speed + R.run.speed[2] * st('speed', 50), 1e-12, 'speed step');
+    near(B3.ratings.inputs(hitter({ recognition: 70 })).bat.recognition, 1 - (1 - B3.tune.BAT.recognition) * Math.pow(R.bat.recognition[2], st('recognition', 70)), 1e-12, 'recognition nears 1');
+    // A table's steps: 60 is 0, they rise with the points, and straight lines run between rows and past the ends.
+    for (const k in R.steps) {
+      assert.strictEqual(st(k, 60), 0, k + ' at 60');
+      for (let r = 20; r < 115; r += 5) assert.ok(st(k, r + 5) > st(k, r), k + ' rises at ' + r);
+    }
   });
 
   t.test('Range and Arm are graded against the position; defense and running share their own cap', () => {
@@ -85,8 +92,8 @@ module.exports = function (t) {
     const a = play({}), b = play({ range: 70, arm: 70 });
     assert.strictEqual(a.ss.first, 1);
     assert.strictEqual(a.ss.armPlus, 0);
-    near(b.ss.first, B3.tune.RATE.fld.first[2], 1e-12, 'one step quicker');
-    near(b.rf.armPlus, B3.tune.RATE.fld.armPlus[2], 1e-12, 'one step of arm');
+    near(b.ss.first, Math.pow(B3.tune.RATE.fld.first[2], B3.ratings.steps('range', 70)), 1e-12, 'a quicker first step');
+    near(b.rf.armPlus, B3.tune.RATE.fld.armPlus[2] * B3.ratings.steps('arm', 70), 1e-12, 'more arm');
     assert.strictEqual(b.ss.react, null, 'the first step itself stays the position\'s');
     // The cap: the defense-and-running group is separate from hitting.
     const e = B3.ratings.effective(hitter({ contact: 95, range: 95, speed: 95 }));

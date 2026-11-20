@@ -174,16 +174,17 @@ module.exports = function (t) {
     assert.ok(odds(quick) > odds(avg) + 0.02, 'Baserunning (the jump)');
     assert.ok(odds(arm) < odds(avg) - 0.05, 'the catcher\'s Arm');
     assert.ok(odds(hands) < odds(avg) - 0.01, 'the catcher\'s quick release (Hands)');
-    // He goes more often with better odds, and never when they are poor.
+    // He goes more often with better odds, and almost never when they are poor (only when he misjudges them).
     const slow = env({ speed: 35, baserunning: 35 }, { arm: 80 });
     assert.ok(odds(slow) < B3min(slow.B3), 'a slow runner against a strong arm has poor odds');
-    assert.strictEqual(tries(slow, 3000), 0, 'so he never goes');
+    assert.ok(tries(slow, 6000) < 0.01, 'so he almost never goes');
     assert.ok(tries(fast, 6000) > tries(avg, 6000) + 0.005, 'fast runners go more often');
-    // The odds he judges match what happens: steals of second by the fast runner, pitch by pitch.
+    // The odds he judges match what happens: steals of second by the fast runner, on the CPU's own pitches.
     let safe = 0;
-    const n = 4000;
+    const n = 6000;
+    const pd = { kind: 'pitch', side: 1, pitcher: 'HOM-SP', batter: 'AWY-CF', pitches: fast.g.teams[1].players['HOM-SP'].pitches.slice(), balls: 0, strikes: 0 };
     for (let i = 0; i < n; i++) {
-      fast.g.pitch = fast.B3.pitch.throw(fast.g, { type: 'FF', x: 0, z: 2.5 });
+      fast.g.pitch = fast.B3.pitch.throw(fast.g, fast.B3.manager.cpu.pitch(pd, fast.g));
       if (fast.B3.ball.steal(fast.g, 1, fast.g.pitch)) safe++;
     }
     near(safe / n, odds(fast), 0.06, 'his judged odds against the real steals');
@@ -196,13 +197,13 @@ module.exports = function (t) {
       const ctl = { tagup: (d, g) => { const a = B3.manager.cpu.tagup(d, g); if (d.from === 3) seen.push({ dist: d.dist, go: a.go }); return a; } };
       for (let n = 0; n < games; n++) {
         const t = averagePair();
-        for (const s of t.away.lineup) t.away.players[s.id].ratings.speed = speed;
+        for (const s of t.away.lineup) t.away.players[s.id].sim = { run: { speed: speed } }; // sprint speed, ft/s
         B3.game.play(B3.game.create(Object.assign(t, { type: 'regular', rng: B3.rng.create('tag ' + n) })), [ctl, null]);
       }
       const rate = (lo, hi) => { const x = seen.filter((s) => s.dist >= lo && s.dist < hi); return x.filter((s) => s.go).length / Math.max(1, x.length); };
       return { deep: rate(300, 999), mid: rate(230, 290), shallow: rate(0, 180) };
     };
-    const avg = run(60, 250), fast = run(85, 250);
+    const avg = run(27, 250), fast = run(30, 250);
     assert.ok(avg.deep > 0.9, 'deep catches: ' + avg.deep);
     assert.ok(avg.shallow < 0.1, 'shallow catches: ' + avg.shallow);
     assert.ok(fast.mid > avg.mid + 0.05, 'faster runners tag more on medium catches: ' + fast.mid + ' vs ' + avg.mid);
