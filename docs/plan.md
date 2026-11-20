@@ -1,9 +1,9 @@
-**Docs version: 5** (2026-11-20): Session 2, M1 task 3 done: game state and rules.
+**Docs version: 6** (2026-11-20): Session 2, M1 task 4 done: decision points.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 2 (M1 step 1.1), tasks 1–3 done. Next: task 4, decision points (the scripted-player test). Branch: `ccr-6e229fc2-je0w02` (this session's branch; it contains all of Session 1's `ccr-facbd381-x31dk5`). Nothing is merged to `main` yet (that needs the owner's OK).
+**Stopped at:** Session 2 (M1 step 1.1), tasks 1–4 done. Next: task 5, box score and play log. Branch: `ccr-6e229fc2-je0w02` (this session's branch; it contains all of Session 1's `ccr-facbd381-x31dk5`). Nothing is merged to `main` yet (that needs the owner's OK).
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 
@@ -86,7 +86,7 @@ Step 1.1 (S2): rules and game loop
    - The owner's answers (Nov 20, 2026): the names rule wording is OK; walks about 8%; keep the extra engine targets.
 2. [x] `B3.rng`: seeded random numbers whose state can be saved and restored, plus a test rule that `js/core/` never calls `Math.random`. Done when: the same seed gives the same sequence after a save and restore. **Result:** `js/core/rng.js` (sfc32, seeded from a hash of the seed's text; `save()` gives four numbers). `tools/tests/rng.test.js` checks repeats, save and restore through JSON, bad input and the spread of draws. The Node loader now makes `Math.random` throw, so every test and tool fails on a stray call.
 3. [x] Game state and rules, with a placeholder outcome for each pitch. Done when: 1,000 seeded games end correctly with every invariant holding (3 outs per half-inning except walk-offs, runs in the log equal the score, extra-inning rules by game type), and two runs with the same seed print identical output. **Result:** `js/core/game.js` (state, rules, the decision loop), `js/core/placeholder.js` (temporary stand-in outcomes), `js/core/data.js`, simple CPU answers in `js/core/manager.js`, test teams in `tools/lib/testteams.js`. `tools/lib/gamecheck.js` checks each game from its log alone; `node tools/gametest.js 1000 7` plays 1,000 games of all six types (regular, spring, postseason, Quick Game 9/3/1) and prints `all checks passed`; two runs print identical output (checksum `dc84cd87`). `tools/tests/game.test.js` also scripts the rule cases (walk-off scoring, runs on a third-out double play, sac fly, caught stealing ending an inning, the runner on second, Quick Game ties, the mercy rule) and confirms the checker catches planted mistakes. The game loop was built around the decision points from the start, so task 4 adds the scripted-player test rather than new plumbing.
-4. [ ] Decision points, answered by placeholder CPU logic. Done when: a test plays a game where a scripted "player" answers every choice for one side.
+4. [x] Decision points, answered by placeholder CPU logic. Done when: a test plays a game where a scripted "player" answers every choice for one side. **Result:** `tools/tests/decisions.test.js`: a scripted player runs the home side (pitch types and targets, swings and takes with timings, steals including double steals, tag-ups, pitching changes), both through `B3.game.play` and one answer at a time through `B3.game.answer` as the UI will; the test checks each answer took effect, every decision went to the right side, the same seed and answers repeat exactly, and bad answers are refused without changing the game. Planting two engine bugs (ignoring the chosen pitch type; dropping pitching changes) made it fail, as it should.
 5. [ ] Box score and play log. Done when: box totals match the game (runs, hits, outs as innings pitched, and plate appearances as the sum of their outcomes).
 
 Step 1.2 (S3): ball in play
