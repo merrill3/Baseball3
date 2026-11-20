@@ -16,9 +16,16 @@
 // The play script (for the field view in M4): timed positions for the ball, every fielder and every
 // runner, plus events, all from the same times that decide the play:
 //   { t, ball: [[t, x, y, z]], fielders: { pos: [[t, x, y]] }, runners: [{ id, from, end, path: [[t, x, y]] }],
-//     events: [{ t, e, pos?, id?, base? }] }
+//     events: [{ t, e, pos?, id?, base?, dive? }] }
 // Between two points everything moves in a straight line, and a track holds its last point until the
-// script's end t. Runners' `from` is 0 for the batter, `end` is the base they end on (4 scored) or 0 (out).
+// script's end t. Runners' `from` is 0 for the batter, `end` is the base they end on (4 scored) or 0 (out);
+// on an uncaught foul, `end` is null. Events: contact, catch, field (dive: true on a diving catch or
+// stop), throw (pos, base), out (id, base), safe, score, error, wall, land, hr, foul. What
+// tools/tests/script.test.js checks on every play: times only go forward; nobody runs faster than his
+// top speed and the ball never beats its exit speed or the thrower's arm; every runner ends where the
+// play says (after a tag-up too); at each out the ball and a fielder are on that base and the runner is
+// on the base path short of it; at each catch or stop the fielder is within his glove's reach of the
+// ball (plus BALL.diveReach on a dive).
 (function (root) {
   'use strict';
   const B3 = root.B3 = root.B3 || {};
@@ -160,11 +167,27 @@
     return d <= g ? fd.at : lerp(fd.at, pt, (d - g) / d);
   }
 
-  // The script: the fielder runs to the ball at pt and has it at time t.
+  // Feet a fielder is still short of a glove's reach from pt at time t (0 if he is there): a dive
+  // covers up to BALL.diveReach more.
+  function diveGap(fd, pt, t) {
+    return Math.max(0, dist(fd.at, pt) - T().BALL.glove - runDist(t - fd.react, fd.speed, 0));
+  }
+
+  // The script: the fielder runs to the ball at pt and has it at time t. On a dive he hasn't got there
+  // by t: he is as far as he could run, and the dive reaches the rest.
   function fieldAt(S, fd, pt, t) {
-    const q = reachPt(fd, pt);
-    S.fielder(fd.pos, reachT(fd, pt), q);
+    const d = dist(fd.at, pt);
+    const run = Math.min(Math.max(0, d - T().BALL.glove), runDist(t - fd.react, fd.speed, 0));
+    const q = d > 0 ? lerp(fd.at, pt, run / d) : fd.at;
+    S.fielder(fd.pos, Math.min(t, reachT(fd, pt)), q);
     S.fielder(fd.pos, t, q);
+    return q;
+  }
+
+  // The script: a fielder covering base b is on the bag at time t.
+  function coverAt(S, cv, b, t) {
+    S.fielder(cv.fd.pos, cv.t, base(b));
+    if (t !== undefined) S.fielder(cv.fd.pos, t, base(b));
   }
 
   // The batter and the runners at contact. Runners who were stealing are already on their way.
@@ -267,6 +290,10 @@
       lastT = times(b); lastS = (b - rn.from) * 90;
       S.put(tr.path, lastT, base(b));
     }
+    if (!out && endBase === rn.from && s > 0.5) {
+      // He holds: back to his bag.
+      S.put(tr.path, t0 + 0.3 + s / (0.8 * rn.run.speed), base(rn.from));
+    }
     if (out) {
       // Where he is when the tag or force is made (never past the base).
       const cap = (out.base - rn.from) * 90 - 1.5;
@@ -308,6 +335,7 @@
         if (path.fair && r > path.fence + 1) continue; // over the wall
         if (foul && !foulCatchable(p[1], p[2])) continue;
         const mk = p[0] - reachT(fd, [p[1], p[2]]);
+        if (mk < 0 && diveGap(fd, [p[1], p[2]], p[0]) > B.diveReach) continue; // out of reach, even diving
         if (mk >= 0 && first < 0) first = k;
         if (mk > m) { m = mk; at = k; }
       }
@@ -369,7 +397,9 @@
           if (!best || p[0] < best.t) best = { fd: fd, t: p[0], p: [p[1], p[2]], k: k, dive: false };
           break;
         }
-        if (pos !== 'C' && pos !== 'P' && (!near || mk > near.m)) near = { fd: fd, t: p[0], p: [p[1], p[2]], k: k, m: mk, dive: true };
+        if (pos !== 'C' && pos !== 'P' && (!near || mk > near.m) && diveGap(fd, [p[1], p[2]], p[0]) <= B.diveReach) {
+          near = { fd: fd, t: p[0], p: [p[1], p[2]], k: k, m: mk, dive: true };
+        }
       }
     }
     if (best) return best;
@@ -444,10 +474,11 @@
       S.event(tc, 'error', { pos: fd.pos });
       return droppedBall(g, c, path, D, off, S, fd, tc, at, bb);
     }
-    S.event(tc, 'catch', { pos: fd.pos });
+    S.event(tc, 'catch', best.margin < 0 ? { pos: fd.pos, dive: true } : { pos: fd.pos });
     const code = bb === 'popup' ? 'PO' : bb === 'line' || bb === 'ground' ? 'LO' : 'FO';
     const runners = [], back = [null, null, null];
-    let outs = g.outs + 1, ballFree = tc; // the ball can be thrown once
+    let outs = g.outs + 1;
+    let free = { t: tc, at: at, pos: fd.pos }; // who has the ball, where and since when (the next throw, a tag-up)
     for (let i = 2; i >= 0; i--) {
       const rn = off.runners[i];
       if (!rn) { runners[i] = null; continue; }
@@ -465,8 +496,9 @@
       const tr = S.runner(rn, pathPt(rn.from, rn.s0));
       S.put(tr.path, tc, pathPt(rn.from, sAt));
       if (outs < 3) {
-        const cv = cover(D, rn.from, [fd.pos]);
-        const tBall = Math.max(ballFree + fd.xfer + throwTime(dist(at, base(rn.from)), fd.arm), cv.t);
+        const thrower = D[free.pos], tRel = free.t + thrower.xfer;
+        const cv = cover(D, rn.from, [fd.pos, free.pos]);
+        const tBall = Math.max(tRel + throwTime(dist(free.at, base(rn.from)), thrower.arm), cv.t);
         if (tBall < tBack + 0.6 && !safeBy(g, tBall + B.tag - tBack)) {
           runners[i] = 0;
           outs++;
@@ -474,11 +506,12 @@
           S.put(tr.path, tc + 0.3, pathPt(rn.from, sAt));
           S.put(tr.path, tBall + B.tag, pathPt(rn.from, Math.min(sAt, sOut)));
           tr.end = 0;
-          S.ballAt(ballFree + fd.xfer, at, 6);
+          S.ballAt(tRel, free.at, 6);
+          S.event(tRel, 'throw', { pos: thrower.pos, base: rn.from });
           S.throwTo(tBall, base(rn.from));
-          S.fielder(cv.fd.pos, cv.t, base(rn.from));
+          coverAt(S, cv, rn.from, tBall + B.tag);
           S.event(tBall + B.tag, 'out', { id: rn.id, base: rn.from });
-          ballFree = tBall + 0.5;
+          free = { t: tBall + B.tag, at: base(rn.from), pos: cv.fd.pos };
           continue;
         }
       }
@@ -487,8 +520,13 @@
       S.put(tr.path, tBack, base(rn.from));
       tr.end = rn.from;
     }
+    // The batter runs toward first until the catch, then he's out.
+    const bt = off.batter, tb = S.runner(bt, base(0));
+    S.put(tb.path, bt.box, base(0));
+    S.put(tb.path, tc, pathPt(0, Math.min(85, runDist(tc - bt.box, bt.run.speed, 0))));
+    tb.end = 0;
     return result(code, bb, fd, true, 0, runners, {
-      meta: { catchT: r2(tc), catchAt: at, fielder: fd.pos, back: back, dist: Math.round(len(at[0], at[1])) }
+      meta: { catchT: r2(tc), catchAt: at, fielder: fd.pos, back: back, dist: Math.round(len(at[0], at[1])), free: free }
     });
   }
 
@@ -523,8 +561,8 @@
     const fd = stop.fd, T0 = stop.t, P0 = stop.p;
     const bb = bbType(c.la);
     S.flight(path, T0);
-    fieldAt(S, fd, P0, T0);
-    S.event(T0, 'field', { pos: fd.pos });
+    const Q0 = fieldAt(S, fd, P0, T0); // where he stands when he has it
+    S.event(T0, 'field', stop.dive ? { pos: fd.pos, dive: true } : { pos: fd.pos });
     const forced = forcedOn(g);
     const R = off.runners, bt = off.batter;
     const tb = arrive(bt, 1, bt.box, 0, 0); // batter to first
@@ -533,15 +571,11 @@
       S.event(T0, 'error', { pos: fd.pos });
       return errorPlay(g, c, D, off, S, fd, T0 + 1, P0, bb, 1);
     }
-    const ready = T0 + fd.xfer + (stop.dive ? B.diveLoss : 0);
-    // When the ball can be at base b: thrown, or carried if he is close to the bag.
-    const busy = [fd.pos];
-    const ballAt = (b, from, t, thrower) => {
-      const d = dist(from, base(b));
-      if (d < 22) return t - (thrower.xfer) + runTime(d, thrower.speed, 0) * 0.9; // steps on the bag
-      const cv = cover(D, b, busy.concat([thrower.pos]));
-      return Math.max(t + throwTime(d, thrower.arm), cv.t);
-    };
+    const up = T0 + (stop.dive ? B.diveLoss : 0); // on his feet with the ball
+    const ready = up + fd.xfer;
+    // When the ball can be at base b: thrown, or carried if he is close to the bag (he runs it there).
+    const carries = (b) => dist(P0, base(b)) < 22;
+    const ballAt = (b) => (carries(b) ? up + runTime(dist(Q0, base(b)), fd.speed, 0) : Math.max(ready + throwTime(dist(P0, base(b)), fd.arm), cover(D, b, [fd.pos]).t));
     // Runners: forced runners go on contact; the rest go only if they can beat a throw.
     const tGo = (rn) => (rn.going ? 0 : rn.run.read);
     const runT = (rn, b) => arrive(rn, b, tGo(rn), rn.s0, rn.v0);
@@ -552,7 +586,7 @@
       if (!rn) continue;
       if (forced[i] || twoOut || rn.going) { plan[i] = Math.min(4, i + 2); continue; }
       // Not forced: he goes if he thinks he beats a throw to his next base.
-      const est = ballAt(i + 2, P0, ready, fd) + B.tag - runT(rn, i + 2) + g.rng.normal(0, rn.run.judge);
+      const est = ballAt(i + 2) + B.tag - runT(rn, i + 2) + g.rng.normal(0, rn.run.judge);
       const ahead = plan[i + 1];
       const open = i === 2 || ahead === null || ahead > i + 2 || ahead === 4;
       plan[i] = open && est > rn.run.dare ? i + 2 : i + 1;
@@ -564,11 +598,11 @@
       const rn = R[i];
       if (!rn || plan[i] !== i + 2) continue;
       const b = i + 2;
-      const tBall = ballAt(b, P0, ready, fd);
+      const tBall = ballAt(b);
       const tag = forced[i] ? 0 : B.tag;
       options.push({ i: i, b: b, rn: rn, tBall: tBall, margin: runT(rn, b) - (tBall + tag), force: forced[i] });
     }
-    const t1 = ballAt(1, P0, ready, fd);
+    const t1 = ballAt(1);
     const first = { i: -1, b: 1, rn: bt, tBall: t1, margin: tb - t1, force: true };
     let choice = first;
     if (twoOut) {
@@ -578,17 +612,26 @@
     }
     // A wild throw: the out isn't made and everyone moves up.
     const throwD = dist(P0, base(choice.b));
-    if (throwD >= 22 && g.rng.chance(E.throw * fd.hands * throwD / 100 * (stop.dive ? E.hard : 1))) {
+    if (!carries(choice.b) && g.rng.chance(E.throw * fd.hands * throwD / 100 * (stop.dive ? E.hard : 1))) {
       S.event(ready, 'throw', { pos: fd.pos, base: choice.b });
+      S.ballAt(ready, P0, 4);
+      coverAt(S, cover(D, choice.b, [fd.pos]), choice.b, choice.tBall);
       S.event(choice.tBall, 'error', { pos: fd.pos });
       return errorPlay(g, c, D, off, S, fd, choice.tBall, base(choice.b), bb, 1);
     }
     const runners = [null, null, null];
     let outs = 0, batterTo = 1, outAt = null;
     const outsList = [];
-    S.event(ready, 'throw', { pos: fd.pos, base: choice.b });
-    S.ballAt(ready, P0, 4);
-    S.throwTo(choice.tBall, base(choice.b));
+    if (carries(choice.b)) {
+      S.ballAt(up, P0, 3);
+      S.throwTo(choice.tBall, base(choice.b), 3);
+      S.fielder(fd.pos, choice.tBall, base(choice.b));
+    } else {
+      S.event(ready, 'throw', { pos: fd.pos, base: choice.b });
+      S.ballAt(ready, P0, 4);
+      S.throwTo(choice.tBall, base(choice.b));
+      coverAt(S, cover(D, choice.b, [fd.pos]), choice.b, choice.tBall);
+    }
     const firstOut = !safeBy(g, -choice.margin);
     let relay = null;
     if (firstOut) {
@@ -596,11 +639,11 @@
       outsList.push({ who: choice.i, b: choice.b, t: choice.tBall + (choice.force ? 0 : B.tag) });
       // A relay to first for a double play (or a triple-play-free second out).
       if (choice !== first && g.outs + 1 < 3) {
-        const pivot = cover(D, choice.b, [fd.pos]).fd;
-        const piv = choice.b === 2 && dist(P0, base(2)) < 22 ? fd : pivot;
+        const piv = carries(choice.b) ? fd : cover(D, choice.b, [fd.pos]).fd;
         const release = choice.tBall + Math.max(0.2, B.pivot - piv.release);
-        const t1b = Math.max(release + throwTime(dist(base(choice.b), base(1)), piv.arm), cover(D, 1, [fd.pos, piv.pos]).t);
-        relay = { t: t1b, release: release };
+        const cv1 = cover(D, 1, [fd.pos, piv.pos]);
+        const t1b = Math.max(release + throwTime(dist(base(choice.b), base(1)), piv.arm), cv1.t);
+        relay = { t: t1b, release: release, piv: piv, cv1: cv1 };
         if (tb > t1b - 0.25 && !safeBy(g, t1b - tb)) {
           outs++;
           outsList.push({ who: -1, b: 1, t: t1b });
@@ -627,7 +670,13 @@
     // The third out on a force or on the batter: no runs count (game.js applies it). Runs never count
     // on these plays, so runsCount stays unset.
     // Script: the throw(s), the runners.
-    if (relay) { S.ballAt(relay.release, base(choice.b), 4); S.throwTo(relay.t, base(1)); }
+    if (relay) {
+      S.fielder(relay.piv.pos, relay.release, base(choice.b));
+      S.ballAt(relay.release, base(choice.b), 4);
+      S.event(relay.release, 'throw', { pos: relay.piv.pos, base: 1 });
+      S.throwTo(relay.t, base(1));
+      coverAt(S, relay.cv1, 1, relay.t);
+    }
     for (const o of outsList) S.event(o.t, 'out', { id: o.who < 0 ? bt.id : R[o.who].id, base: o.b });
     for (let i = 2; i >= 0; i--) {
       const rn = R[i];
@@ -731,6 +780,7 @@
       const tb = tBall(target.pl.to);
       S.event(ready, 'throw', { pos: fd.pos, base: target.pl.to });
       S.throwTo(tb, base(target.pl.to));
+      coverAt(S, cover(D, target.pl.to, [fd.pos]), target.pl.to, tb + B.tag);
       if (!safeBy(g, target.m) && g.outs < 3) { outIdx = target.i; outT = tb + B.tag; }
       // The batter takes an extra base on a throw home or to third, if it is open.
       if (target.pl.to >= 3 && bTo < 3) {
@@ -847,35 +897,47 @@
   }
 
   // A tag-up after a catch: the runner leaves when the ball is caught (or when he is back on the bag).
+  // The throw comes from whoever has the ball once the catch play is over (meta.free).
   function tagup(g, play, from) {
     const B = T().BALL;
     const m = play.meta;
     const rn = g.bases[from - 1];
     const run = g.teams[g.half].inp[rn.id].run;
     const D = defense(g, 'R');
-    const fd = D[m.fielder];
+    const free = m.free || { t: m.catchT, at: m.catchAt, pos: m.fielder };
+    const fd = D[free.pos];
     const leave = Math.max(m.catchT, m.back[from - 1] || 0) + run.read * 0.5;
     const tRun = leave + runTime(90, run.speed, 0);
-    const cv = cover(D, from + 1, [fd.pos]);
-    const tBall = Math.max(m.catchT + fd.xfer + throwTime(dist(m.catchAt, base(from + 1)), fd.arm), cv.t);
+    const cv = cover(D, from + 1, [m.fielder, free.pos]);
+    const tRel = free.t + fd.xfer;
+    const tBall = Math.max(tRel + throwTime(dist(free.at, base(from + 1)), fd.arm), cv.t);
     const safe = safeBy(g, tBall + B.tag - tRun);
-    // The script: the runner leaves the bag and the throw comes in.
+    // The script: the runner leaves the bag, the throw comes in, the cover man waits on the bag.
     const S = play.script;
     if (S) {
+      const push = (track, t, p, z) => {
+        const q = [r2(Math.max(t, track[track.length - 1][0])), r1(p[0]), r1(p[1])];
+        if (z !== undefined) q.push(r1(z));
+        track.push(q);
+        if (q[0] > S.t) S.t = q[0];
+      };
       const tr = S.runners.find((r) => r.id === rn.id);
       const end = safe ? tRun : tBall + B.tag;
-      const p = safe ? base(from + 1) : lerp(base(from), base(from + 1), 0.96);
+      const p = safe ? base(from + 1) : pathPt(from, Math.min(88.5, runDist(end - leave, run.speed, 0)));
       if (tr) {
-        tr.path.push([r2(Math.max(leave, tr.path[tr.path.length - 1][0])), r1(base(from)[0]), r1(base(from)[1])]);
-        tr.path.push([r2(end), r1(p[0]), r1(p[1])]);
+        push(tr.path, leave, base(from));
+        push(tr.path, end, p);
         tr.end = safe ? from + 1 : 0;
       }
-      S.ball.push([r2(m.catchT + fd.xfer), r1(m.catchAt[0]), r1(m.catchAt[1]), 6]);
-      S.ball.push([r2(tBall), r1(base(from + 1)[0]), r1(base(from + 1)[1]), 4]);
-      S.events.push({ t: r2(m.catchT + fd.xfer), e: 'throw', pos: fd.pos, base: from + 1 });
+      push(S.ball, tRel, free.at, 6);
+      push(S.ball, tBall, base(from + 1), 4);
+      const ft = S.fielders[cv.fd.pos];
+      push(ft, cv.t, base(from + 1));
+      push(ft, tBall + B.tag, base(from + 1));
+      S.events.push({ t: r2(tRel), e: 'throw', pos: fd.pos, base: from + 1 });
       S.events.push({ t: r2(end), e: safe ? (from + 1 === 4 ? 'score' : 'safe') : 'out', id: rn.id, base: from + 1 });
       S.events.sort((a, b) => a.t - b.t);
-      S.t = r2(Math.max(S.t, end, tBall));
+      S.t = r2(Math.max(S.t, end, tBall + B.tag));
     }
     return safe;
   }

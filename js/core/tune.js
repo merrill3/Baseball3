@@ -145,6 +145,7 @@
     maxTime: 12,       // seconds: a guard
     reach: 8,          // feet: a fielder can catch a ball this high (with a reach or jump)
     glove: 4,          // feet: a fielder gets a ball this far from where he stands (arm, glove, lean)
+    diveReach: 4,      // feet a dive (a diving stop or catch) reaches past the glove
     wallReach: 10.5,   // feet: a leap at the wall
     fieldHeight: 3.5,  // feet: a bouncing ball this low can be fielded
     catchSd: 0.09,     // seconds: how sharply a catch's chance falls off with the margin
