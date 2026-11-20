@@ -1,6 +1,6 @@
 # Baseball3: Session 1 proposal
 
-**Stopped at:** Session 1, task 3. This proposal is written and pushed. Waiting for the owner's OK before task 4 (CLAUDE.md, README.md, DESIGN.md, ARCHITECTURE.md, docs/plan.md) and task 5 (the skeleton).
+**Stopped at:** Session 1, task 3. This proposal is written and pushed. Waiting for the owner's OK (and answers to section 6) before tasks 4–6 in section 7.
 
 **Based on:** Baseball1 (merrill3/Baseball1, "Diamond Dash") at docs version 26, `main` commit 8355bdb (Nov 20, 2026), and the owner's Session 1 message (Nov 20, 2026).
 
@@ -203,3 +203,30 @@ Each step below is one session (one Claude Code session in a usage window). Size
 4. **Names:** keep fictional names everywhere (my default), even though the longplan chose real U.S. cities for Baseball1?
 5. **Roadmap:** are the order and sizes OK? About 25 sessions to the release, with M7 the largest at 5.
 6. **Clutch:** add it after the release (my default), or put it in the player model from the start?
+
+---
+
+## 7. After the owner's OK: the rest of Session 1 (from the owner's message, Nov 20, 2026)
+
+Recorded here so a new session can resume from this file. These are the owner's instructions.
+
+**Tasks**
+4. Write CLAUDE.md (with the hard rules and working rules below), README.md, DESIGN.md, ARCHITECTURE.md and docs/plan.md, using the owner's answers to section 6. docs/plan.md starts with a "Docs version: 1" line, holds the roadmap, and has detailed plans only for the next 1–2 milestones (status, goal, why now, in and out of scope, based on, decisions, ordered tasks each with "Done when", testing, open questions, risks). From then on, "Stopped at:" lives in docs/plan.md.
+5. Minimal skeleton: an index.html that loads cleanly from disk, and a Node test command that runs and passes.
+6. Commit, push, report, and stop.
+
+**Hard rules** (Claude's defaults carried from Baseball1; the owner can change them)
+- No build step, no dependencies. Plain scripts on one global namespace, loaded by index.html in a fixed order. Works opened straight from disk (file://): no ES modules, no web workers, no fetching local files.
+- Logic files never touch the DOM, so Node can test them.
+- Fictional team and player names only.
+- A save key unique to Baseball3, so saves don't collide with Baseball1 on merrill3.github.io.
+
+**Working rules** (every session; owner's choices)
+- Work on a branch. Commit and push after every task. Keep the "Stopped at:" line current, because the owner rests for hours between sessions.
+- One coding session at a time. Merge to main only with the owner's OK. Milestones that span more than one session end with one independent review agent; no parallel building agents.
+- Label every decision "owner's choice" or "Claude's default". Never present Claude's defaults as the owner's choices.
+- Once docs/plan.md exists: in any commit that changes CLAUDE.md, README.md, DESIGN.md, ARCHITECTURE.md or docs/plan.md, add 1 to the Docs version and update its date and note.
+- Don't build past the current milestone or step.
+- End every session with: what's done, how the owner can test it, what's next, the branch name, and the exact prompt for the next session.
+
+**Reference rules for Baseball1** (owner's choices): use its plans as the main input; use its code only as a very light reference (learn what worked or failed; never copy code or files); never change anything in Baseball1. The owner's earlier "Baseball2" plan (copying Baseball1's code) is dropped.
