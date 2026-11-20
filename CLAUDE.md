@@ -9,7 +9,7 @@ Diamond Dash (working title, owner's choice) is a browser baseball game built fr
 4. `README.md`: how to open the game and run the tests.
 5. `docs/proposal.md`: the Session 1 proposal the owner confirmed (history; the reasons behind DESIGN.md).
 
-## Hard rules (Claude's defaults carried from Baseball1; the owner can change them)
+## Hard rules (carried from Baseball1 as Claude's defaults; the owner chose to keep them, Session 3)
 - No build step and no dependencies. Plain scripts on one global namespace, **`B3`**, loaded by `index.html` in a fixed order. It must work opened straight from disk (`file://`): no ES modules, no web workers, no fetching local files.
 - Logic files (`js/core/`) never touch the DOM, so Node can test them.
 - Names: teams use real U.S. cities with invented nicknames (owner's choice, Nov 20, 2026; the list is in DESIGN.md section 6). Players, coaches and logos are invented. No real MLB team or player names.
@@ -17,7 +17,7 @@ Diamond Dash (working title, owner's choice) is a browser baseball game built fr
 
 ## Working rules (owner's choices, every session)
 - Work on a branch. Commit and push after every task. Keep the **Stopped at:** line in `docs/plan.md` current, because the owner rests for hours between sessions.
-- One coding session at a time. Merge to `main` only with the owner's OK. Milestones that span more than one session end with one independent review agent. No parallel building agents.
+- One coding session at a time. Merge to `main` after each finished, tested step, each time with the owner's OK (owner's choice, Session 3); the next session starts from `main`. Milestones that span more than one session end with one independent review agent. No parallel building agents.
 - Label every decision "owner's choice" or "Claude's default". Never present your defaults as the owner's choices. Text marked "suggested" is not decided.
 - In any commit that changes `CLAUDE.md`, `README.md`, `DESIGN.md`, `ARCHITECTURE.md` or `docs/plan.md`, add 1 to the **Docs version** at the top of `docs/plan.md`, and update its date and note.
 - Don't build past the current milestone or step.
@@ -34,6 +34,7 @@ Diamond Dash (working title, owner's choice) is a browser baseball game built fr
 - Its plans (DESIGN.md, docs/plan.md, docs/blueprint.md, docs/longplan-draft.md, the briefing at the end of docs/transcript.md) are inputs for features, order and lessons. `docs/longplan-draft.md` is a light reference for plans (owner's choice); it was written for Baseball1's code, so it is not Baseball3's milestone list.
 - Its code is a very light reference: look to learn what worked or failed; never copy code or files.
 - Never change anything in Baseball1.
+- The rating system (DESIGN.md section 10) and the screens and menus (section 9) must be Baseball3's own designs, not Baseball1's (owner's choice, Session 3).
 - The owner's earlier "Baseball2" plan (copying Baseball1's code) is dropped.
 
 ## Test after changes

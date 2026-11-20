@@ -1,6 +1,6 @@
 # Diamond Dash (Baseball3): design decisions
 
-Every product decision for Baseball3, with who made it. So far the rules and game loop are built (M1 step 1.1, headless); this file says what will be built. `docs/plan.md` says when.
+Every product decision for Baseball3, with who made it. So far the rules, the game loop, pitches, swings and balls in play are built (M1 steps 1.1–1.2, headless); this file says what will be built. `docs/plan.md` says when.
 
 **Labels**
 - **Owner's choice:** the owner decided it.
@@ -9,6 +9,8 @@ Every product decision for Baseball3, with who made it. So far the rules and gam
 - **Suggested:** came from a design discussion and is not decided.
 
 Baseball1 (merrill3/Baseball1, also called "Diamond Dash") is the reference. Its plans were the main input; its code is not copied.
+
+**What must differ from Baseball1** (owner's choice, Session 3, Nov 20, 2026): the **rating system** (section 10) and the **screens and menus** (section 9) are Baseball3's own designs, not Baseball1's. Baseball3's code is written fresh: a Session 3 check found only 8 generic lines (such as a stylesheet link and browser-test setup) that also appear in Baseball1, out of about 2,000. The code ground rules carried over from Baseball1 stay: plain scripts on one global name, no build step, game logic kept apart from the screens (CLAUDE.md "Hard rules"), and a top-down ball-in-play model that writes a play script for the field view.
 
 ---
 
@@ -207,7 +209,7 @@ League games, over several simulated seasons. M1 tunes the league-wide rates; M2
 
 ## 10. Ratings (owner's choices, Nov 20, 2026, from the ratings interview)
 
-The owner was interviewed on a full ratings redesign in a separate chat (merrill3/Baseball1, branch `ccr-a97b9715-fnzb96`, `docs/ratings-interview.md`; that branch is not merged and Baseball1 is unchanged). In Session 2 the owner chose to build it in Baseball3, answered the open points, and confirmed this summary. The interview's three rules: each rating has a unique job; a point of each rating is worth about the same (curves allowed); each rating ties to stats that track performance over the long run. Nothing in this section is built yet (M1 steps 1.2–1.4, then M2).
+The owner was interviewed on a full ratings redesign in a separate chat (merrill3/Baseball1, branch `ccr-a97b9715-fnzb96`, `docs/ratings-interview.md`; that branch is not merged and Baseball1 is unchanged). In Session 2 the owner chose to build it in Baseball3, answered the open points, and confirmed this summary. The interview's three rules: each rating has a unique job; a point of each rating is worth about the same (curves allowed); each rating ties to stats that track performance over the long run. M1 step 1.2 built the physical inputs each rating will set (the "rating hooks" in ARCHITECTURE.md), one per job below; the ratings themselves (20–99, the curve, the overall) come in steps 1.3–1.4 and M2.
 
 **Hitting.** A swing has two errors: *when* (timing, in ms) and *where* (bat height against the ball). Six hitting ratings, plus Speed (under running):
 
@@ -241,6 +243,7 @@ The owner was interviewed on a full ratings redesign in a separate chat (merrill
 - **Fielders:** Range (first step and route), Hands (clean catches, transfers, quick release: errors and double plays), Arm. **Catchers** also have Framing (borderline strikes). Throwing out base stealers uses Arm plus Hands' quick release.
 - **Blocking** (wild pitches and passed balls) waits until those exist, after the release (owner's choice, Session 2), so no rating is without a job.
 - **Running:** Speed (raw sprint; also helps Range and infield hits) and Baserunning (reads, jumps, extra bases, steal success, outs on the bases).
+- **No baserunning tendency** (owner's choice, Session 3, Nov 20, 2026): how much safety margin a runner wants before taking an extra base is one engine number for every runner (`BALL.dare`), not a player trait. Aggressiveness and Aim stay the only tendencies.
 - **Value rule:** a point of each is worth about as much as a point of a hitting rating at its key spot (Range at shortstop and center field, Arm in right field and at catcher, Framing at catcher, Baserunning for a regular), and less elsewhere. The overall is weighted by position.
 
 **The whole set**

@@ -61,8 +61,7 @@
     speed: 27,         // Speed: top sprint speed, feet per second (also a fielder's speed to the ball)
     read: 0.2,         // Baserunning: seconds to read a ball in play and break
     jump: 0.12,        // Baserunning: seconds lost on the jump when stealing
-    judge: 0.14,       // Baserunning: seconds of error when he judges an extra base (lower is better)
-    dare: 0.2          // tendency: seconds of margin he wants before taking an extra base
+    judge: 0.14        // Baserunning: seconds of error when he judges an extra base (lower is better)
   };
 
   // ---- Physics and rules numbers ----
@@ -164,6 +163,8 @@
     pivot: 0.45,       // seconds for the pivot man to catch and throw on a double play
     infield: 125,      // feet: grounders past this have left the infield
     lead: [12, 18, 12], // feet: leads off first, second and third
+    dare: 0.2,         // seconds of margin a runner wants before taking an extra base: one number for every
+                       // runner, not a player trait (owner's choice, Session 3)
     halfway: 0.45,     // share of the way a runner goes on a fly ball that may be caught
     dropRead: 1,       // a runner at halfway breaks this many reads (RUN.read) after the ball drops
     foulRoom: 28,      // feet of foul ground beyond the lines where a foul fly can be caught

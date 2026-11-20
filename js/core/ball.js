@@ -10,7 +10,7 @@
 //
 // Every rating hook it uses is an input from B3.tune.inputs: fielders' Range (react, route), Hands
 // (hands, release), Arm (arm) and catchers' arm and release on steals; runners' Speed (speed) and
-// Baserunning (read, jump, judge); the tendency dare. Times are seconds from contact; positions are
+// Baserunning (read, jump, judge). Times are seconds from contact; positions are
 // feet on the field (B3.data.FIELD: home at 0, 0; y toward center; x toward first base).
 //
 // The play script (for the field view in M4): timed positions for the ball, every fielder and every
@@ -589,7 +589,7 @@
       const est = ballAt(i + 2) + B.tag - runT(rn, i + 2) + g.rng.normal(0, rn.run.judge);
       const ahead = plan[i + 1];
       const open = i === 2 || ahead === null || ahead > i + 2 || ahead === 4;
-      plan[i] = open && est > rn.run.dare ? i + 2 : i + 1;
+      plan[i] = open && est > B.dare ? i + 2 : i + 1;
     }
     // The defense's choice: the lead forced runner (or a runner breaking for home) if it's a sure out,
     // with a relay to first for two; else the batter at first; with two outs, the easiest out.
@@ -749,7 +749,7 @@
         const nb = to + 1;
         if (nb >= aheadEnd && nb < 4) break;
         const est = tBall(nb) + B.tag - at(nb) + g.rng.normal(0, rn.run.judge);
-        if (est > rn.run.dare) to = nb; else break;
+        if (est > B.dare) to = nb; else break;
       }
       if (to < 4 && to >= aheadEnd) to = aheadEnd - 1;
       plans[i] = { rn: rn, to: to, at: at, st: st };
@@ -762,7 +762,7 @@
       const nb = bTo + 1;
       if (nb >= aheadEnd && nb < 4) break;
       const margin = tBall(nb) + B.tag - bAt(nb);
-      if (margin > bt.run.dare * 0.5 && margin + g.rng.normal(0, bt.run.judge) > bt.run.dare) bTo = nb; else break;
+      if (margin > B.dare * 0.5 && margin + g.rng.normal(0, bt.run.judge) > B.dare) bTo = nb; else break;
     }
     // The throw: to the runner with the closest play, if there is one.
     let target = null;
