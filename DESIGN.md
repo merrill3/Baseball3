@@ -235,7 +235,7 @@ The owner was interviewed on a full ratings redesign in a separate chat (merrill
 | Stamina | Pitches per outing. Weighted by role and outside the equal-value rule: it counts for starters, barely for relievers | pitches per start, innings |
 
 - **Aim** is a tendency (Nibbler, Balanced, Attacker), about value-neutral, paying off with good Command. **Which way** (owner's choice, Session 4, Nov 20, 2026): good Command rewards Nibbler. A nibbler with good Command paints the corners; with poor Command he misses off the plate and walks people. Attacker is the safer style for a pitcher with poor Command.
-- **Arsenal:** each pitch has a **grade** (movement and quality) and a **shape** (ground-ball or fly-ball tilt). Grades carry moderate weight; the pitch type stays the main driver. For balance and the overall, the arsenal counts as one usage-weighted composite. It is a section of the pitcher's profile, not its own screen. Sizes are in section 4.
+- **Arsenal:** each pitch has a **grade** (movement and quality) and a **shape** (ground-ball or fly-ball tilt). Grades carry moderate weight; the pitch type stays the main driver. **A shape is value-neutral** (owner's choice, Session 5, Nov 20, 2026): a ground-ball or fly-ball tilt is a style, and neither is better on its own (Claude adds a counterweight to the tilt to make it so). For balance and the overall, the arsenal counts as one usage-weighted composite. It is a section of the pitcher's profile, not its own screen. Sizes are in section 4.
 - **Put-away pitch:** the best-graded pitch, with the steep curve past 85. Strikeout aces come from here.
 - **Growth** (M6's growth function): pitch grades grow and age. A pitcher sometimes learns a new pitch in the offseason: rare, about 3–5% of pitchers a year, mostly 27 and under or with only 2–3 pitches; it starts at grade 35–50, can grow, and makes a news item. Pitches are never lost.
 
@@ -245,6 +245,7 @@ The owner was interviewed on a full ratings redesign in a separate chat (merrill
 - **Running:** Speed (raw sprint; also helps Range and infield hits) and Baserunning (reads, jumps, extra bases, steal success, outs on the bases).
 - **No baserunning tendency** (owner's choice, Session 3, Nov 20, 2026): how much safety margin a runner wants before taking an extra base is one engine number for every runner (`BALL.dare`), not a player trait. Aggressiveness and Aim stay the only tendencies.
 - **Value rule:** a point of each is worth about as much as a point of a hitting rating at its key spot (Range at shortstop and center field, Arm in right field and at catcher, Framing at catcher, Baserunning for a regular), and less elsewhere. The overall is weighted by position.
+- **Hands and Speed in the value rule** (owner's choices, Session 5, Nov 20, 2026): Hands' key spot is shortstop (second base, third base and catcher get less). Speed is worth a full hitting point in center field, with its running and fielding together; less at other spots, and least at DH, where it only runs.
 
 **The whole set**
 - **Top end:** steep past about 85, the same shape for every rating. Bonuses from combining ratings are capped.
