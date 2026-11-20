@@ -1,6 +1,6 @@
 # Baseball3: Session 1 proposal
 
-**Stopped at:** Session 1, task 3. This proposal is written and pushed. Waiting for the owner's OK (and answers to section 6) before tasks 4–6 in section 7.
+**Status:** confirmed by the owner on Nov 20, 2026 (answers in section 6). The decisions now live in DESIGN.md and the roadmap in docs/plan.md, which also holds the **Stopped at** line. This file is kept as history.
 
 **Based on:** Baseball1 (merrill3/Baseball1, "Diamond Dash") at docs version 26, `main` commit 8355bdb (Nov 20, 2026), and the owner's Session 1 message (Nov 20, 2026).
 
@@ -203,6 +203,8 @@ Each step below is one session (one Claude Code session in a usage window). Size
 4. **Names:** keep fictional names everywhere (my default), even though the longplan chose real U.S. cities for Baseball1?
 5. **Roadmap:** are the order and sizes OK? About 25 sessions to the release, with M7 the largest at 5.
 6. **Clutch:** add it after the release (my default), or put it in the player model from the start?
+
+**The owner's answers (Nov 20, 2026):** 1, 3 and 5 confirmed. 2: the working title is **Diamond Dash**. 4: use the owner's team list (`claude/baseball3-teams-2026-11-20.md` in the planning project): real U.S. cities with invented nicknames, now in DESIGN.md section 6. 6: clutch is parked for later. Also: lightly reference Baseball1's `docs/longplan-draft.md` for the plans.
 
 ---
 

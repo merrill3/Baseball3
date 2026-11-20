@@ -1,0 +1,184 @@
+# Diamond Dash (Baseball3): design decisions
+
+Every product decision for Baseball3, with who made it. Nothing beyond the skeleton is built yet; this file says what will be built. `docs/plan.md` says when.
+
+**Labels**
+- **Owner's choice:** the owner decided it.
+- **Confirmed Nov 20, 2026:** Claude proposed it in `docs/proposal.md` (section 2, rows 1–64, and section 3) and the owner confirmed the whole list. These count as owner's choices. Numbers in brackets, like [12], are the proposal's row numbers.
+- **Claude's default:** Claude picked it and the owner hasn't confirmed it. Easy to change.
+- **Suggested:** came from a design discussion and is not decided.
+
+Baseball1 (merrill3/Baseball1, also called "Diamond Dash") is the reference. Its plans were the main input; its code is not copied.
+
+---
+
+## 1. Goal and name
+- **Goal** (owner's choice): a public web page friends open in a browser on a phone or computer, on GitHub Pages. An app version may come later; it is not planned.
+- **Working title: Diamond Dash** (owner's choice, Nov 20, 2026), the same name as Baseball1. The repo stays Baseball3, and saves use Baseball3's own keys (see ARCHITECTURE.md "Saving"), so the two games don't collide on `merrill3.github.io`.
+- **The final series is the "Diamond Series"** (Claude's default: the proposal tied the final's name to the game's name, and the name stayed Diamond Dash).
+
+## 2. Core game and controls (confirmed Nov 20, 2026)
+- A full mini baseball game: you bat and pitch against a CPU team [1].
+- Quick Game: pick 1, 3 or 9 innings. Franchise games are always 9 innings [2].
+- Runs in the browser with no build step [3].
+- **Batting is timing only.** Tap, click or press Space to swing. Early pulls the ball, late goes the other way, perfect timing hits hardest. Pitches outside the zone are harder to hit well, so you can take them [4].
+- **Pitching:** pick one of your pitcher's pitches, then tap where to throw it. Control isn't perfect, so the pitch lands near the target [5].
+- **Fielding and baserunning are automatic,** except two choices: send a runner to steal, and send the lead runner to tag up after a catch [6]. The longplan's "rework stealing" is still undefined (after the release).
+- **Camera behind the batter** for every pitch [7], cutting to a **top-down field view** when the ball is in play [8].
+- **Clean, flat 2D art on a canvas** [9].
+- **Phone and desktop,** with touch, mouse and keyboard [10]. Phone-first or desktop-first is settled at the design interview before M3.
+- **Easy, Medium and Hard.** Difficulty changes pitch speed, the swing timing window, CPU hitting and pitching, and hints (Easy shows the pitch type and where it will cross the plate). It changes only games you play; simulated games use neutral settings [11, 43].
+- **Quick Game uses league teams:** pick any two of the 30 teams, with their real rosters and ratings. No separate exhibition rosters [12, 32]. You pick home or away [16].
+- **Box score after every game.** Win/loss records and personal bests are saved in the browser [13].
+- **Sound effects** made in code (Web Audio), with an umpire voice by speech synthesis where the browser supports it. Built in M8 [14].
+- **Extra innings:** Quick Game plays up to 3 extra innings, then ends in a tie. League games always play to a winner. In regular-season and spring games each extra inning starts with a runner on second; postseason games don't [17].
+- **Mercy rule:** Quick Game only (a 10-run lead after 7 innings, in 9-inning games). Never in league games [18].
+- The designated hitter is used, so pitchers don't bat (Claude's default, as in Baseball1).
+
+## 3. Look and motion (confirmed Nov 20, 2026)
+- Starting idea: sleek near-black silhouettes with team-color trim (cap, sleeves, number), a light rim highlight, belt and sock trim, dark hands. Drawn simply. The final look is settled at the interview before M4 [19].
+- **The first version uses a few simple key poses and light idle motion.** A full jointed skeleton waits until after the release, because graphics cost was Baseball1's biggest problem [20].
+- Tiny top-down running figures in the field view [21].
+- Later: reactions, follow cam, replays, special postseason presentation. M5 adds one simple postseason touch [22].
+- Later: graphics editor tools (Baseball1's "option B") and any 3D look. Nothing in the first version depends on them, and 3D would break the hard rules [23].
+
+## 4. Pitching and bullpen (confirmed Nov 20, 2026)
+- **7 pitch types:** four-seam fastball, sinker, cutter, slider, curveball, change-up, splitter. Each has its own speed, movement, effect on contact and deception [24].
+- Each pitcher throws 3–5 of them, with his own velocity, control and stamina [25].
+- Full league staffs in every game, Quick Game included [26].
+- Bring in a reliever between pitches (BULLPEN button or `B`). A removed pitcher can't return. The CPU changes pitchers when its pitcher tires or is hit hard [27].
+- Fatigue lowers control and velocity. The HUD shows your pitcher's energy [28].
+- **Each rating has one job** [29, 30]:
+  - Stuff makes hitters miss (whiffs and strikeouts).
+  - Velocity makes contact weaker (hitters are late; fewer hard-hit balls).
+  - Control sets walks.
+  - Eye sets how often a hitter chases.
+  - Pitch quality changes how often hitters chase.
+- The calibration test checks each job from M1. These come from Baseball1's lessons: Control barely moved walks, chase rates didn't change with pitch quality, and the four-seam fastball was the most hittable pitch.
+
+## 5. League, season and franchise (confirmed Nov 20, 2026)
+- You control one team. Take over any of the 30, rename it, recolor it [31].
+- 30 teams in 2 leagues of 3 divisions, a 162-game season [33]. Teams are listed in section 6.
+- Each game: Play it, Quick play only its key moments, or Sim it. You can also sim a day, a week, a month, to a date, or to the end [34].
+- Standings, leaders, awards and an All-Star Game (M5) [35].
+- Injuries and rest, and a 5-man rotation. Basic injuries in M2; deeper injuries after the release [36].
+- Trades, free agency and a draft, in Improve Team (M7) [37].
+- Spring training: about 15 games with separate stats, small breakouts and slumps, then you set your 26-man Opening Day roster (M6) [38].
+- **Postseason: 12 teams,** 6 per league (3 division winners and 3 wild cards). The top 2 seeds per league get a bye. Wild Card Series best of 3, Division Series best of 5, League Championship Series best of 7, Diamond Series best of 7 [39].
+- You can play, quick-play or sim every postseason game. While your team is alive, multi-day sims stop at your games; "Sim to my next game" skips to your next one [40].
+- **Saving:** one franchise slot, autosaved, with a save version, an upgrade step for older saves, and Export and Import from the first saving step (M2) [41].
+- Every game keeps full stats. Full box scores are kept for your games and recent days only, to keep the save small [42].
+- **Rosters:** 26 active (13 position players, 5 starters, 8 relievers including a closer) plus a reserve squad. Minor leagues come after the release [44].
+- **Ratings** run 20–99, and 60 is an average big-leaguer. Hitters: Contact, Power, Eye, Speed, Fielding, Arm. Pitchers: Velocity, Control, Stamina, Stuff, plus a pitch set [45].
+- **Overall rating tracks value** (WAR) by position, and teams get a team overall [46].
+- **Growth:** one growth function handles every rating change (aging, performance, spring breakouts, in-season lasting changes, later training), for your team and the CPU teams alike (M6) [47].
+- **Contracts and money:** salary in $M, years left, and a payroll budget per team. Payroll always means the whole organization (active roster, injured list, reserves) plus released players still being paid [48]. Finances stay lightweight for now (owner's choice).
+- **Releasing a player:** you keep paying him until his contract would have ended. Blocked during the draft, and blocked if it would leave the roster too thin (M7) [49].
+- **Team control** (M7) [50]: 6 years of big-league service before free agency; about 3 years near the minimum salary, then 3 arbitration years with automatic raises; you tender or non-tender arbitration players; extensions at any time until free agency; minor-league free agency after 7 seasons in the organization without reaching 6 years. CPU teams follow the same rules.
+- Build order: the foundation first, as in the roadmap in `docs/plan.md` [51].
+
+## 6. Teams (owner's choice, Nov 20, 2026)
+
+From the owner's list (`claude/baseball3-teams-2026-11-20.md` in the planning project). Two nicknames were cut to 3 syllables or fewer: Bodega Cats became **Bodegas**, Gila Monsters became **Gilas** (syllables counted in the nickname only).
+
+**Coast League**
+
+| Division | Team | Code | Colors |
+|---|---|---|---|
+| Atlantic | Boston Wicked | BOS | brick #8B2F23 / granite #6F7378 |
+| Atlantic | New York Bodegas | NYC | awning green #1F6F43 / tabby orange #D9822B |
+| Atlantic | Philadelphia Jawns | PHI | pretzel brown #8A5A2B / mustard #D9A520 |
+| Atlantic | Baltimore Hons | BAL | Formstone gray #7D7468 / hairspray blue #6FA8DC |
+| Atlantic | Washington Monuments | WAS | marble #E8E4DA / Potomac blue #2C4A6B |
+| Gulf | Miami Flamingos | MIA | flamingo #F26B8A / Biscayne turquoise #1FB5B0 |
+| Gulf | Tampa Cigars | TAM | tobacco #6B4226 / band gold #C9A227 |
+| Gulf | Orlando Swans | ORL | lake teal #2E7F86 / beak orange #E8752C |
+| Gulf | New Orleans Yats | NOL | streetcar green #2F5D3A / Mardi Gras purple #5B2C83 |
+| Gulf | Houston Bayous | HOU | bayou olive #4E5B31 / sunset orange #E8612C |
+| Pacific | Seattle Freeze | SEA | drizzle gray #5E6A71 / evergreen #1D4D3A |
+| Pacific | Portland Roses | POR | rose #C2185B / moss #6B8E3D |
+| Pacific | San Francisco Sourdoughs | SF | bridge orange #C0362C / fog #B8BEC2 |
+| Pacific | Los Angeles 405s | LA | freeway green #006B3F / sunset violet #8E4F8C |
+| Pacific | San Diego Sea Lions | SD | cove blue #1B7BAA / kelp #3B5323 |
+
+**Heartland League**
+
+| Division | Team | Code | Colors |
+|---|---|---|---|
+| Lakes | Chicago Els | CHI | L-car silver #9EA3A8 / lake blue #1E5C8C |
+| Lakes | Detroit Mittens | DET | steel #5A6470 / mitten red #A8322D |
+| Lakes | Cleveland Walleyes | CLE | Lake Erie green #3F6B5A / walleye gold #C9A13B |
+| Lakes | Pittsburgh Yinzers | PIT | smoke gray #4A4A48 / incline red #B23A2E |
+| Lakes | Minneapolis Skyways | MIN | lake ice #A9CCE3 / north-woods green #2F4F3A |
+| Central | Atlanta Peaches | ATL | peach #F4A261 / red clay #A0442B |
+| Central | Nashville Pickers | NSH | sunburst #C1661C / denim #2E4A6B |
+| Central | St. Louis Arches | STL | steel #A8B0B5 / river brown #6E5A3C |
+| Central | Kansas City Burnt Ends | KC | bark #2B1D16 / sauce red #8B1E1A |
+| Central | Dallas Y'all | DAL | sky blue #4A90C2 / boot brown #6B4423 |
+| Desert & Mountain | Denver Mile High | DEN | Red Rocks #A0452E / snowcap #F0F3F5 |
+| Desert & Mountain | Phoenix Gilas | PHX | gila orange #E07B39 / gila black #231F20 |
+| Desert & Mountain | Las Vegas Locals | LV | neon pink #FF3EA5 / desert night #1A1A2E |
+| Desert & Mountain | Salt Lake Brine Shrimp | SLC | salt white #EEEDE8 / Wasatch blue #3E5C8A |
+| Desert & Mountain | Austin Bats | AUS | dusk purple #4B3A6B / limestone #D8CBB0 |
+
+**The names rule.** Owner's choice (Nov 20, 2026): teams use real U.S. cities with the invented nicknames above. Claude's wording, not yet confirmed by the owner: nicknames, logos, players and coaches stay invented, and no real MLB team or player name is ever used. Baseball1's longplan proposed nearly the same text.
+
+Claude's defaults (to check when M2 builds the league): codes are 2–3 letters as listed; market sizes, ballpark sizes and the schedule's division and league mix get proposed in M2.
+
+## 7. Calibration targets (confirmed Nov 20, 2026; originally approved by the owner in Baseball1's Milestones 1b and 2b)
+
+League games, over several simulated seasons. M1 tunes the league-wide rates; M2 re-checks them over full seasons and adds the per-player targets.
+
+| Measure | Target |
+|---|---|
+| Runs per team-game [52] | about 4.3–4.6 |
+| Strikeout rate [53] | about 21% (20–22%) |
+| League AVG [53] | about .260 (.255–.264); may move if the .300 and .240 counts need it |
+| League SLG [53] | about .440 (.430–.450) |
+| Doubles per team-game [53] | 1.4 or more on average |
+| Triples per team-game [53] | 0.2 or fewer |
+| Home runs per team-game [53] | about 1.5 (1.4–1.55) |
+| Standout starters (28% K or more) per league [54] | 1–2, maybe 3–4 |
+| Standout hitters (.600 SLG or more) per league [54] | 1–2, maybe 3–4 |
+| .300 hitters per league [55] | 5–10 |
+| Batting champion, each league [55] | .330–.350 |
+| Regulars under .240 against .300 hitters [55] | more under .240 than at .300 |
+| Contact against Power, in AVG [55] | Contact moves AVG more than Power does |
+
+- Built in from the start (M1–M2), not added later [55].
+- Played and simmed games use the same model. There is no special edge in games you play. Re-add one only if playtests ask for it [56].
+- 25 hidden archetypes for player generation: later, as in Baseball1 [57].
+- A "regular" has 502 or more plate appearances; a "qualified" starter has 162 or more innings (Claude's default, as in Baseball1).
+- Targets come from general baseball knowledge, not research (as in Baseball1).
+
+## 8. Workload, WAR and form (confirmed Nov 20, 2026)
+- **Bullpen rest** (M2) [58]: no reliever pitches 3 days in a row. A long outing needs extra rest: over 20 pitches means 1 day off, over 35 means 2, over 50 means 3. Roles are set each day from the rested arms: closer (9th or later, lead of 0–3), two setup men (7th and 8th of a close game), middle relief.
+- **Workload targets** [59]: the busiest reliever about 60–80 innings and at most about 75 games; the top starter under about 210 innings.
+- No "pace guard" or fixed hook percentages as patches. Stamina is tuned directly, and patches return only if tests need them [60].
+- **WAR targets** [61]: about 1,000 a season across the league, about 57% hitters and 43% pitchers; MVP about 8–10, nobody much past 11; Rookie of the Year typically 3–6. Rookies count only up to age 27 from the second season on. Reliever of the Year needs 80% of his games in relief. No display "stretch" on hitters' WAR (Baseball1 had one; Baseball3's sim should let stars stand out on its own).
+- **In-season form** (M6) [62]: players run hot (🔥) or cold (❄️) for a few weeks, with one icon each, next to their names everywhere and in the game HUD. Nothing goes to the news. Spring results set Opening Day form. A few players a season make a lasting change: small steps forward or back, big breakouts (mostly 27 and under, a rare late bloomer up to about 31), and prospect busts that also lower potential. Each leaves a note on the player's profile. Lasting changes go through the one growth function.
+- **Form starting values** [63]: form is −6 to +6 rating points, half of it fades in about 12 days, and the icon shows at ±2.8 or more.
+
+## 9. Navigation and screens (confirmed Nov 20, 2026)
+- **Five tabs, always in the same place:** Home, Manage Team, Improve Team, Finances, Library. A bottom bar on phones, a top bar on desktops [64; section 3].
+- **Home** is the daily hub: today's game (Play, Quick play, Sim), sim controls, a standings snapshot of your division, news, and alerts.
+- **Offseason:** its own calendar-style page, connected to Improve Team (owner's choice). From the final out of the postseason to Opening Day, the first tab reads "Offseason" and opens the calendar, since the calendar is the daily hub then (confirmed Nov 20, 2026). Improve Team links to it all year; during the season it previews key dates and your expiring contracts. Each offseason step opens the matching Improve Team page.
+- **Manage Team** is assessment-first (owner's choice): an overview (record, run differential, how your hitting, pitching and defense rank, strengths and needs), then Roster, Lineup, Pitching, Injuries and the Auto-manage switch. Game prep lives here (owner's choice).
+- **Improve Team:** Trades, Free agency, Draft. *Suggested:* player development and long-term planning (after the release).
+- **Finances:** lightweight for now (owner's choice). *Suggested:* budget, payroll, contracts.
+- **Library:** organized by subject, with attractive pages plus dense sortable tables (owner's choice). *Suggested subjects:* players, teams, standings and schedule (with the bracket), leaders, stats and records, transaction history.
+- **Rules** (confirmed Nov 20, 2026):
+  - Every piece of information has one home. Other places link to it or reuse the same component. Home's standings card is a snapshot that links to Library, never a second standings screen.
+  - *Suggested* (adopted): information can be reached from wherever it's needed. A player's contract is one block on his player page, reachable from Manage Team, Improve Team and Finances.
+  - One way to show each thing: potential, contract status and form are each drawn by one shared function.
+  - Each feature lives in one area. Trading happens only in Improve Team; other screens link there.
+  - Back is predictable. Pages have addresses (`#/library/players/123`), so the browser's Back and a phone's back gesture work. Player and team pages are pages, not popups.
+  - Popups only for short choices and confirmations. One stack: Escape or Back closes the top popup only, and every popup closes when the page changes.
+  - Easy for new players: plain labels, a short first-run guide and a glossary (M8).
+
+**Lessons from the owner's Baseball1 playtests** (owner's list, possibly incomplete): features shouldn't be scattered (trades were "all over the place"); no duplicate screens (standings showed twice); easy for new players; information easy to find; popups and Back behave predictably; batters must chase some pitches outside the zone; prospect potential must look the same everywhere.
+
+## 10. Later and parked
+- **Clutch:** parked for later (owner's choice, Nov 20, 2026).
+- **After the release** (from Baseball1's longplan; re-planned after friends' feedback): deeper stats and stat pages; deeper pitching (new pitches, spin, a fastball rework); graphics tools and wiring; one development system with training and coaches; deeper injuries; playing by hand (stealing rework; a decision on balk, hit by pitch and bunt); team maps, logos and history; revenue budgets and luxury tax; hidden information ("fog"); deeper trades and free agency; minor leagues; a deeper draft and scouting; franchise difficulty; rewards; realism (archetypes, a baseball study).
+- **Parked** (owner's choices in Baseball1's longplan): owner-manager system, multiplayer, Korea and Japan, more postseason effects, fun modes. App version: not planned.
