@@ -1,4 +1,4 @@
-**Docs version: 11** (2026-11-20): Session 3: task 7 in progress (ball.js written, placeholder.js removed); `state.md` holds the resume notes.
+**Docs version: 12** (2026-11-20): Session 3: the owner accepts about 13 s a season for now (no speed work); README file list updated for ball.js.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
@@ -128,7 +128,7 @@ Step 1.3 (S4): hitting and pitching ratings, CPU choices
 Step 1.4 (S5): defense and running ratings, calibration, close
 11. [ ] Defense and running ratings into sim numbers: Range, Hands, Arm, Framing; Speed, Baserunning. Done when: each moves its own stats (plays made, errors, double plays, steals and caught stealing, extra bases) and the value rule holds at its key position.
 12. [ ] `tools/calibrate.js`. Done when: over 3,000 or more seeded games the target table (DESIGN.md section 7, with the extra engine targets) and the equal-value check are inside their bands, or each miss is reported to the owner.
-13. [ ] Speed. Done when: the measured time for 2,430 games is reported, inside the budget or with a plan.
+13. [ ] Speed. Done when: the measured time for 2,430 games is reported, inside the budget or with a plan. **Owner's choice (Session 3, Nov 20, 2026):** about 13 s a season (measured mid step 1.2) is fine for now; don't spend effort on speed. Task 13 still measures and reports it.
 14. [ ] Docs (DESIGN.md calibration results, ARCHITECTURE.md engine API, Docs version bump) and one independent review agent on the M1 code. Done when: committed, and each finding is fixed or reported.
 
 **Testing**

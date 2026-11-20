@@ -11,7 +11,7 @@ Written Nov 20, 2026, mid Session 3, because the owner's usage window was nearly
   - `tune.js` gained FLD (Range, Hands, Arm hooks), POS, RUN (Speed, Baserunning), BALL, ERR, STEAL. `data.js` gained FIELD, `fenceAt`, `polar`, `FIELDERS`.
   - The tag-up decision now carries `dist` (catch depth); the placeholder CPU tags from third only at 220 ft or deeper.
   - New tool: `node tools/hits.js 300` (hit types, where hits land, steals, tag-ups, batting line).
-- **Checks at this commit:** `node tools/test.js` prints `all tests passed (46)`; `node tools/gametest.js 1000 7` prints `all checks passed` (checksum `7986a86d`, about 5 s, so about 5 ms a game and about 13 s a season: over the 10 s budget, which is task 13's job). The browser boot check was last run after task 6 (passed); re-run it.
+- **Checks at this commit:** `node tools/test.js` prints `all tests passed (46)`; `node tools/gametest.js 1000 7` prints `all checks passed` (checksum `7986a86d`, about 5 s, so about 5 ms a game and about 13 s a season: over the 10 s budget, but **the owner said 13 s a season is fine for now: don't spend effort on speed** (Nov 20, 2026; recorded at task 13 in docs/plan.md)). The browser boot check was last run after task 6 (passed); re-run it.
 
 ## Numbers from `node tools/hits.js 300` (placeholder choices, not calibrated)
 Runs 4.25 per team-game, AVG .272, OBP .319, SLG .458, BABIP .325, K 22.5%, BB 6.7%, 3.41 pitches per PA. Per team-game: singles 5.66, doubles 2.74, triples 0.04, home runs 1.28, errors 0.25, double plays 0.52. Steals 68% safe. Tag-ups 137 safe, 158 out.
