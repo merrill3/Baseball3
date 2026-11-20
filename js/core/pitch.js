@@ -117,10 +117,13 @@
     const e = expect(g, pitch);
     const off = r.normal(e.mean, e.sd);
     const out = { r: 'S', off: Math.round(off * 100) / 100 };
-    if (Math.abs(tm) > S.missMs || Math.abs(off) > S.radius) return out; // whiff
-    if (Math.abs(off) > S.radius * S.foulBack) { out.r = 'F'; return out; } // glancing: fouled back
+    // A mistimed swing meets the ball with less of the bat in its path (the arc is off), so it misses more.
+    const v = tm / S.missMs;
+    const radius = S.radius * Math.max(0, 1 - S.timeRadius * v * v);
+    if (Math.abs(tm) > S.missMs || Math.abs(off) > radius) return out; // whiff
+    if (Math.abs(off) > radius * S.foulBack) { out.r = 'F'; return out; } // glancing: fouled back
     // Exit speed: bat speed and pitch speed, less for an off-center hit and for bad timing.
-    const u = off / (S.radius * S.foulBack), v = tm / S.missMs;
+    const u = off / (radius * S.foulBack);
     const top = S.collision * pitch.speed * S.plateShare + (1 + S.collision) * w.b.bat.batSpeed;
     const ev = top * (1 - S.offLoss * u * u) * (1 - S.timeLoss * v * v) + r.normal(0, S.evSd);
     // Launch angle: over the ball drives it down; high pitches go up. Launch sets the band.

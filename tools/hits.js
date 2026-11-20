@@ -1,20 +1,22 @@
 // Prints what happens on balls in play over seeded regular-season games: hit types, where hits land,
-// outs, errors, steals and tag-ups, and the league batting line. Usage: node tools/hits.js [games=300] [seed=1]
+// outs, errors, steals and tag-ups, and the league batting line. Usage: node tools/hits.js [games=300] [seed=1] [--avg]
+// Rated test teams with a league-like spread; --avg plays two average teams (every hook at its placeholder).
 // It checks nothing: it is for reading the numbers (M1 step 1.2 task 7) and, later, calibration.
 'use strict';
 const { loadCore } = require('./lib/load');
-const { pair } = require('./lib/testteams');
+const { pair, ratedPair } = require('./lib/testteams');
 
 // Spray zones, degrees from center (plus toward right field).
 const ZONES = [['LF line', -45, -30], ['LF-CF gap', -30, -10], ['CF', -10, 10], ['CF-RF gap', 10, 30], ['RF line', 30, 45.01]];
 function zone(sp) { const z = ZONES.find((x) => sp >= x[1] && sp < x[2]); return z ? z[0] : 'foul'; }
 
-function run(games, seed) {
+function run(games, seed, avgTeams) {
   const B3 = loadCore();
   const c = { games: 0, pa: 0, ab: 0, h: 0, tb: 0, bb: 0, k: 0, sf: 0, runs: 0, res: {}, zones: {}, bb2: {}, e: 0, sb: 0, cs: 0, tagOk: 0, tagOut: 0, ifh: 0, pitches: 0, bip: 0, foulOuts: 0, lob: 0 };
   for (const [n] of ZONES) c.zones[n] = { '1B': 0, '2B': 0, '3B': 0, HR: 0, outs: 0 };
   for (let n = 0; n < games; n++) {
-    const g = B3.game.sim(Object.assign(pair(), { type: 'regular', rng: B3.rng.create(seed + ':' + n) }));
+    const teams = avgTeams ? pair() : ratedPair(B3.rng.create('teams:' + seed + ':' + n));
+    const g = B3.game.sim(Object.assign(teams, { type: 'regular', rng: B3.rng.create(seed + ':' + n) }));
     c.games++;
     c.runs += g.score[0] + g.score[1];
     let last = null;
@@ -54,7 +56,7 @@ function report(c) {
   const hr = c.res.HR || 0;
   const babip = (c.h - hr) / (c.ab - c.k - hr + c.sf);
   const out = [];
-  out.push(c.games + ' regular-season games with the test teams (placeholder swing, pitch and steal choices; not calibrated)');
+  out.push(c.games + ' regular-season games, ' + (c.avgTeams ? 'two average test teams' : 'rated test teams') + ' (not calibrated)');
   out.push('');
   out.push('Per team-game: runs ' + per(c.runs) + ', hits ' + per(c.h) + ', singles ' + per(c.res['1B'] || 0) + ', doubles ' + per(c.res['2B'] || 0) +
     ', triples ' + per(c.res['3B'] || 0) + ', home runs ' + per(hr) + ', walks ' + per(c.bb) + ', strikeouts ' + per(c.k) +
@@ -78,5 +80,8 @@ function report(c) {
 module.exports = { run, report };
 
 if (require.main === module) {
-  console.log(report(run(parseInt(process.argv[2] || '300', 10), process.argv[3] || '1')));
+  const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+  const c = run(parseInt(args[0] || '300', 10), args[1] || '1', process.argv.includes('--avg'));
+  c.avgTeams = process.argv.includes('--avg');
+  console.log(report(c));
 }

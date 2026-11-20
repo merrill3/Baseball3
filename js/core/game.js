@@ -78,7 +78,8 @@
   }
 
   // A team as the engine keeps it. Input: { id, name, players: {id: {name, bats?, throws?, pitches?,
-  // role?, sim?}} (bats R, L or S and throws R or L, both R if missing; sim overrides the rating hooks),
+  // role?, ratings?, arsenal?, tendencies?, sim?}} (bats R, L or S and throws R or L, both R if missing;
+  // ratings, arsenal and tendencies as in B3.ratings; sim overrides the rating hooks),
   // lineup: [{ id, pos }] x 9 in batting order, pitcher: id (the starter), bullpen: [id] }.
   function makeSide(t, label) {
     if (!t || typeof t !== 'object' || !t.players || !Array.isArray(t.lineup)) fail(label + ': a team needs players and a lineup');
@@ -106,7 +107,7 @@
     const inp = {};
     for (const id of lineup.concat([t.pitcher], bullpen)) {
       checkHands(t.players[id], id, label);
-      inp[id] = B3.tune.inputs(t.players[id]);
+      inp[id] = B3.ratings.inputs(t.players[id]);
     }
     return {
       id: t.id, name: t.name || t.id, code: t.code || t.id,
@@ -115,7 +116,7 @@
       spot: 0, // index in lineup of the batter due up
       pitcher: t.pitcher, used: [t.pitcher], bullpen: bullpen,
       live: live, // per pitcher this game: { pitches, outs, runs, bf }, for in-game choices
-      inp: inp // per player: B3.tune.inputs (bats, throws, bat, pit, fld)
+      inp: inp // per player: B3.ratings.inputs (bats, throws, bat, pit, fld, run)
     };
   }
 

@@ -2,11 +2,12 @@
 // placeholder value of every rating hook. Logic file: no DOM.
 //
 // Rating hooks (M1 step 1.2): the physics never reads a rating. It reads one input object per player, in
-// physical units (inches, ms, mph, feet), made by B3.tune.inputs at game start. In step 1.2 every input
-// is the placeholder value below (an average big-leaguer, rating 60), and a test can override any of
-// them with player.sim = { bat: {...}, pit: {...}, fld: {...}, run: {...} }. Step 1.3's ratings.js fills
-// the same inputs from ratings, so the physics does not change. All values are Claude's defaults, set
-// in step 1.2 to give sane numbers; step 1.4 calibrates them against DESIGN.md section 7.
+// physical units (inches, ms, mph, feet), made at game start by B3.ratings.inputs (step 1.3), which
+// maps the player's ratings with the scales in RATE below and passes them to B3.tune.inputs. A rating of
+// 60 gives exactly the placeholder value below (an average big-leaguer), and a player without ratings
+// gets the placeholders. A test can override any input with player.sim = { bat: {...}, pit: {...},
+// fld: {...}, run: {...} }. All values are Claude's defaults, set in steps 1.2-1.3 to give sane numbers;
+// step 1.4 calibrates them against DESIGN.md section 7.
 (function (root) {
   'use strict';
   const B3 = root.B3 = root.B3 || {};
@@ -23,8 +24,9 @@
     launchSd: 8,       // Launch: extra launch-angle noise in degrees
     sprayNoise: 20,    // Launch: spray-direction noise in degrees (spray control)
     recognition: 0.75, // Recognition: share of a pitch's movement and speed change he reads (0 to 1)
-    discipline: 0.5,   // Discipline: swing-or-take judgment. Hook for step 1.3's choices; unused in step 1.2
-    aggressiveness: 0  // tendency (-1 Patient, 0 Balanced, 1 Aggressive). Hook for step 1.3; unused in step 1.2
+    judgeSd: 0.25,     // Discipline: feet of noise in judging where a pitch will cross, for swing or take
+                       // (the CPU's swing choice, step 1.3 task 10)
+    aggressiveness: 0  // tendency (-1 Patient, 0 Balanced, 1 Aggressive): the CPU's swing choice
   };
 
   // Pitching. Grades and shapes are per pitch type: { FF: 1.1, SL: 0.9 }; a missing type is average.
@@ -35,7 +37,8 @@
     stamina: null,     // Stamina: pitches before fatigue sets in; null means the role's value in STAMINA
     grades: null,      // pitch grades: movement multiplier per type (1 average, 1.2 is 20% more break)
     shapes: null,      // pitch shapes: inches of extra drop per type (+ ground-ball tilt, - fly-ball tilt)
-    aim: 0             // tendency (-1 Nibbler, 0 Balanced, 1 Attacker). Hook for step 1.3; unused in step 1.2
+    putAway: null,     // the put-away pitch (his best-graded type); null: the CPU picks by pitch type
+    aim: 0             // tendency (-1 Nibbler, 0 Balanced, 1 Attacker): the CPU's pitch targets
   };
   const STAMINA = { SP: 92, LR: 50, other: 28 }; // placeholder Stamina by role, in pitches
 
@@ -62,6 +65,46 @@
     read: 0.2,         // Baserunning: seconds to read a ball in play and break
     jump: 0.12,        // Baserunning: seconds lost on the jump when stealing
     judge: 0.14        // Baserunning: seconds of error when he judges an extra base (lower is better)
+  };
+
+  // ---- Ratings to hook inputs (M1 step 1.3; B3.ratings) ----
+  // Ratings run 20-99 and 60 is an average big-leaguer (DESIGN.md section 10). A rating first goes
+  // through the top-end curve, then becomes u, tens of points from 60 (70 is u = 1). Each hook is then
+  //   'mul': placeholder x step^u   (spreads and noise: they shrink as the rating rises, never below 0)
+  //   'add': placeholder + step x u (speeds, shares and offsets)
+  // Steps are Claude's defaults (step 1.3), aimed at +10 points for a whole lineup or staff being worth
+  // about 0.3 runs per team-game; step 1.4's equal-value check tunes them.
+  const RATE = {
+    // The steep curve past 85 (the same shape for every rating): k x (r - 85)^2 extra points, so 90 plays
+    // like 91.25, 95 like 100 and 99 like 108.8. The capped combination bonus: in each group (the hitting
+    // ratings; the pitching ratings with every pitch grade) only the biggest extra counts in full, the
+    // others count at `others`, and the extras together add at most `cap` points.
+    top: { from: 85, k: 0.05, others: 0.5, cap: 12 },
+    bat: {
+      contactSd: ['contact', 'mul', 0.88],
+      timingSd: ['timing', 'mul', 0.88],
+      timingTop: ['timing', 'add', 1.5],
+      launchK: ['launch', 'mul', 0.9],
+      launchSd: ['launch', 'mul', 0.9],
+      sprayNoise: ['launch', 'mul', 0.9],
+      batSpeed: ['rawPower', 'add', 2.0],
+      recognition: ['recognition', 'add', 0.05],
+      judgeSd: ['discipline', 'mul', 0.85]
+    },
+    pit: {
+      velo: ['velocity', 'add', 1.6],
+      commandSd: ['command', 'mul', 0.88],
+      deception: ['deception', 'add', 0.05] // the mirror of Recognition: the same step, taken off the read
+    },
+    grade: { step: 0.12, min: 0.3 }, // a pitch grade: movement multiplier 1 + step x u (at least min)
+    shape: 3,          // inches of extra drop at shape +1 (ground-ball tilt); -1 is a fly-ball tilt
+    // Stamina: pitches before fatigue sets in, by rating (straight lines between; past 100 the last
+    // slope). One scale for every role: relievers are low-Stamina pitchers. 60 is the placeholder starter.
+    stamina: [[20, 18], [30, 28], [40, 45], [50, 68], [60, 92], [70, 102], [80, 110], [90, 117], [100, 123]],
+    tendency: {
+      aggressiveness: { Patient: -1, Balanced: 0, Aggressive: 1 },
+      aim: { Nibbler: -1, Balanced: 0, Attacker: 1 }
+    }
   };
 
   // ---- Physics and rules numbers ----
@@ -98,6 +141,8 @@
     radius: 2.75,      // bat radius plus ball radius, inches: a bigger *where* error misses
     foulBack: 0.53,    // share of radius past which contact is a glancing foul (tipped back)
     missMs: 80,        // a *when* error past this many ms misses the ball
+    timeRadius: 0.5,   // share of the bat's reach (radius) lost at missMs; scales with the square of the *when*
+                       // error (step 1.3: so velocity and Timing move whiffs, not only exit speed)
     // Location: pitches far from the middle are harder to square up (inches of extra spread per foot).
     edgeSd: 1.2,       // per foot from 0.4 ft inside the edge outward
     chaseSd: 2.6,      // per foot outside the zone, on top of edgeSd
@@ -194,26 +239,29 @@
     return out;
   }
 
-  // One player's inputs for the physics: { bats, throws, bat, pit, fld, run }. The game makes these at start.
-  function inputs(player) {
+  // One player's inputs for the physics: { bats, throws, bat, pit, fld, run }. The game makes these at
+  // start through B3.ratings.inputs, which passes the inputs from his ratings as `rated` ({ bat, pit, fld,
+  // run }, each partial). Layers, last wins: the placeholders here, then `rated`, then player.sim.
+  function inputs(player, rated) {
     const sim = player.sim || {};
-    const pit = merge(PIT, sim.pit);
+    rated = rated || {};
+    const pit = merge(merge(PIT, rated.pit), sim.pit);
     if (pit.stamina === null) pit.stamina = has(STAMINA, player.role) ? STAMINA[player.role] : STAMINA.other;
     pit.grades = Object.assign({}, pit.grades || {});
     pit.shapes = Object.assign({}, pit.shapes || {});
     return {
       bats: player.bats || 'R',
       throws: player.throws || 'R',
-      bat: merge(BAT, sim.bat),
+      bat: merge(merge(BAT, rated.bat), sim.bat),
       pit: pit,
-      fld: merge(FLD, sim.fld),
-      run: merge(RUN, sim.run)
+      fld: merge(merge(FLD, rated.fld), sim.fld),
+      run: merge(merge(RUN, rated.run), sim.run)
     };
   }
 
   B3.tune = {
     BAT: BAT, PIT: PIT, STAMINA: STAMINA, FLD: FLD, POS: POS, RUN: RUN, BALL: BALL, ERR: ERR, STEAL: STEAL,
-    PITCH: PITCH, TYPE: TYPE, SWING: SWING, TIMING: TIMING, PLATOON: PLATOON,
+    PITCH: PITCH, TYPE: TYPE, SWING: SWING, TIMING: TIMING, PLATOON: PLATOON, RATE: RATE,
     inputs: inputs
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

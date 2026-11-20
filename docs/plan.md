@@ -1,9 +1,9 @@
-**Docs version: 16** (2026-11-20): Session 4, M1 step 1.3 plan check; the owner chose which way the tendencies pay off (Aggressive with good Discipline, Nibbler with good Command).
+**Docs version: 17** (2026-11-20): Session 4, M1 task 9 in progress (ratings.js, rated test teams, tools/worth.js); the scales wait for task 10's choices.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 4 is on M1 step 1.3 (tasks 9–10) on the branch `claude/baseball3-session-4-step-1-3-svjqrz` (from `main`). The plan check is done and reported (below, under step 1.3); the owner chose which way the tendencies pay off. Next: task 9 (`js/core/ratings.js`, rated test teams, `tools/worth.js`). If this session stops early, resume with: "Continue Session 4 of Baseball3 (merrill3/Baseball3): M1 step 1.3 on the branch claude/baseball3-session-4-step-1-3-svjqrz. Read CLAUDE.md, then the "Stopped at:" line in docs/plan.md. Baseball1 is reference only; never change it."
+**Stopped at:** Session 4 is on M1 step 1.3 (tasks 9–10) on the branch `claude/baseball3-session-4-step-1-3-svjqrz` (from `main`). Plan check done (under step 1.3). Task 9 is in progress: `js/core/ratings.js`, `B3.tune.RATE`, rated test teams, `tools/worth.js` and `tools/tests/ratings.test.js` are committed and pass; a mistimed swing now whiffs more (`SWING.timeRadius`). The first worth table showed Raw Power too strong and Velocity too weak (it needs the stronger lateness tried in `TIMING`); the scales get set after task 10's CPU choices, then both tasks close. Next: task 10 (swing, pitch and pitching-change choices in `manager.js`). If this session stops early, resume with: "Continue Session 4 of Baseball3 (merrill3/Baseball3): M1 step 1.3 on the branch claude/baseball3-session-4-step-1-3-svjqrz. Read CLAUDE.md, then the "Stopped at:" line in docs/plan.md. Baseball1 is reference only; never change it."
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 

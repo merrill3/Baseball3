@@ -4,7 +4,7 @@
 // The same games and seed always print the same output, ending with a checksum of every game log.
 'use strict';
 const { loadCore } = require('./lib/load');
-const { pair } = require('./lib/testteams');
+const { ratedPair } = require('./lib/testteams');
 const { check } = require('./lib/gamecheck');
 
 // The game types in turn: league games and Quick Games of each length.
@@ -28,7 +28,8 @@ function run(games, seed, B3) {
   let runs = 0, pitches = 0, pas = 0;
   for (let n = 0; n < games; n++) {
     const m = MIX[n % MIX.length];
-    const opts = Object.assign(pair(), m, { rng: B3.rng.create(seed + ':' + n) });
+    // Rated test teams (a league-like spread), drawn from their own seed so the game's draws don't move.
+    const opts = Object.assign(ratedPair(B3.rng.create('teams:' + seed + ':' + n)), m, { rng: B3.rng.create(seed + ':' + n) });
     const g = B3.game.sim(opts);
     if (!out.first) out.first = g;
     const c = check(g);
@@ -50,7 +51,7 @@ function run(games, seed, B3) {
 function report(r, seed) {
   const lines = [];
   lines.push(r.games + ' games, seed ' + seed);
-  lines.push('runs per team-game ' + r.runsPerTeamGame.toFixed(2) + ' (placeholder ball-in-play outcomes, not calibrated), pitches per PA ' + r.pitchesPerPA.toFixed(2));
+  lines.push('runs per team-game ' + r.runsPerTeamGame.toFixed(2) + ' (rated test teams, not calibrated), pitches per PA ' + r.pitchesPerPA.toFixed(2));
   lines.push('');
   lines.push('type          games  runs/g  innings/g  final walk-off mercy  tie  extras');
   for (const k in r.byType) {

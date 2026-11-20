@@ -1,10 +1,11 @@
 // Prints pitch and contact distributions from seeded games: by pitch type, by timing and by matchup.
-// Usage: node tools/contact.js [games=300] [seed=1]
+// Usage: node tools/contact.js [games=300] [seed=1] [--avg]
+// Rated test teams with a league-like spread; --avg plays two average teams (every hook at its placeholder).
 // It records every pitch through B3.pitch.resolve (nothing extra goes in the game log). It checks
 // nothing: it is for reading the numbers (M1 step 1.2) and, later, for calibration.
 'use strict';
 const { loadCore } = require('./lib/load');
-const { pair } = require('./lib/testteams');
+const { pair, ratedPair } = require('./lib/testteams');
 
 function pct(a, b) { return b ? (100 * a / b).toFixed(1) : '-'; }
 function avg(xs) { return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN; }
@@ -35,7 +36,7 @@ function add(row, rec) {
   } else if (p.zone) { row.takeZ++; if (out.r === 'C') row.cZ++; } else { row.takeO++; if (out.r === 'C') row.cO++; }
 }
 
-function run(games, seed) {
+function run(games, seed, avgTeams) {
   const B3 = loadCore();
   const recs = [];
   const resolve = B3.pitch.resolve;
@@ -47,7 +48,8 @@ function run(games, seed) {
   };
   let pa = 0, k = 0, bb = 0, pitches = 0;
   for (let n = 0; n < games; n++) {
-    const g = B3.game.sim(Object.assign(pair(), { type: 'regular', rng: B3.rng.create(seed + ':' + n) }));
+    const teams = avgTeams ? pair() : ratedPair(B3.rng.create('teams:' + seed + ':' + n));
+    const g = B3.game.sim(Object.assign(teams, { type: 'regular', rng: B3.rng.create(seed + ':' + n) }));
     for (const e of g.log) {
       if (e.e === 'pitch') pitches++;
       if (e.e === 'pa') { pa++; if (e.res === 'K') k++; if (e.res === 'BB') bb++; }
@@ -94,7 +96,7 @@ function report(r) {
   }
   const order = (obj, keys) => keys.filter((k) => obj[k]).map((k) => [k, obj[k]]);
   const out = [];
-  out.push(r.games + ' regular-season games with the test teams (placeholder swing choices and ball-in-play outcomes)');
+  out.push(r.games + ' regular-season games, ' + (r.avgTeams ? 'two average test teams' : 'rated test teams') + ' (not calibrated)');
   out.push('PA ' + r.pa + ', K% ' + pct(r.k, r.pa) + ', BB% ' + pct(r.bb, r.pa) + ', pitches per PA ' + (r.pitches / r.pa).toFixed(2) +
     ', called strikes on takes in the zone ' + pct(all.cZ, all.takeZ) + '%, outside ' + pct(all.cO, all.takeO) + '%');
   out.push('');
@@ -112,7 +114,8 @@ const B3PITCHES = ['FF', 'SI', 'FC', 'SL', 'CU', 'CH', 'FS'];
 module.exports = { run, report };
 
 if (require.main === module) {
-  const games = parseInt(process.argv[2] || '300', 10);
-  const seed = process.argv[3] || '1';
-  console.log(report(run(games, seed)));
+  const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+  const r = run(parseInt(args[0] || '300', 10), args[1] || '1', process.argv.includes('--avg'));
+  r.avgTeams = process.argv.includes('--avg');
+  console.log(report(r));
 }
