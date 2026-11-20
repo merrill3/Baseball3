@@ -90,10 +90,10 @@
       const away = B3.pitch.who(g).bats === 'L' ? -1 : 1; // the side of the plate away from the batter
       const low = r.chance(P.low[type]);
       if (r.chance(P.zone[d.balls][d.strikes] + P.aimZone * aim)) {
-        const inset = P.inset[aim + 1];
+        const inset = P.inset[aim + 1], gr = d.balls === 3 ? P.groove : 0;
         const side = r.chance(0.55) ? away : -away;
-        const x = side * (Z.halfWidth - r.range(inset[0], inset[1]));
-        const dz = r.range(inset[0], inset[1]);
+        const x = side * (Z.halfWidth - r.range(inset[0], inset[1]) - gr);
+        const dz = r.range(inset[0], inset[1]) + gr;
         return { type: type, x: x, z: low ? Z.bottom + dz : Z.top - dz };
       }
       const off = r.range(P.chase[0], P.chase[1]);

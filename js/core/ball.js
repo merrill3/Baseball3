@@ -81,7 +81,8 @@
     const B = T().BALL, F = B3.data.FIELD;
     const v = c.ev * MPH, la = c.la * D2R, dir = c.sp * D2R;
     const ux = Math.sin(dir), uy = Math.cos(dir);
-    const fair = Math.abs(c.sp) <= 45;
+    let fair = Math.abs(c.sp) <= 45; // and it must come down in front of home plate (step 1.4: a pop-up
+                                     // straight up drifts back on its backspin and can land behind it)
     const fence = B3.data.fenceAt(c.sp);
     const lift = c.la > 0 ? B.lift * Math.min(1, c.la / B.liftFull) : 0; // backspin grows with launch angle
     let vr = v * Math.cos(la), vh = v * Math.sin(la), r = 0, h = B.startHeight, t = 0;
@@ -103,7 +104,7 @@
       }
       if (h <= 0) {
         h = 0;
-        if (!land) land = { t: t, r: r, x: r * ux, y: r * uy };
+        if (!land) { land = { t: t, r: r, x: r * ux, y: r * uy }; if (r < 0) fair = false; }
         if (hr || !fair) { keep(); break; } // out of play
         vh = -vh * B.bounceUp; vr *= B.bounceOn;
         if (vh < B.rolling) break; // it rolls from here

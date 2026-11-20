@@ -75,8 +75,13 @@
   function effective(player) {
     const pitches = Array.isArray(player.pitches) ? player.pitches : [];
     const hit = capped(HIT.map((k) => ({ k: k, r: ratingOf(player, k) })));
-    const pit = capped(PIT.map((k) => ({ k: k, r: ratingOf(player, k) }))
-      .concat(pitches.map((type) => ({ k: 'grade:' + type, r: gradeOf(player, type) }))));
+    // The put-away pitch (his best grade as rated) comes first, so on a tie it keeps the full extra.
+    const raw = {};
+    for (const type of pitches) raw[type] = gradeOf(player, type);
+    const pa = pitches.length ? putAway(pitches, raw) : null;
+    const order = pa ? [pa].concat(pitches.filter((t) => t !== pa)) : [];
+    const pit = capped(order.map((type) => ({ k: 'grade:' + type, r: raw[type] }))
+      .concat(PIT.map((k) => ({ k: k, r: ratingOf(player, k) }))));
     const def = capped(DEF.map((k) => ({ k: k, r: ratingOf(player, k) })));
     const out = { grades: {} };
     for (const k of HIT) out[k] = hit[k];
@@ -84,6 +89,7 @@
     for (const k of DEF) out[k] = def[k];
     for (const type of pitches) out.grades[type] = pit['grade:' + type];
     out.stamina = curve(ratingOf(player, 'stamina')); // outside the cap: Stamina is outside the equal-value rule
+    out.putAway = pa;
     return out;
   }
 
@@ -136,7 +142,7 @@
         if (typeof shape !== 'number' || !(shape >= -1 && shape <= 1)) fail((player.id || 'player') + ' ' + type + ' shape must be from -1 to 1, not ' + shape);
         pit.shapes[type] = rate.shape * shape;
       }
-      pit.putAway = putAway(pitches, e.grades);
+      pit.putAway = e.putAway; // chosen from the grades as rated (before the curve and the cap)
     }
     return { bat: bat, pit: pit, fld: fld, run: run };
   }

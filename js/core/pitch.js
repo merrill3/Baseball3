@@ -99,15 +99,21 @@
     const read = readOf(w);
     // He expects a read share of this type's normal movement and the rest of a fastball's. The pitch's
     // real movement against that is the surprise; only its vertical part moves the bat's height.
+    // The surprise is the type's own movement (step 1.4: not the grade's extra, which would only move the
+    // launch angle; the grade acts through the bite below and through how the pitch looks, B3.pitch.look).
     const type = B3.data.PITCH[pitch.type], ff = B3.data.PITCH.FF;
     const expected = read.rec * type.vz + (1 - read.rec) * ff.vz;
-    const surprise = expected - pitch.vz; // above 0: the ball ends lower than he thought, so the bat is over it
+    const surprise = expected - type.vz; // above 0: the ball ends lower than he thought, so the bat is over it
     const mean = kind.surprise * surprise;
     // Spread: Contact, the type's bite (grade makes it bigger), and distance from the middle of the zone.
     const edge = B3.data.zoneEdge(pitch.x, pitch.z);
     const loc = S.edgeSd * Math.max(0, edge + 0.4) + S.chaseSd * Math.max(0, edge);
     const bite = kind.bite * pitch.grade;
-    const sd = Math.sqrt(read.contactSd * read.contactSd + bite * bite + loc * loc);
+    // The shape's counterweight (step 1.4, owner's choice: a value-neutral tilt): a ground-ball shape is
+    // easier to square up, a fly-ball shape harder (SWING.shapeSd per unit of shape).
+    const s = (pitch.shape || 0) / T().RATE.shape;
+    const tilt = 1 - (s > 0 ? S.shapeSd[0] : S.shapeSd[1]) * s;
+    const sd = tilt * Math.sqrt(read.contactSd * read.contactSd + bite * bite + loc * loc);
     return { mean: mean, sd: sd, rec: read.rec, bats: w.bats };
   }
 
@@ -116,7 +122,9 @@
     const r = g.rng, S = T().SWING, w = who(g);
     const tm = swing.timing;
     const e = expect(g, pitch);
-    const off = r.normal(e.mean, e.sd);
+    // With two strikes he shortens up (step 1.4): a smaller *where* error, less exit speed.
+    const two = g.strikes >= 2;
+    const off = r.normal(e.mean, e.sd * (two ? S.twoStrike[0] : 1));
     const out = { r: 'S', off: Math.round(off * 100) / 100 };
     // A mistimed swing meets the ball with less of the bat in its path (the arc is off), so it misses more.
     const v = tm / S.missMs;
@@ -128,7 +136,7 @@
     const top = S.collision * pitch.speed * S.plateShare + (1 + S.collision) * w.b.bat.batSpeed;
     // A pitch away from the middle is hit off the end of the bat or jammed: less exit speed (step 1.3).
     const away = Math.max(0, B3.data.zoneEdge(pitch.x, pitch.z) + 0.4);
-    const ev = top * (1 - S.offLoss * u * u) * (1 - S.timeLoss * v * v) * (1 - S.locLoss * away) + r.normal(0, S.evSd);
+    const ev = top * (1 - S.offLoss * u * u) * (1 - S.timeLoss * v * v) * (1 - S.locLoss * away) * (two ? S.twoStrike[1] : 1) + r.normal(0, S.evSd);
     // Launch angle: over the ball drives it down; high pitches go up. Launch sets the band.
     // The pitch's shape tilts it: a ground-ball shape (above 0) lowers the launch angle (step 1.3: a tilt,
     // not a quality, so it adds no movement for the hitter to misread).
@@ -151,8 +159,13 @@
     const ff = fastball(w.p, pitch.fatigue);
     const expected = read.rec * pitch.speed + (1 - read.rec) * Math.max(pitch.speed, ff);
     const early = M.readShare * (flightMs(pitch.speed) - flightMs(expected)); // ms early: he swings for a faster pitch
-    const late = M.latePerMph * Math.max(0, pitch.speed - w.b.bat.timingTop);
-    const sd = w.b.bat.timingSd * Math.max(0.5, 1 + M.sdPer10 * (pitch.speed - M.refMph) / 10);
+    // Late: rising smoothly with the pitch's speed over his timingTop (step 1.4: a soft step, so every mph of
+    // Velocity counts, not only those past timingTop). The spread grows with speed as a power of it.
+    // He also gears up for this pitcher's fastball: he starts earlier by `gearUp` of the lateness that
+    // fastball would give him, on every pitch, so a harder thrower makes him early on the slower ones.
+    const lateAt = (mph) => { const x = (mph - w.b.bat.timingTop) / M.lateSoft; return M.latePerMph * M.lateSoft * (x > 30 ? x : Math.log(1 + Math.exp(x))); };
+    const late = lateAt(pitch.speed) - M.gearUp * lateAt(ff);
+    const sd = w.b.bat.timingSd * Math.pow(pitch.speed / M.refMph, M.sdPow);
     return Math.round(late - early + g.rng.normal(0, sd));
   }
 

@@ -6,8 +6,8 @@
 // maps the player's ratings with the scales in RATE below and passes them to B3.tune.inputs. A rating of
 // 60 gives exactly the placeholder value below (an average big-leaguer), and a player without ratings
 // gets the placeholders. A test can override any input with player.sim = { bat: {...}, pit: {...},
-// fld: {...}, run: {...} }. All values are Claude's defaults, set in steps 1.2-1.3 to give sane numbers;
-// step 1.4 calibrates them against DESIGN.md section 7.
+// fld: {...}, run: {...} }. All values are Claude's defaults, set in steps 1.2-1.3 to give sane numbers
+// and calibrated in step 1.4 against DESIGN.md section 7 (node tools/calibrate.js).
 (function (root) {
   'use strict';
   const B3 = root.B3 = root.B3 || {};
@@ -16,12 +16,12 @@
 
   // Hitting (DESIGN.md section 10: each input names the rating whose job it is).
   const BAT = {
-    contactSd: 1.35,   // Contact: spread of the *where* error, inches between bat and ball centers
+    contactSd: 1.72,   // Contact: spread of the *where* error, inches between bat and ball centers
     timingSd: 20,      // Timing: spread of a CPU hitter's *when* error at 92 mph, in ms
-    timingTop: 93,     // Timing: the pitch speed (mph) above which he starts to run late
-    batSpeed: 75,      // Raw Power: bat speed in mph; sets exit speed on a squared-up ball
+    timingTop: 96,     // Timing: the pitch speed (mph) around which he starts to run late (a soft step, TIMING.lateSoft)
+    batSpeed: 76.3,    // Raw Power: bat speed in mph; sets exit speed on a squared-up ball
     launchK: 22,       // Launch: degrees of launch angle per inch of *where* error (lower is a tighter band)
-    launchSd: 8,       // Launch: extra launch-angle noise in degrees
+    launchSd: 16.5,    // Launch: extra launch-angle noise in degrees
     sprayNoise: 20,    // Launch: spray-direction noise in degrees (spray control)
     recognition: 0.75, // Recognition: share of a pitch's movement and speed change he reads (0 to 1)
     judgeSd: 0.45,     // Discipline: feet of noise in judging where a pitch will cross, for swing or take
@@ -49,7 +49,7 @@
   const FLD = {
     react: null,       // first step, seconds before he moves after contact (null: his position's, in POS)
     first: 1,          // Range: multiplier on that first step (below 1 is quicker)
-    route: 0.92,       // Range: share of his top speed he keeps on the way to the ball (the route)
+    route: 0.915,      // Range: share of his top speed he keeps on the way to the ball (the route)
     hands: 1,          // Hands: error rate multiplier (0.5 is half as many fumbles, drops and wild throws)
     release: 0,        // Hands: seconds taken off every catch-and-throw (quick release; double-play pivots)
     arm: null,         // throw speed in mph (null: his position's, in POS)
@@ -162,7 +162,7 @@
 
   const SWING = {
     radius: 2.75,      // bat radius plus ball radius, inches: a bigger *where* error misses
-    foulBack: 0.53,    // share of radius past which contact is a glancing foul (tipped back)
+    foulBack: 0.52,    // share of radius past which contact is a glancing foul (tipped back)
     missMs: 80,        // a *when* error past this many ms misses the ball
     timeRadius: 0.7,   // share of the bat's reach (radius) lost at missMs; scales with the square of the *when*
                        // error (step 1.3: so velocity and Timing move whiffs, not only exit speed)
@@ -175,18 +175,26 @@
     offLoss: 0.42,     // exit speed lost at the glancing edge (scales with the square of the *where* error)
     timeLoss: 0.45,    // exit speed lost at missMs (scales with the square of the *when* error)
     evSd: 2.5,         // exit-speed noise, mph
-    attack: 12,        // launch angle of a dead-center hit at the middle of the zone, degrees
+    attack: 13.5,      // launch angle of a dead-center hit at the middle of the zone, degrees
     heightLA: 7,       // degrees of launch angle per foot the pitch is above the middle of the zone (2.55 ft)
     pullAt0: -6,       // spray of a perfectly timed swing, degrees toward the pull side (minus is pull)
     sprayPerMs: 1.0,   // degrees of spray per ms of *when* error (early pulls, late goes the other way)
     insidePull: 12,    // degrees toward the pull side per foot the pitch is inside
+    twoStrike: [0.68, 0.96], // with two strikes a hitter shortens up (step 1.4): [share of his *where* spread, share of
+                       // his exit speed]
+    shapeSd: [0.16, 0.2], // the shape's counterweight (step 1.4, owner's choice: value-neutral): share of the
+                       // *where* spread taken off per unit of ground-ball shape (easier to square up), and
+                       // added per unit of fly-ball shape (harder)
     foulLine: 45       // the foul lines, degrees from straightaway center
   };
 
   const TIMING = {
     refMph: 92,        // timingSd is the spread at this pitch speed
-    sdPer10: 0.6,      // the spread grows by this share per 10 mph faster
-    latePerMph: 6,     // ms late per mph above the hitter's timingTop (Velocity attacks Timing)
+    sdPow: 6,          // the spread grows as (speed / refMph) to this power (step 1.4; was +60% per 10 mph, floored)
+    latePerMph: 14,    // ms late per mph well above the hitter's timingTop (Velocity attacks Timing)
+    lateSoft: 4,       // mph over which lateness eases in around timingTop (step 1.4: a soft step, so every
+                       // mph of Velocity counts; 14 x 4 x ln(1 + e^((speed - top) / 4)) ms)
+    gearUp: 0.6,       // share of his fastball's lateness a hitter makes up by starting earlier, on every pitch
     readShare: 0.45    // share of an unread speed change that shows up as timing error (hitters adjust mid-swing)
   };
 
@@ -199,7 +207,7 @@
 
   // Ball flight, fielding, throws and running (M1 step 1.2 task 7).
   const BALL = {
-    drag: 0.00175,     // air drag per foot (sets carry: 100 mph at 28 degrees goes about 390 ft)
+    drag: 0.0018,      // air drag per foot (sets carry: 100 mph at 28 degrees goes about 385 ft)
     lift: 0.0009,      // backspin lift per foot on balls hit in the air
     liftFull: 35,      // degrees of launch angle at which backspin (and lift) is full; less below it
     dt: 0.02,          // integration step in the air, seconds
@@ -232,7 +240,7 @@
     pivot: 0.45,       // seconds for the pivot man to catch and throw on a double play
     infield: 125,      // feet: grounders past this have left the infield
     lead: [12, 18, 12], // feet: leads off first, second and third
-    dare: 0.2,         // seconds of margin a runner wants before taking an extra base: one number for every
+    dare: 0.08,        // seconds of margin a runner wants before taking an extra base: one number for every
                        // runner, not a player trait (owner's choice, Session 3)
     halfway: 0.45,     // share of the way a runner goes on a fly ball that may be caught
     dropRead: 1,       // a runner at halfway breaks this many reads (RUN.read) after the ball drops
@@ -268,7 +276,7 @@
       // A CPU hitter swings when the pitch looks to cross inside this line: feet from the edge of the zone
       // (below 0 inside), by balls (rows 0-3) and strikes (columns 0-2). He takes the corners early in the
       // count and protects the plate with two strikes; on 3-0 he waits for one down the middle.
-      line: [[-0.12, -0.04, 0.1], [-0.12, -0.05, 0.1], [-0.13, -0.07, 0.08], [-0.5, -0.1, 0.05]],
+      line: [[-0.12, -0.04, 0.24], [-0.12, -0.05, 0.24], [-0.13, -0.07, 0.22], [-0.5, -0.1, 0.19]],
       agg: [0.1, 0.08, 0.03], // feet the line moves out per step of Aggressiveness, by strikes, for an average
                            // lean (judgeLean); in proportion to his own lean
       // Chance he takes all the way, whatever the pitch looks like, by balls and strikes.
@@ -284,16 +292,17 @@
       behind: 1.8,         // fastballs (FF, SI, FC) x this when 2 balls ahead of the strikes (2-0, 3-0, 3-1)
       putAway: 2.5,        // the put-away pitch x this with two strikes
       // Chance the target is in the zone, by balls (rows) and strikes (columns).
-      zone: [[0.75, 0.65, 0.47], [0.85, 0.75, 0.58], [0.95, 0.88, 0.7], [1, 0.98, 0.9]],
+      zone: [[0.75, 0.62, 0.4], [0.85, 0.72, 0.5], [0.95, 0.86, 0.65], [1, 0.98, 0.9]],
       aimZone: 0.03,       // per step of Aim (-1 Nibbler, +1 Attacker): more targets in the zone
       // Targets in the zone: feet inside the nearest side and top or bottom, by Aim (Nibbler, Balanced,
       // Attacker). A nibbler works the corners; an attacker comes in toward the middle.
       inset: [[0.12, 0.52], [0.18, 0.62], [0.24, 0.72]],
+      groove: 0.08,        // feet of extra inset (toward the middle) on targets in the zone with three balls
       chase: [0.03, 0.5],  // targets outside the zone: feet off the edge
       low: { FF: 0.4, SI: 0.75, FC: 0.55, SL: 0.7, CU: 0.8, CH: 0.8, FS: 0.85 } // share of targets kept low, by type
     },
     pull: {
-      starter: 0.3,        // fatigue steps (B3.tune.PITCH.fatigueSpan pitches each) at which a starter comes out
+      starter: 0.55,       // fatigue steps (B3.tune.PITCH.fatigueSpan pitches each) at which a starter comes out
       late: 0,             // ... from the 7th inning on
       starterRuns: 5,      // runs that take a starter out (hit hard); 4 once he is within 25 pitches of his Stamina
       reliever: 0,         // fatigue steps at which a reliever comes out

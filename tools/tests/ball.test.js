@@ -135,7 +135,10 @@ module.exports = function (t) {
       assert.ok(off > 45 || at[1] < 0, 'caught in foul ground: ' + JSON.stringify(at));
     }
     assert.ok(caught > 150 && caught < 2400, 'some foul flies are caught, not all: ' + caught);
-    for (const x of plays(setup(), fair())) {
+    // Fair by direction and by where it comes down: a pop-up straight up can drift back behind the plate
+    // on its backspin, and lands foul (step 1.4).
+    const env2 = setup();
+    for (const x of plays(env2, fair().filter((c) => env2.B3.ball.flight(c).fair))) {
       if (!x.p.caught) continue;
       const at = x.p.meta.catchAt;
       assert.ok(Math.abs(Math.atan2(at[0], at[1])) / D2R <= 45.01 && at[1] >= 0, 'a fair ball is caught in fair ground');

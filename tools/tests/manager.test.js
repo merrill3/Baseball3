@@ -131,7 +131,7 @@ module.exports = function (t) {
     const live = team.live['HOM-SP'];
     live.pitches = 60;
     assert.strictEqual(cpu.change(d(), g), null, 'a fresh starter stays');
-    live.pitches = team.inp['HOM-SP'].pit.stamina + 10;
+    live.pitches = team.inp['HOM-SP'].pit.stamina + 15;
     assert.ok(cpu.change(d(), g), 'a tired starter comes out');
     live.pitches = 50; live.runs = 6;
     assert.ok(cpu.change(d(), g), 'a starter hit hard comes out');

@@ -4,8 +4,11 @@
 // Every condition plays the same seeded regular-season games between two average teams (every rating
 // 60, tools/lib/testteams.js average()). A hitting rating is raised for all 18 hitters, a pitching
 // rating for all 18 pitchers, and the batting against them is measured, so each row is the worth of
-// +10 points for a whole lineup or staff (divide by 9 for one player). --from=40 starts from 40 instead
-// (everyone at 40, the row at 50), and so on. Each row prints the change from the base; the stats
+// +10 points for a whole lineup or staff (divide by 9 for one player). A defense or running rating
+// (step 1.4) is raised for every fielder and runner (Framing: the catchers). --from=40 starts from 40
+// instead (every hitting and pitching rating at 40, the row at 50; defense and running stay 60), and so
+// on. For the equal-value check, tools/calibrate.js measures value more precisely (tools/lib/value.js);
+// this table is for the stats each rating moves. Each row prints the change from the base; the stats
 // marked * are the rating's own (DESIGN.md section 10). --pairs adds the synergy check: two ratings at
 // +20 together against the sum of each alone (the combination bonus). --styles adds the tendencies:
 // Aggressiveness at Discipline 40, 60 and 80, and Aim at Command 40, 60 and 80. It checks nothing: it is for
@@ -13,7 +16,7 @@
 // run(games, seed, { from, only, pairs, styles, tweak }) returns the numbers; tweak(B3) can change B3.tune first.
 'use strict';
 const { loadCore } = require('./lib/load');
-const { averagePair, HIT, PIT } = require('./lib/testteams');
+const { averagePair, HIT, PIT, DEF } = require('./lib/testteams');
 
 // Linear weights: runs each result is worth against an average plate appearance (general baseball
 // values, Claude's default). Less noisy than runs scored, which also depend on sequencing.
@@ -28,6 +31,9 @@ function conditions(from) {
   for (const k of HIT) rows.push({ name: k, own: hitting[k], set: (p, kind) => { if (kind === 'hitter') p.ratings[k] = up; } });
   const pitching = { velocity: 'EV hard oppo K', command: 'BB zone', deception: 'chase offWhiff' };
   for (const k of PIT) rows.push({ name: k, own: pitching[k], set: (p, kind) => { if (kind === 'pitcher') p.ratings[k] = up; } });
+  // Defense and running (step 1.4): every fielder (Framing: the catcher), every hitter as a runner.
+  const defense = { range: 'BABIP', hands: 'E DP', arm: 'XB CS', framing: 'K BB', speed: 'BABIP XB SB', baserunning: 'XB SB CS' };
+  for (const k of DEF.concat(['framing'])) rows.push({ name: k, own: defense[k], set: (p, kind) => { if (kind === 'hitter' && k in p.ratings) p.ratings[k] = up; } });
   rows.push({ name: 'grades', own: 'whiff K', set: (p, kind) => { if (kind === 'pitcher') for (const t in p.arsenal) p.arsenal[t].grade = up; } });
   rows.push({ name: 'putAway', own: 'whiff K', set: (p, kind, B3) => { if (kind === 'pitcher') p.arsenal[B3.ratings.putAway(p.pitches, grades(p))].grade = up; } });
   rows.push({ name: 'stamina SP', own: 'SPpit SPip', set: (p, kind) => { if (kind === 'pitcher' && p.role === 'SP') p.ratings.stamina += 10; } });
@@ -44,7 +50,7 @@ function teams(B3, from, set) {
   for (const side of [t.away, t.home]) {
     for (const id in side.players) {
       const p = side.players[id], kind = p.pitches ? 'pitcher' : 'hitter';
-      for (const k in p.ratings) if (k !== 'stamina') p.ratings[k] = from;
+      for (const k in p.ratings) if (k !== 'stamina' && DEF.indexOf(k) < 0 && k !== 'framing') p.ratings[k] = from;
       if (p.arsenal) for (const type in p.arsenal) p.arsenal[type].grade = from;
       if (set) set(p, kind, B3);
     }
@@ -55,7 +61,8 @@ function teams(B3, from, set) {
 function newStats() {
   return { games: 0, runs: 0, pa: 0, ab: 0, h: 0, tb: 0, bb: 0, k: 0, sf: 0, hr: 0, lw: 0, res: {}, pitches: 0, zone: 0, out: 0,
     sw: 0, swZone: 0, swOut: 0, whiff: 0, conZone: 0, sw95: 0, whiff95: 0, swOff: 0, whiffOff: 0,
-    ev: [], la: [], pull: 0, oppo: 0, fb: 0, fbHr: 0, spPitches: 0, spOuts: 0, starts: 0 };
+    ev: [], la: [], pull: 0, oppo: 0, fb: 0, fbHr: 0, spPitches: 0, spOuts: 0, starts: 0,
+    e: 0, dp: 0, sb: 0, cs: 0, xbChance: 0, xb: 0 };
 }
 
 function play(B3, games, seed, t0) {
@@ -83,6 +90,15 @@ function play(B3, games, seed, t0) {
     }
     return out;
   };
+  // Extra bases: runners on first or second when a single or double falls in; an extra base is any base
+  // past the hit's own (first to third on a single, scoring from first on a double, and so on).
+  const inPlay = B3.ball.inPlay;
+  B3.ball.inPlay = function (g, contact, steal) {
+    const p = inPlay(g, contact, steal);
+    const bases = { '1B': 1, '2B': 2 }[p.code];
+    if (bases) for (let i = 0; i < 2; i++) if (g.bases[i]) { s.xbChance++; if (p.runners[i] > i + 1 + bases) s.xb++; }
+    return p;
+  };
   try {
     for (let n = 0; n < games; n++) {
       const g = B3.game.sim(Object.assign(t0(), { type: 'regular', rng: B3.rng.create(seed + ':' + n) }));
@@ -92,7 +108,11 @@ function play(B3, games, seed, t0) {
       let lastPitch = null;
       for (const e of g.log) {
         if (e.e === 'pitch') { lastPitch = e; if (e.p === starter[1 - e.h]) s.spPitches++; continue; }
+        if (e.e === 'sb') s.sb++;
+        if (e.e === 'cs') s.cs++;
         if (e.e !== 'pa') continue;
+        if (e.res === 'E') s.e++;
+        if (e.res === 'DP') s.dp++;
         if (e.p === starter[1 - e.h]) s.spOuts += e.out;
         s.pa++;
         s.res[e.res] = (s.res[e.res] || 0) + 1;
@@ -110,6 +130,7 @@ function play(B3, games, seed, t0) {
     }
   } finally {
     B3.pitch.resolve = resolve;
+    B3.ball.inPlay = inPlay;
   }
   return s;
 }
@@ -146,6 +167,12 @@ const COLS = [
   ['HR/FB', 1, (s) => 100 * s.fbHr / s.fb],
   ['pull', 1, (s) => 100 * s.pull / s.ev.length],
   ['oppo', 1, (s) => 100 * s.oppo / s.ev.length],
+  ['BABIP', 3, (s) => (s.h - s.hr) / (s.ab - s.k - s.hr + s.sf)],
+  ['E', 2, (s) => s.e / s.games / 2],
+  ['DP', 2, (s) => s.dp / s.games / 2],
+  ['SB', 2, (s) => s.sb / s.games / 2],
+  ['CS', 2, (s) => s.cs / s.games / 2],
+  ['XB', 1, (s) => 100 * s.xb / s.xbChance],
   ['SPpit', 1, (s) => s.spPitches / s.starts],
   ['SPip', 2, (s) => s.spOuts / 3 / s.starts]
 ];
