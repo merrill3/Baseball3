@@ -1,9 +1,9 @@
-**Docs version: 18** (2026-11-20): Session 4, M1 step 1.3 done (tasks 9–10: hitting and pitching ratings, the CPU's choices); notes for step 1.4.
+**Docs version: 19** (2026-11-20): Session 4, M1 step 1.3 done (tasks 9–10: hitting and pitching ratings, the CPU's choices) and merged to `main`; notes for step 1.4.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 4 finished M1 step 1.3 (tasks 9–10) on the branch `claude/baseball3-session-4-step-1-3-svjqrz` (from `main`); it waits for the owner's OK to merge into `main`. The step 1.3 notes below list what step 1.4 must calibrate (Velocity's worth, Raw Power's size, Aim and Aggressiveness, pitches per PA). Next: Session 5, M1 step 1.4 (tasks 11–14: defense and running ratings, `tools/calibrate.js`, speed, docs and the review), opening with its plan check. Start it with: "Start Session 5 of Baseball3 (merrill3/Baseball3): M1 step 1.4. Use the branch the session environment gives you, starting from main. Read CLAUDE.md, then the "Stopped at:" line in docs/plan.md. Do only step 1.4 (tasks 11–14), opening with its plan check. Baseball1 is reference only; never change it."
+**Stopped at:** Session 4 finished M1 step 1.3 (tasks 9–10) on the branch `claude/baseball3-session-4-step-1-3-svjqrz` and, with the owner's OK, merged it into `main` (fast-forward to `5754a65`). The step 1.3 notes below list what step 1.4 must calibrate (Velocity's worth, Raw Power's size, Aim and Aggressiveness, pitches per PA). Next: Session 5, M1 step 1.4 (tasks 11–14: defense and running ratings, `tools/calibrate.js`, speed, docs and the review), opening with its plan check. Start it with: "Start Session 5 of Baseball3 (merrill3/Baseball3): M1 step 1.4. Use the branch the session environment gives you, starting from main. Read CLAUDE.md, then the "Stopped at:" line in docs/plan.md. Do only step 1.4 (tasks 11–14), opening with its plan check. Baseball1 is reference only; never change it."
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 
