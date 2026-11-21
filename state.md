@@ -1,6 +1,6 @@
-# State (Nov 21, 2026): Session 7 ended at the owner's request; read sections 6–8 first
+# State (Nov 21, 2026): Session 8 ended; read sections 9–10 first
 
-Sections 1–5 are Session 6's hand-off (history). Session 7's answers are in section 6, its base-running work in section 7, and the next steps in section 8.
+Sections 1–5 are Session 6's hand-off (history). Session 7's answers are in section 6, its base-running work in section 7, its hand-off in section 8. Session 8's interview, data and tools are in section 9, and the next steps in section 10.
 
 # Session 6 state: stopped mid-session at the owner's request
 
@@ -145,3 +145,19 @@ Branch `ccr-85acc383-8ehj83` (from `ccr-5b4b0818-qu6w9c`); everything is committ
 - **Task 2 done:** the population check (`--part=pop`: 40 lineups of test hitters at 118 games each, 120 test starters at 40 games; ratings about 60 ± 12.2 with correlation 0.2; 500-PA seasons, 250+ kept) and the chart page (`--html`, `tools/lib/ratingspage.js`), published as a private link: "Rating Ladder Check", https://claude.ai/artifact/Nu6bFpT944PboYtKDzBdaS (version 1, before tuning). `calibrate.js --json` writes the equal-value rows for it. Equal value now (hitting, +10 at 40 / 60 / 80): Contact 0.32 / 0.33 / 0.37, Timing 0.26 / 0.24 / 0.34, Launch 0.28 / 0.31 / 0.32, Raw Power 0.29 / 0.30 / 0.35, Recognition 0.35 / 0.31 / 0.34, Discipline 0.35 / 0.31 / 0.40.
 - **Population check before tuning** (engine 5th–95th percentile against real): hitters' AVG .194–.331 [.202–.295] (too wide), SLG .314–.595 [.315–.517], ISO .117–.273 [.086–.251] (high), exit speed 84.3–89.9 [85.5–92.8] (low), hard-hit 24.6–44.4 [26.4–52.3], barrel 2.8–9.4 [2.3–15.6] (low and narrow), pull 38.6–49.4 [29.6–49.5] (high), oppo 12.6–21.1 [17.5–31.4] (low: likely the first-to-third gap), ground balls 42–51 [32–52] (high, narrow); pitchers' K% 12.6–36.2 [15.6–31.7] (wide at the top), ERA 2.49–7.03 [2.18–6.01], exit speed against 84.6–88.9 [86.4–91.0].
 - Next: task 3, batted balls (spray, launch angle, exit speed, bat speed in real units with the real collision formula, the Raw Power gate).
+
+## 10. Hand-off for Session 9
+Branch `ccr-856b53aa-oc98im` (from `ccr-85acc383-8ehj83`); everything is committed and pushed. `main` is still at Session 5's end (`1feb3da`); Sessions 6–8 are not merged. Tests: 78 pass; the engine is unchanged since Session 7 (`gametest.js 1000 7` checksum `b25ea22e`; only comments and tools changed).
+
+**Done in Session 8:** the open decision (base/outs margin kept); the ratings-to-stats interview (section 9; DESIGN.md sections 7 and 10; step 1.5's plan in docs/plan.md); task 1 (real data, `tools/lib/real.js`); task 2 (`tools/ratingstats.js`, the population check, the chart page "Rating Ladder Check", https://claude.ai/artifact/Nu6bFpT944PboYtKDzBdaS, version 1 = before tuning).
+
+**Next: step 1.5 task 3, batted balls**, in this order (Claude's plan; each change is Claude's default, reported):
+1. Bat speed in real units with the real collision formula (Savant: max possible exit speed = 1.23 × bat speed + 0.23 × pitch speed at the plate; the engine's `SWING.collision` 0.12 and `batSpeed` 90.3 become about 0.23 and about 71.7 at 60), Raw Power's step table on the real bat-speed ladder (62.4 / 67.3 / 71.7 / 76.1 / 81.2 mph at 20 / 40 / 60 / 80 / 99), and the tighter gate (Contact and Timing): max exit speed, hardest-half exit speed, squared-up % (real median 32.9% per contact) and blasts against the ladder.
+2. Spray: pull 39% / center 37% / oppo 24% (engine 44 / 40 / 16), then re-check first to third (`tools/running.js`).
+3. Launch angle and the batted-ball mix: ground balls 42% (engine 47%), exit speed and hard-hit % up to real (89.2 mph, 40.7% median), barrels (8.0% median).
+4. Then task 4: Velocity's per-mph effects (whiffs, not weak contact), Contact's, Timing's, Recognition's, Deception's and the grades' wider ranges, Command's meatballs.
+Run `node tools/ratingstats.js --html=page.html --value=value.json` after each part (with `node tools/calibrate.js --part=value --json=value.json` for the equal-value tables) and republish the chart page to the same link (Artifact publish with `url`).
+
+**Real data:** `tools/lib/real.js` is committed. To rebuild it, fetch the sources again (`node tools/realdata.js --urls DIR`, curl loop in the file's header; about 20 minutes) into a scratch folder; the downloads from Session 8 were in a scratch folder and may be gone.
+
+**Prompt for the next session:** "Start Session 9 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from the branch `ccr-856b53aa-oc98im` (not main: Sessions 6–8 are not merged). Read CLAUDE.md, then `state.md` (sections 9–10 first) and the "Stopped at:" line in docs/plan.md. Continue step 1.5 at task 3 (batted balls). Baseball1 is reference only; never change it."

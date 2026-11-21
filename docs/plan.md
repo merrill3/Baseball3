@@ -1,9 +1,9 @@
-**Docs version: 29** (2026-11-21): Session 8: step 1.5 task 2 done (`tools/ratingstats.js`, the chart page), ARCHITECTURE.md and README.md list the new tools; Stopped at updated.
+**Docs version: 30** (2026-11-21): Session 8 ended: hand-off in `state.md` section 10; Stopped at updated.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 8 under way on branch `ccr-856b53aa-oc98im` (from `ccr-85acc383-8ehj83`; not merged; `main` is at Session 5's end). **Read `state.md` sections 6–9 first.** The ratings-to-stats interview is done (DESIGN.md sections 7 and 10). Step 1.5 tasks 1 (real data) and 2 (`tools/ratingstats.js` and its chart page) are done; next: task 3, batted balls.
+**Stopped at:** Session 8 ended on branch `ccr-856b53aa-oc98im` (from `ccr-85acc383-8ehj83`; not merged; `main` is at Session 5's end). **Read `state.md` sections 9–10 first.** The ratings-to-stats interview is done (DESIGN.md sections 7 and 10). Step 1.5 tasks 1 (real data) and 2 (`tools/ratingstats.js` and its chart page) are done; next: task 3, batted balls. Start Session 9 with: "Start Session 9 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from the branch `ccr-856b53aa-oc98im` (not main: Sessions 6–8 are not merged). Read CLAUDE.md, then `state.md` (sections 9–10 first) and the "Stopped at:" line in docs/plan.md. Continue step 1.5 at task 3 (batted balls). Baseball1 is reference only; never change it."
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 
