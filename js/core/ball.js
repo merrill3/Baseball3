@@ -96,8 +96,11 @@
     while (t < B.maxTime) {
       const s = Math.sqrt(vr * vr + vh * vh);
       const up = land ? 0 : lift; // spin's lift counts only before the first bounce
-      vr += (-B.drag * s * vr - up * s * vh) * dt;
-      vh += (-B.drag * s * vh + up * s * vr - G) * dt;
+      // In its first flight the drag coefficient falls as the ball goes faster (step 1.5: the drag crisis, so a softly
+      // hit fly ball dies sooner than a hard one); bouncing, plain drag.
+      const drag = land ? B.drag : B.drag * Math.pow(B.dragRef / Math.max(s, 20), B.dragPow);
+      vr += (-drag * s * vr - up * s * vh) * dt;
+      vh += (-drag * s * vh + up * s * vr - G) * dt;
       r += vr * dt; h += vh * dt; t += dt;
       if (fair && !hr && !wall && r >= fence) {
         if (h > F.wall && !land) hr = { t: t, h: h };

@@ -61,9 +61,11 @@
     framing: 0         // Framing (catchers): feet the borderline edge of the zone moves toward strikes
   };
   // Position values: [react s, arm mph, catch-to-throw s]. Shortstops and center fielders start quickest.
+  // Step 1.5: infielders' catch-to-throw is 0.25 s slower than step 1.4's (so ground balls by exit speed become hits
+  // about as often as Statcast's: slow rollers beat more throws, and fewer runs come from hard grounders).
   const POS = {
-    P: [0.55, 80, 0.75], C: [0.45, 80, 0.72], '1B': [0.32, 76, 0.6], '2B': [0.28, 78, 0.55],
-    '3B': [0.28, 84, 0.7], SS: [0.26, 85, 0.62], LF: [0.42, 85, 0.95], CF: [0.36, 87, 0.9], RF: [0.42, 89, 0.95],
+    P: [0.55, 80, 0.75], C: [0.45, 80, 0.72], '1B': [0.32, 76, 0.85], '2B': [0.28, 78, 0.8],
+    '3B': [0.28, 84, 0.95], SS: [0.26, 85, 0.87], LF: [0.42, 85, 0.95], CF: [0.36, 87, 0.9], RF: [0.42, 89, 0.95],
     DH: [0.4, 80, 0.8]
   };
 
@@ -259,7 +261,10 @@
 
   // Ball flight, fielding, throws and running (M1 step 1.2 task 7).
   const BALL = {
-    drag: 0.0018,      // air drag per foot (with lift below, 100 mph at 28 degrees goes about 375 ft)
+    drag: 0.00165,     // air drag per foot (step 1.5, was 0.0018; with dragPow and lift below, Statcast's fly-ball
+                       // distances by exit speed: 230 / 280 / 315 / 345 / 370 / 395 ft for 74 / 86 / 93 / 98 / 102 / 108 mph)
+    dragRef: 140,      // ft/s (95 mph) at which the first flight's drag is `drag` ...
+    dragPow: 0.3,      // ... and it grows as (dragRef / speed) to this power below it, falls above it (step 1.5)
     lift: 0.0006,      // backspin lift per foot on balls hit in the air (step 1.5, was 0.0009: Statcast 2024 fly balls
                        // average 314 ft, and 12% of those hit 95-100 mph and 41% at 100-105 mph are home runs)
     sliceLift: 0.015,  // share of that lift lost per degree a ball goes toward the opposite field (step 1.5: it leaves with
@@ -269,7 +274,8 @@
     sample: 0.1,       // the ball's path is kept every this many seconds (fielding and the play script)
     startHeight: 3,    // feet: the ball's height at contact
     bounceUp: 0.42,    // share of the downward speed kept on a bounce
-    bounceOn: 0.78,    // share of the forward speed kept on a bounce
+    bounceOn: 0.72,    // share of the forward speed kept on a bounce (step 1.5, was 0.78: hard grounders reach fielders
+                       // as often as Statcast's do)
     rolling: 4,        // ft/s of bounce below which the ball rolls (slowing at a steady rate)
     rollDecel: 9,      // ft/s per second a rolling ball slows (grass)
     wallBack: 0.2,     // share of speed a ball keeps bouncing off the wall
