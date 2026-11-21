@@ -60,7 +60,7 @@ function setFrom(c) {
     if (c.away && !p.id.startsWith('AWY')) return;
     if (c.grades) for (const t in p.arsenal) p.arsenal[t].grade = c.L;
     else if (c.k) p.ratings[c.k] = c.L;
-    if (c.at) for (const k in c.at) p.ratings[k] = c.at[k];
+    if (c.at) for (const k in c.at) { if (k === 'grades') { for (const t in p.arsenal) p.arsenal[t].grade = c.at[k]; } else p.ratings[k] = c.at[k]; }
     if (c.tend) p.tendencies[c.tend[0]] = c.tend[1];
     if (c.shape !== undefined) for (const t in p.arsenal) p.arsenal[t].shape = c.shape;
   };
@@ -310,7 +310,10 @@ function solveTable(pts, slope) {
 
 const STYLES = [
   ['discipline', 'aggressiveness', ['Patient', 'Aggressive'], 'hitter'],
-  ['command', 'aim', ['Nibbler', 'Attacker'], 'pitcher']
+  ['command', 'aim', ['Nibbler', 'Attacker'], 'pitcher'],
+  // The owner's idea (Session 5): good stuff rewards Attacker, poor stuff Nibbler.
+  ['velocity', 'aim', ['Nibbler', 'Attacker'], 'pitcher'],
+  ['grades', 'aim', ['Nibbler', 'Attacker'], 'pitcher']
 ];
 
 // Paired difference (b - a) in runs per team-game, with its standard error. side: null for every plate
@@ -447,7 +450,8 @@ function main() {
     }
     if (plan.styles.length) {
       out.push('Tendencies against Balanced at the same rating (runs per team-game for a whole lineup or staff; Aim rows are runs allowed,');
-      out.push('below 0 is better for the pitcher). Target: within about +-0.1 at 60; Aggressive better as Discipline rises, Nibbler as Command rises.');
+      out.push('below 0 is better for the pitcher). Target: within about +-0.1 at 60; Aggressive better as Discipline rises, Nibbler as Command rises');
+      out.push('(owner\'s choices, Session 4), Attacker better as Velocity and grades rise (the owner\'s idea, Session 5).');
       for (const st of plan.styles) {
         out.push('  ' + (st.rating + ' ' + st.at).padEnd(16) + st.cells.map((c) => { const x = diff(res[c.bal], res[c.id]); return c.w.padEnd(11) + fmt(x.v, 3) + '±' + x.se.toFixed(3); }).join('    '));
       }

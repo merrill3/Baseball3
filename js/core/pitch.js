@@ -109,7 +109,7 @@
     const mean = kind.surprise * surprise * Math.min(1, pitch.grade);
     // Spread: Contact, the type's bite (grade makes it bigger), and distance from the middle of the zone.
     const edge = B3.data.zoneEdge(pitch.x, pitch.z);
-    const loc = S.edgeSd * Math.max(0, edge + 0.4) + S.chaseSd * Math.max(0, edge);
+    const loc = S.edgeSd * Math.max(0, edge + S.edgeFrom) + S.chaseSd * Math.max(0, edge);
     const bite = kind.bite * pitch.grade;
     // The shape's counterweight (step 1.4, owner's choice: a value-neutral tilt): a ground-ball shape is
     // easier to square up, a fly-ball shape harder (SWING.shapeSd per unit of shape).
@@ -137,7 +137,7 @@
     const u = off / (radius * S.foulBack);
     const top = S.collision * pitch.speed * S.plateShare + (1 + S.collision) * w.b.bat.batSpeed;
     // A pitch away from the middle is hit off the end of the bat or jammed: less exit speed (step 1.3).
-    const away = Math.max(0, B3.data.zoneEdge(pitch.x, pitch.z) + 0.4);
+    const away = Math.max(0, B3.data.zoneEdge(pitch.x, pitch.z) + S.edgeFrom);
     const ev = top * (1 - S.offLoss * u * u) * (1 - S.timeLoss * v * v) * (1 - S.locLoss * away) * (two ? S.twoStrike[1] : 1) + r.normal(0, S.evSd);
     // Launch angle: over the ball drives it down; high pitches go up. Launch sets the band.
     // The pitch's shape tilts it: a ground-ball shape (above 0) lowers the launch angle (step 1.3: a tilt,

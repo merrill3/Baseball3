@@ -94,7 +94,8 @@ module.exports = function (t) {
     const good = trial(setup({ bat: { contactSd: 1.0 } }), MID, 0);
     const poor = trial(setup({ bat: { contactSd: 2.6 } }), MID, 0);
     const whiff = (rows) => rate(rows, (x) => x.r.r === 'S');
-    assert.ok(whiff(good) < 0.08 && whiff(poor) > 0.25, 'whiffs ' + whiff(good) + ' / ' + whiff(poor));
+    // (Step 1.4: location matters from near the middle, so even these pitches carry a little location spread.)
+    assert.ok(whiff(good) < 0.2 && whiff(poor) > 0.3 && whiff(poor) > whiff(good) + 0.15, 'whiffs ' + whiff(good) + ' / ' + whiff(poor));
     assert.ok(rate(good, (x) => x.r.r === 'X') > rate(poor, (x) => x.r.r === 'X'));
     // The bat's height against the ball sets the launch angle.
     const rows = inPlay(trial(setup(), MID, 0));

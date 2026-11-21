@@ -246,6 +246,7 @@ The owner was interviewed on a full ratings redesign in a separate chat (merrill
 - **No baserunning tendency** (owner's choice, Session 3, Nov 20, 2026): how much safety margin a runner wants before taking an extra base is one engine number for every runner (`BALL.dare`), not a player trait. Aggressiveness and Aim stay the only tendencies.
 - **Value rule:** a point of each is worth about as much as a point of a hitting rating at its key spot (Range at shortstop and center field, Arm in right field and at catcher, Framing at catcher, Baserunning for a regular), and less elsewhere. The overall is weighted by position.
 - **Hands and Speed in the value rule** (owner's choices, Session 5, Nov 20, 2026): Hands' key spot is shortstop (second base, third base and catcher get less). Speed is worth a full hitting point in center field, with its running and fielding together; less at other spots, and least at DH, where it only runs.
+- **Arm and Baserunning are worth half a point** (owner's choice, Session 5, Nov 21, 2026): a point of Arm (in right field and at catcher) and of Baserunning (for a regular) is worth about half a point of a hitting rating. A full point would need unrealistic play: a 99 baserunner would take leads of about 20 feet and read the ball almost at once (about 25 runs a season; the best real ones gain about 8), and strong arms would throw out several times more runners than real ones.
 
 **The whole set**
 - **Top end:** steep past about 85, the same shape for every rating. Bonuses from combining ratings are capped.

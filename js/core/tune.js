@@ -16,12 +16,12 @@
 
   // Hitting (DESIGN.md section 10: each input names the rating whose job it is).
   const BAT = {
-    contactSd: 1.72,   // Contact: spread of the *where* error, inches between bat and ball centers
+    contactSd: 1.38,   // Contact: spread of the *where* error, inches between bat and ball centers
     timingSd: 20,      // Timing: spread of a CPU hitter's *when* error at 92 mph, in ms
     timingTop: 92,     // Timing: the pitch speed (mph) around which he starts to run late (a soft step, TIMING.lateSoft)
-    batSpeed: 87.7,    // Raw Power: bat speed in mph; sets exit speed on a squared-up ball
+    batSpeed: 89.9,    // Raw Power: bat speed in mph; sets exit speed on a squared-up ball
     launchK: 22,       // Launch: degrees of launch angle per inch of *where* error (lower is a tighter band)
-    launchSd: 16.5,    // Launch: extra launch-angle noise in degrees
+    launchSd: 15,      // Launch: extra launch-angle noise in degrees
     sprayNoise: 20,    // Launch: spray-direction noise in degrees (spray control)
     recognition: 0.75, // Recognition: share of a pitch's movement and speed change he reads (0 to 1)
     judgeSd: 0.45,     // Discipline: feet of noise in judging where a pitch will cross, for swing or take
@@ -32,7 +32,7 @@
   // Pitching. Grades and shapes are per pitch type: { FF: 1.1, SL: 0.9 }; a missing type is average.
   const PIT = {
     velo: 93.5,        // Velocity: four-seam fastball speed in mph; other types are a share of it
-    commandSd: 0.5,    // Command: scatter around the target, feet on each axis
+    commandSd: 0.59,   // Command: scatter around the target, feet on each axis
     deception: 1,      // Deception: multiplier on the share of movement and speed change a hitter doesn't read
                        // (the mirror of Recognition; step 1.4, was taken off his recognition)
     stamina: null,     // Stamina: pitches before fatigue sets in; null means the role's value in STAMINA
@@ -130,19 +130,22 @@
     // runs at every level and for every rating (the equal-value check); a rating without a table steps
     // one per 10 points.
     steps: {
-      contact: [[20, -2.895], [30, -2.252], [40, -1.56], [50, -0.812], [60, 0], [70, 0.884], [80, 1.845], [90, 2.883], [100, 3.988], [110, 5.139]],
-      timing: [[20, -2.134], [30, -1.661], [40, -1.156], [50, -0.607], [60, 0], [70, 0.684], [80, 1.478], [90, 2.748], [100, 4.781], [110, 8.033]],
-      launch: [[20, -3.368], [30, -2.374], [40, -1.524], [50, -0.745], [60, 0], [70, 0.735], [80, 1.481], [90, 2.262], [100, 3.115], [110, 4.123]],
-      rawPower: [[20, -2.109], [30, -1.566], [40, -1.032], [50, -0.509], [60, 0], [70, 0.494], [80, 0.971], [90, 1.432], [100, 1.875], [110, 2.304]],
-      recognition: [[20, -2.553], [30, -2.037], [40, -1.459], [50, -0.794], [60, 0], [70, 1.017], [80, 2.569], [90, 5.052], [100, 9.025], [110, 15.382]],
-      discipline: [[20, -5.514], [30, -3.613], [40, -2.269], [50, -1.099], [60, 0], [70, 1.083], [80, 2.198], [90, 3.982], [100, 6.836], [110, 11.403]],
-      velocity: [[20, -8.438], [30, -4.762], [40, -2.464], [50, -1.028], [60, 0], [70, 0.879], [80, 1.68], [90, 2.438], [100, 3.171], [110, 3.895]],
-      command: [[20, -2.047], [30, -1.633], [40, -1.168], [50, -0.635], [60, 0], [70, 0.808], [80, 2.006], [90, 3.923], [100, 6.99], [110, 11.897]],
-      grade: [[20, -6.127], [30, -4.683], [40, -3.204], [50, -1.568], [60, 0], [70, 1.321], [80, 2.401], [90, 3.3], [100, 4.067], [110, 4.766]],
-      range: [[20, -2.16], [30, -1.586], [40, -1.044], [50, -0.519], [60, 0], [70, 0.525], [80, 1.069], [90, 1.65], [100, 2.298], [110, 3.09]],
-      hands: [[20, -2.515], [30, -1.972], [40, -1.377], [50, -0.723], [60, 0], [70, 0.797], [80, 1.665], [90, 2.589], [100, 3.534], [110, 4.463]],
-      framing: [[20, -1.061], [30, -0.83], [40, -0.578], [50, -0.302], [60, 0], [70, 0.327], [80, 0.674], [90, 1.032], [100, 1.387], [110, 1.738]],
-      speed: [[20, -1.347], [30, -1.024], [40, -0.694], [50, -0.354], [60, 0], [70, 0.373], [80, 0.772], [90, 1.211], [100, 1.716], [110, 2.308]]
+      contact: [[20, -2.883], [30, -2.25], [40, -1.564], [50, -0.817], [60, 0], [70, 0.893], [80, 1.865], [90, 2.909], [100, 4.003], [110, 5.111]],
+      timing: [[20, -2.301], [30, -1.743], [40, -1.065], [50, -0.467], [60, 0], [70, 0.572], [80, 1.309], [90, 2.414], [100, 4.182], [110, 7.011]],
+      launch: [[20, -3.235], [30, -2.328], [40, -1.513], [50, -0.745], [60, 0], [70, 0.742], [80, 1.498], [90, 2.291], [100, 3.154], [110, 4.157]],
+      rawPower: [[20, -2.09], [30, -1.555], [40, -1.027], [50, -0.508], [60, 0], [70, 0.495], [80, 0.976], [90, 1.442], [100, 1.892], [110, 2.328]],
+      recognition: [[20, -2.504], [30, -2.021], [40, -1.482], [50, -0.829], [60, 0], [70, 1.042], [80, 2.641], [90, 5.199], [100, 9.293], [110, 15.842]],
+      discipline: [[20, -5.427], [30, -3.589], [40, -2.398], [50, -1.152], [60, 0], [70, 0.955], [80, 2.062], [90, 3.56], [100, 5.957], [110, 9.792]],
+      velocity: [[20, -8.543], [30, -4.763], [40, -2.4], [50, -0.923], [60, 0], [70, 0.709], [80, 1.755], [90, 2.606], [100, 3.253], [110, 3.899]],
+      command: [[20, -2.032], [30, -1.642], [40, -1.093], [50, -0.57], [60, 0], [70, 0.889], [80, 2.311], [90, 4.587], [100, 8.229], [110, 14.055]],
+      deception: [[20, -9.669], [30, -5.401], [40, -2.734], [50, -1.067], [60, 0], [70, 0.775], [80, 1.431], [90, 2.031], [100, 2.518], [110, 3.006]],
+      grade: [[20, -8.028], [30, -5.503], [40, -3.275], [50, -1.473], [60, 0], [70, 1.24], [80, 2.312], [90, 3.257], [100, 4.106], [110, 4.904]],
+      range: [[20, -2.147], [30, -1.577], [40, -1.039], [50, -0.517], [60, 0], [70, 0.524], [80, 1.067], [90, 1.646], [100, 2.292], [110, 3.08]],
+      hands: [[20, -2.525], [30, -1.971], [40, -1.37], [50, -0.716], [60, 0], [70, 0.784], [80, 1.642], [90, 2.571], [100, 3.556], [110, 4.566]],
+      arm: [[20, -1.999], [30, -1.602], [40, -1.205], [50, -0.675], [60, 0], [70, 0.86], [80, 2.043], [90, 2.713], [100, 3.785], [110, 5.5]],
+      framing: [[20, -1.025], [30, -0.809], [40, -0.568], [50, -0.299], [60, 0], [70, 0.328], [80, 0.672], [90, 1.016], [100, 1.341], [110, 1.637]],
+      speed: [[20, -1.284], [30, -0.984], [40, -0.672], [50, -0.345], [60, 0], [70, 0.368], [80, 0.768], [90, 1.211], [100, 1.722], [110, 2.355]],
+      baserunning: [[20, -5.343], [30, -3.998], [40, -2.655], [50, -1.32], [60, 0], [70, 1.3], [80, 2.574], [90, 3.819], [100, 5.033], [110, 6.234]]
     },
     shape: 4,          // degrees off the launch angle at shape +1 (ground-ball tilt); -1 is a fly-ball tilt
     // Stamina: pitches before fatigue sets in, by rating (straight lines between; past 100 the last
@@ -191,9 +194,11 @@
     timeRadius: 0.7,   // share of the bat's reach (radius) lost at missMs; scales with the square of the *when*
                        // error (step 1.3: so velocity and Timing move whiffs, not only exit speed)
     // Location: pitches far from the middle are harder to square up (inches of extra spread per foot).
-    edgeSd: 2.6,       // per foot from 0.4 ft inside the edge outward
+    edgeFrom: 0.8,     // feet inside the zone's edge from which location starts to matter (step 1.4: from near the
+                       // middle, so a pitch down the middle is the easiest to hit; it was 0.4)
+    edgeSd: 2.4,       // per foot from edgeFrom inside the edge outward
     chaseSd: 3.0,      // per foot outside the zone, on top of edgeSd
-    locLoss: 0.06,     // share of exit speed lost per foot from 0.4 ft inside the edge outward (step 1.3)
+    locLoss: 0.08,     // share of exit speed lost per foot from edgeFrom inside the edge outward (step 1.3)
     collision: 0.12,   // exit speed = collision x pitch speed at the plate + (1 + collision) x bat speed (step 1.4:
                        // 0.12, was 0.2, so a pitch's speed adds less to exit speed and Velocity counts at every level)
     plateShare: 0.9,   // pitch speed at the plate as a share of release speed
@@ -205,7 +210,7 @@
     pullAt0: -6,       // spray of a perfectly timed swing, degrees toward the pull side (minus is pull)
     sprayPerMs: 1.0,   // degrees of spray per ms of *when* error (early pulls, late goes the other way)
     insidePull: 12,    // degrees toward the pull side per foot the pitch is inside
-    twoStrike: [0.68, 0.96], // with two strikes a hitter shortens up (step 1.4): [share of his *where* spread, share of
+    twoStrike: [0.64, 0.96], // with two strikes a hitter shortens up (step 1.4): [share of his *where* spread, share of
                        // his exit speed]
     shapeSd: [0.16, 0.2], // the shape's counterweight (step 1.4, owner's choice: value-neutral): share of the
                        // *where* spread taken off per unit of ground-ball shape (easier to square up), and
@@ -320,11 +325,11 @@
       behind: 1.8,         // fastballs (FF, SI, FC) x this when 2 balls ahead of the strikes (2-0, 3-0, 3-1)
       putAway: 2.5,        // the put-away pitch x this with two strikes
       // Chance the target is in the zone, by balls (rows) and strikes (columns).
-      zone: [[0.75, 0.62, 0.4], [0.85, 0.72, 0.5], [0.95, 0.86, 0.65], [1, 0.98, 0.9]],
-      aimZone: 0.03,       // per step of Aim (-1 Nibbler, +1 Attacker): more targets in the zone
+      zone: [[0.63, 0.52, 0.31], [0.72, 0.62, 0.42], [0.83, 0.77, 0.57], [0.92, 0.9, 0.82]],
+      aimZone: [-0.02, 0, 0.02], // targets in the zone added by Aim (Nibbler, Balanced, Attacker)
       // Targets in the zone: feet inside the nearest side and top or bottom, by Aim (Nibbler, Balanced,
       // Attacker). A nibbler works the corners; an attacker comes in toward the middle.
-      inset: [[0.12, 0.52], [0.18, 0.62], [0.24, 0.72]],
+      inset: [[0.3, 0.82], [0.36, 0.9], [0.42, 0.98]],
       groove: 0.04,        // feet of extra inset (toward the middle) on targets in the zone with three balls
       chase: [0.03, 0.5],  // targets outside the zone: feet off the edge
       low: { FF: 0.4, SI: 0.75, FC: 0.55, SL: 0.7, CU: 0.8, CH: 0.8, FS: 0.85 } // share of targets kept low, by type
