@@ -18,7 +18,10 @@
   const BAT = {
     contactSd: 1.33,   // Contact: spread of the *where* error, inches between bat and ball centers
     timingSd: 20,      // Timing: spread of a CPU hitter's *when* error at 92 mph, in ms
-    timingTop: 92,     // Timing: the pitch speed (mph) around which he starts to run late (a soft step, TIMING.lateSoft)
+    square: 1,         // Timing (Session 11, owner's choice: Timing's job is squaring up): multiplier on the exit speed he
+                       // loses to a mishit, off center or mistimed (below 1: he keeps the barrel on the ball)
+    timingTop: 92,     // Contact (Session 11; Timing's until then): the pitch speed (mph) around which he starts to run
+                       // late (a soft step, TIMING.lateSoft); real data: whiffs against 95+ mph follow fastball whiffs
     batSpeed: 71.7,    // Raw Power: average bat speed in mph (Savant's bat tracking: the sweet spot's speed at
                        // contact; step 1.5, real units, was 90.3 in the engine's own); each swing varies by SWING.batSd
     launchK: 15,       // Launch: degrees of launch angle per inch of *where* error near the bat's center (lower is a
@@ -97,7 +100,8 @@
     bat: {
       contactSd: ['contact', 'mul', 0.88],
       timingSd: ['timing', 'mul', 0.85],
-      timingTop: ['timing', 'add', 2.0],
+      square: ['timing', 'mul', 0.9],
+      timingTop: ['contact', 'add', 1.0],
       launchK: ['launch', 'mul', 0.87],
       launchSd: ['launch', 'mul', 0.87],
       sprayNoise: ['launch', 'mul', 0.87],

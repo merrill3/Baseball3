@@ -28,7 +28,9 @@ const OFF = { SL: 1, CU: 1, CH: 1, FS: 1 };
 // rating means a higher real stat), and its per-unit check (engine x, engine y, real slope key).
 const RATINGS = {
   contact: { kind: 'hitter', own: [['zContact', 'bat.iz_contact_percent', 1], ['whiff', 'bat.whiff_percent', -1]] },
-  timing: { kind: 'hitter', own: [['whiff95', 'vs95.whiff_per_swing', -1]] },
+  // Timing's job is squaring up (owner's choice, Session 11, from real data: whiff against 95+ mph is fastball whiff, Contact's);
+  // whiff against 95+ stays in the report (whiff95) as a check of Contact and Velocity.
+  timing: { kind: 'hitter', own: [['squared', 'track.squared_up_per_bat_contact', 1]] },
   launch: { kind: 'hitter', own: [['sweet', 'bat.sweet_spot_percent', 1], ['pu', 'bat.popups_percent', -1]] },
   // Raw Power's per-mph checks (step 1.5, owner's choice, Session 10: a faster bat costs accuracy, so each mph moves
   // whiffs, squared-up % and average exit speed as it does across real hitters).
@@ -438,7 +440,7 @@ function main() {
         if (ow.target) console.log('  real ' + (ow.real.padEnd(11).slice(0, 11)) + LEVELS.map((L) => fmt(ow.target[L], 2).padStart(7)).join(''));
       }
       if (jobs.some((j) => j.cond && j.cond.k === k)) {
-        for (const [lab, key, d] of [['K%', 'k', 1], ['BB%', 'bb', 1], ['AVG', 'avg', 3], ['SLG', 'slg', 3], ['EV', 'ev', 1], ['hard%', 'hard', 1], ['runs', 'runs', 2]]) {
+        for (const [lab, key, d] of [['whiff%', 'whiff', 1], ['whiff 95+', 'whiff95', 1], ['squared-up%', 'squared', 1], ['K%', 'k', 1], ['BB%', 'bb', 1], ['AVG', 'avg', 3], ['SLG', 'slg', 3], ['EV', 'ev', 1], ['hard%', 'hard', 1], ['runs', 'runs', 2]]) {
           console.log('  ' + lab.padEnd(16) + LEVELS.map((L) => fmt(rows[L][key], d).padStart(7)).join(''));
         }
       }

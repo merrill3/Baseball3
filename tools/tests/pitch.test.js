@@ -117,6 +117,12 @@ module.exports = function (t) {
     assert.ok(ev(0) > ev(-40) + 4 && ev(0) > ev(40) + 4, 'exit speed falls off with bad timing');
     const env = setup();
     assert.ok(trial(env, MID, env.B3.tune.SWING.missMs + 1, 300).every((x) => x.r.r === 'S'), 'too early or late misses');
+    // Timing squares it up (Session 11, owner's choice): bat.square scales the exit speed lost to a mishit, not the whiffs.
+    const sq = (square, tm) => trial(setup({ bat: { square } }), MID, tm);
+    const evOf = (rows) => avg(inPlay(rows).map((x) => x.r.contact.ev));
+    assert.ok(evOf(sq(0.5, 30)) > evOf(sq(1.5, 30)) + 4, 'a hitter who keeps the barrel on it loses less to a late swing');
+    assert.ok(evOf(sq(0.5, 0)) > evOf(sq(1.5, 0)) + 2, 'and less to an off-center hit');
+    near(rate(sq(0.5, 30), (x) => x.r.r === 'S'), rate(sq(1.5, 30), (x) => x.r.r === 'S'), 1e-9, 'the same whiffs');
   });
 
   t.test('Raw Power sets exit speed at a cost in accuracy; Launch sets the launch-angle band and spray', () => {
@@ -152,13 +158,13 @@ module.exports = function (t) {
     assert.ok(tm(0.3) < tm(0.95) - 8 && tm(0.3) < -10, 'early on change-ups');
   });
 
-  t.test('Velocity against Timing: faster pitches make CPU hitters late and less consistent', () => {
+  t.test('Velocity: faster pitches make CPU hitters late and less consistent; Contact sets where lateness starts (Session 11)', () => {
     const tm = (o) => trial(setup(o), MID, 'cpu').map((x) => x.tm);
     const slow = tm({ pit: { velo: 90 } }), fast = tm({ pit: { velo: 100 } });
     assert.ok(avg(fast) > avg(slow) + 4, 'late against 100 mph');
     assert.ok(sd(fast) > sd(slow) * 1.25, 'wider timing against 100 mph');
     near(sd(tm({ bat: { timingSd: 10 }, pit: { velo: 92 } })), 10, 1, 'Timing sets the spread');
-    assert.ok(avg(tm({ bat: { timingTop: 102 }, pit: { velo: 100 } })) < avg(fast) - 4, 'a good Timing hitter is not late at 100');
+    assert.ok(avg(tm({ bat: { timingTop: 102 }, pit: { velo: 100 } })) < avg(fast) - 4, 'a good Contact hitter is not late at 100 (timingTop is Contact\'s since Session 11)');
     const whiff = (velo) => rate(trial(setup({ pit: { velo } }), MID, 'cpu'), (x) => x.r.r === 'S');
     assert.ok(whiff(100) > whiff(90), 'more whiffs against velocity');
   });

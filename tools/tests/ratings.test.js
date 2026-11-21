@@ -37,7 +37,7 @@ module.exports = function (t) {
     const B3 = loadCore();
     // rating -> { 'side.hook': +1 (rises with the rating) or -1 (falls) }
     const own = {
-      contact: { 'bat.contactSd': -1 }, timing: { 'bat.timingSd': -1, 'bat.timingTop': 1 },
+      contact: { 'bat.contactSd': -1, 'bat.timingTop': 1 }, timing: { 'bat.timingSd': -1, 'bat.square': -1 }, // Session 11: Timing squares up; Contact handles velocity
       launch: { 'bat.launchK': -1, 'bat.launchSd': -1, 'bat.sprayNoise': -1 },
       rawPower: { 'bat.batSpeed': 1 }, recognition: { 'bat.recognition': 1 }, discipline: { 'bat.judgeSd': -1, 'bat.judgeLean': -1 },
       velocity: { 'pit.velo': 1 }, command: { 'pit.commandSd': -1 }, deception: { 'pit.deception': 1 }, stamina: { 'pit.stamina': 1 },
