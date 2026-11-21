@@ -119,3 +119,5 @@ Branch `ccr-85acc383-8ehj83` (from `ccr-5b4b0818-qu6w9c`); everything is committ
 ## 9. Session 8 (Nov 21, 2026; branch `ccr-856b53aa-oc98im`, started from `ccr-85acc383-8ehj83`)
 - Open decision, the runners' margin: **keep the rule by base and outs** (`BALL.breakEven`), not one number (owner's choice, Session 8). Recorded in DESIGN.md section 10.
 - Ratings-to-stats interview: under way (answers below as they come).
+- Real league numbers (Baseball-Reference, league batting per team-game): 2024 4.39 runs, .243/.312/.399, HR 1.12; 2025 4.45, .245/.315/.404, HR 1.16; 2026 4.48, .244/.318/.400, HR 1.15; 2019 4.83, .252/.323/.435, HR 1.39. Section 7's targets (AVG .260, SLG .440, HR 1.5) are livelier than any recent season.
+- Q1, the league baseline: **in between** real recent MLB and section 7: about AVG .250–.255, SLG .415–.425, HR about 1.3 per team-game, runs about 4.6–4.7; a little livelier than today's MLB, with more .300 hitters than real (owner's choice, Session 8). Exact bands to confirm in the summary; DESIGN.md section 7 changes then.
