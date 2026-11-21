@@ -118,7 +118,10 @@
     // A faster bat costs accuracy (step 1.5, owner's choice, Session 10): the whole spread grows by speedCost per mph
     // of his average bat speed above an average hitter's (BAT.batSpeed), so Raw Power brings swing and miss, as in MLB.
     const cost = Math.exp(S.speedCost * (w.b.bat.batSpeed - T().BAT.batSpeed));
-    const sd = cost * tilt * Math.sqrt(read.contactSd * read.contactSd + bite * bite + loc * loc);
+    // Contact also scales the location and movement parts (step 1.5 task 4: bat control; contactAll is the power on
+    // his spread against an average hitter's, 0 for his own part only), so the best contact hitters reach real zone contact.
+    const m = Math.pow(read.contactSd / T().BAT.contactSd, S.contactAll);
+    const sd = cost * tilt * Math.sqrt(read.contactSd * read.contactSd + m * m * (bite * bite + loc * loc));
     return { mean: mean, sd: sd, rec: read.rec, bats: w.bats };
   }
 

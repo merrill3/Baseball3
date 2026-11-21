@@ -210,6 +210,9 @@
                        // was 0.08)
     collision: 0.23,   // exit speed = collision x pitch speed at the plate + (1 + collision) x bat speed, for a
                        // squared-up ball (step 1.5: Savant's 0.23 with bat speed in real units; step 1.4 had 0.12)
+    contactAll: 0,     // Contact's reach (step 1.5 task 4): the location and movement parts of the *where* spread are
+                       // multiplied by (his Contact spread / an average hitter's) to this power (0: Contact moves only its
+                       // own part, as in steps 1.2-1.5 task 3; 1: the whole spread)
     speedCost: 0.04,   // a faster bat costs accuracy (step 1.5, owner's choice, Session 10): the *where* spread is
                        // multiplied by e^(speedCost x mph of his average bat speed above BAT.batSpeed), tuned so each mph
                        // moves whiffs, squared-up % and average exit speed as across real hitters (tools/ratingstats.js)

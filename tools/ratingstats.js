@@ -181,13 +181,19 @@ function measure(B3, cond, games, seed) {
 }
 
 // The population check (layer 3): test players with realistic mixed ratings (Claude's default: about 12.2
-// points per standard deviation around 60, so 40 and 80 are the 5th and 95th percentiles, and a shared
-// part with correlation POP_R between one player's ratings), each playing about a season against average
+// points per standard deviation around 60, so 40 and 80 are the 5th and 95th percentiles; the correlations below),
+// each playing about a season against average
 // opponents. Returns one accumulator per player (with his innings pitched for pitchers).
-const POP_SD = 12.2, POP_R = 0.2;
+// The owner's choice (Session 10): ratings independent, except Raw Power and Contact lean opposite (POP_PC -0.3: power
+// hitters tend to whiff more); pitchers independent too (Claude's reading). POPR and POPPC override them for experiments.
+const POP_SD = 12.2, POP_R = process.env.POPR !== undefined ? +process.env.POPR : 0;
+// POP_PC: the correlation between Raw Power and Contact.
+const POP_PC = process.env.POPPC !== undefined ? +process.env.POPPC : -0.3;
 function popRatings(rng, keys) {
-  const common = rng.normal(0, 1), out = {};
-  for (const k of keys) out[k] = Math.round(Math.max(20, Math.min(99, 60 + POP_SD * (Math.sqrt(POP_R) * common + Math.sqrt(1 - POP_R) * rng.normal(0, 1)))));
+  const common = rng.normal(0, 1), z = {}, out = {};
+  for (const k of keys) z[k] = Math.sqrt(POP_R) * common + Math.sqrt(1 - POP_R) * rng.normal(0, 1);
+  if (POP_PC && z.rawPower !== undefined && z.contact !== undefined) z.rawPower = POP_PC * z.contact + Math.sqrt(1 - POP_PC * POP_PC) * z.rawPower;
+  for (const k of keys) out[k] = Math.round(Math.max(20, Math.min(99, 60 + POP_SD * z[k])));
   return out;
 }
 function measurePop(B3, spec) {
@@ -195,6 +201,15 @@ function measurePop(B3, spec) {
   const rng = B3.rng.create('pop:' + spec.seed + ':' + spec.kind + ':' + spec.team);
   const teams = averagePair();
   const draws = {};
+  // Tendencies as in the rated test teams (step 1.5 task 4, Claude's default): Patient / Balanced / Aggressive hitters and
+  // Nibbler / Balanced / Attacker pitchers at 1 : 2 : 1, from their own stream so the ratings draws stay the same.
+  const srng = B3.rng.create('popstyle:' + spec.seed + ':' + spec.kind + ':' + spec.team);
+  const style = (words) => words[srng.weighted([1, 2, 1])];
+  for (const id in teams.away.players) {
+    const p = teams.away.players[id];
+    if (spec.kind === 'hitter' && !p.pitches) p.tendencies = { aggressiveness: style(['Patient', 'Balanced', 'Aggressive']) };
+    if (spec.kind === 'pitcher' && p.pitches) p.tendencies = { aim: style(['Nibbler', 'Balanced', 'Attacker']) };
+  }
   for (const id in teams.away.players) {
     const p = teams.away.players[id];
     if (spec.kind === 'hitter' && !p.pitches) Object.assign(p.ratings, draws[id] = popRatings(rng, HIT));
@@ -336,10 +351,14 @@ const POP_STATS = {
   hitter: [['K%', 'k', 'bat.k_percent', 1], ['BB%', 'bb', 'bat.bb_percent', 1], ['AVG', 'avg', 'bat.batting_avg', 3], ['OBP', 'obp', 'bat.on_base_percent', 3],
     ['SLG', 'slg', 'bat.slg_percent', 3], ['ISO', 'iso', 'bat.isolated_power', 3], ['BABIP', 'babip', 'bat.babip', 3], ['exit speed', 'ev', 'bat.exit_velocity_avg', 1],
     ['hard-hit %', 'hard', 'bat.hard_hit_percent', 1], ['barrel %', 'barrel', 'bat.barrel_batted_rate', 1], ['whiff %', 'whiff', 'bat.whiff_percent', 1],
+    ['swing %', 'swing', 'bat.swing_percent', 1], ['zone swing %', 'zSwing', 'bat.z_swing_percent', 1],
     ['chase %', 'chase', 'bat.oz_swing_percent', 1], ['zone contact %', 'zContact', 'bat.iz_contact_percent', 1], ['sweet-spot %', 'sweet', 'bat.sweet_spot_percent', 1],
     ['pull %', 'pull', 'bat.pull_percent', 1], ['oppo %', 'oppo', 'bat.opposite_percent', 1], ['ground-ball %', 'gb', 'bat.groundballs_percent', 1],
     ['max exit speed', 'maxEV', 'evbat.max_hit_speed', 1], ['bat speed', 'batSpeed', 'track.avg_bat_speed', 1], ['fast-swing %', 'fast', 'track.hard_swing_rate', 1],
-    ['squared-up %', 'squared', 'track.squared_up_per_bat_contact', 1], ['blasts %', 'blast', 'track.blast_per_bat_contact', 1]],
+    ['squared-up %', 'squared', 'track.squared_up_per_bat_contact', 1], ['blasts %', 'blast', 'track.blast_per_bat_contact', 1],
+    // Plate discipline by pitch group (step 1.5 task 4: the owner's ladder rule, Session 10, matches these spreads first)
+    // (whiff against 95+ mph is left out: the test pitchers are average, so few of their pitches reach 95)
+    ['off-speed whiff %', 'offWhiff', 'off.whiff_per_swing', 1], ['off-speed chase - FB', 'offChaseMinusFb', 'off.chase_minus_fb', 1]],
   pitcher: [['K%', 'k', 'pit.k_percent', 1], ['BB%', 'bb', 'pit.bb_percent', 1], ['ERA', 'era', 'pit.p_era', 2], ['AVG against', 'avg', 'pit.batting_avg', 3],
     ['SLG against', 'slg', 'pit.slg_percent', 3], ['exit speed against', 'ev', 'pit.exit_velocity_avg', 1], ['hard-hit % against', 'hard', 'pit.hard_hit_percent', 1],
     ['ground-ball %', 'gb', 'pit.groundballs_percent', 1], ['whiff %', 'whiff', 'pit.whiff_percent', 1], ['chase % against', 'chase', 'pit.oz_swing_percent', 1],
@@ -356,7 +375,7 @@ function popReport(res, real) {
       seasons.push(st);
     }
     const rows = [];
-    console.log('\nPopulation check, ' + kind + 's: ' + seasons.length + ' test player-seasons (250+ PA; ratings about 60 +- ' + POP_SD + ', r ' + POP_R + ') against real 2024-2026');
+    console.log('\nPopulation check, ' + kind + 's: ' + seasons.length + ' test player-seasons (250+ PA; ratings about 60 +- ' + POP_SD + ', r ' + POP_R + ', Raw Power-Contact ' + POP_PC + '; tendencies 1:2:1) against real 2024-2026');
     console.log('  stat                   engine p5    p25    p50    p75    p95  |   real p5    p25    p50    p75    p95');
     for (const [lab, key, rk, d] of POP_STATS[kind]) {
       const xs = seasons.map((s2) => s2[key]);
@@ -446,4 +465,4 @@ function main() {
 
 if (process.argv[2] === '--worker') worker();
 else if (require.main === module) main();
-module.exports = { RATINGS, LEVELS, ANCHOR, ladder, stats, measure, newAcc, merge, barrel, attack };
+module.exports = { RATINGS, LEVELS, ANCHOR, ladder, stats, measure, measurePop, newAcc, merge, barrel, attack };
