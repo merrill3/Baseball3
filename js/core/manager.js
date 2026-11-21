@@ -29,7 +29,7 @@
   // Is the pitcher done? Starters go until tired or hit hard; relievers by role, outs and Stamina.
   function done(g, team, id) {
     const P = C().pull, live = team.live[id], f = fatigue(team, id);
-    const newInning = g.outs === 0 && !g.bases[0] && !g.bases[1] && !g.bases[2];
+    const newInning = !g.halfPitches; // no pitch yet this half (in extra innings a runner is already on second)
     if (team.used[0] === id) {
       if (f >= P.starter || (g.inning >= 7 && f >= P.late)) return true;
       return live.runs >= P.starterRuns || (live.runs >= P.starterRuns - 1 && f >= -25 / B3.tune.PITCH.fatigueSpan);
@@ -48,7 +48,7 @@
       if (g.balls || g.strikes || !d.bullpen.length) return null;
       const team = g.teams[d.side];
       const lead = g.score[d.side] - g.score[1 - d.side];
-      const saveSpot = g.inning >= 9 && lead >= 1 && lead <= 3 && g.outs === 0 && !g.bases[0] && !g.bases[1] && !g.bases[2];
+      const saveSpot = g.inning >= 9 && lead >= 1 && lead <= 3 && !g.halfPitches;
       let out = done(g, team, d.pitcher);
       if (saveSpot && role(team, d.pitcher) !== 'CL' && team.bullpen.some((id) => role(team, id) === 'CL')) out = true;
       if (!out) return null;

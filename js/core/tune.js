@@ -16,10 +16,10 @@
 
   // Hitting (DESIGN.md section 10: each input names the rating whose job it is).
   const BAT = {
-    contactSd: 1.34,   // Contact: spread of the *where* error, inches between bat and ball centers
+    contactSd: 1.33,   // Contact: spread of the *where* error, inches between bat and ball centers
     timingSd: 20,      // Timing: spread of a CPU hitter's *when* error at 92 mph, in ms
     timingTop: 92,     // Timing: the pitch speed (mph) around which he starts to run late (a soft step, TIMING.lateSoft)
-    batSpeed: 90.4,    // Raw Power: bat speed in mph; sets exit speed on a squared-up ball
+    batSpeed: 90.3,    // Raw Power: bat speed in mph; sets exit speed on a squared-up ball
     launchK: 22,       // Launch: degrees of launch angle per inch of *where* error (lower is a tighter band)
     launchSd: 15,      // Launch: extra launch-angle noise in degrees
     sprayNoise: 20,    // Launch: spray-direction noise in degrees (spray control)
@@ -142,10 +142,10 @@
       grade: [[20, -7.141], [30, -4.387], [40, -2.666], [50, -1.304], [60, 0], [70, 1.461], [80, 2.408], [90, 3.128], [100, 3.831], [110, 4.534]],
       range: [[20, -2.101], [30, -1.611], [40, -1.099], [50, -0.563], [60, 0], [70, 0.593], [80, 1.22], [90, 1.884], [100, 2.591], [110, 3.347]],
       hands: [[20, -2.405], [30, -1.882], [40, -1.313], [50, -0.69], [60, 0], [70, 0.774], [80, 1.653], [90, 2.665], [100, 3.836], [110, 5.129]],
-      arm: [[20, -1.867], [30, -1.409], [40, -0.949], [50, -0.481], [60, 0], [70, 0.5], [80, 1.03], [90, 1.605], [100, 2.254], [110, 3.048]],
+      arm: [[20, -1.594], [30, -1.305], [40, -0.965], [50, -0.548], [60, 0], [70, 0.799], [80, 1.92], [90, 2.851], [100, 3.559], [110, 4.263]],
       framing: [[20, -1.179], [30, -0.902], [40, -0.613], [50, -0.312], [60, 0], [70, 0.322], [80, 0.653], [90, 0.991], [100, 1.334], [110, 1.678]],
-      speed: [[20, -1.896], [30, -1.365], [40, -0.88], [50, -0.43], [60, 0], [70, 0.423], [80, 0.847], [90, 1.283], [100, 1.743], [110, 2.236]],
-      baserunning: [[20, -4.679], [30, -3.113], [40, -1.966], [50, -0.956], [60, 0], [70, 0.949], [80, 1.936], [90, 3.027], [100, 4.392], [110, 6.576]]
+      speed: [[20, -1.564], [30, -1.157], [40, -0.765], [50, -0.381], [60, 0], [70, 0.382], [80, 0.771], [90, 1.171], [100, 1.591], [110, 2.04]],
+      baserunning: [[20, -5.57], [30, -3.415], [40, -2.068], [50, -0.985], [60, 0], [70, 0.952], [80, 1.917], [90, 2.949], [100, 4.152], [110, 6.043]]
     },
     shape: 4,          // degrees off the launch angle at shape +1 (ground-ball tilt); -1 is a fly-ball tilt
     // Stamina: pitches before fatigue sets in, by rating (straight lines between; past 100 the last
@@ -212,7 +212,7 @@
     insidePull: 12,    // degrees toward the pull side per foot the pitch is inside
     twoStrike: [0.64, 0.96], // with two strikes a hitter shortens up (step 1.4): [share of his *where* spread, share of
                        // his exit speed]
-    shapeSd: [0.16, 0.2], // the shape's counterweight (step 1.4, owner's choice: value-neutral): share of the
+    shapeSd: [0.112, 0.09], // the shape's counterweight (step 1.4, owner's choice: value-neutral): share of the
                        // *where* spread taken off per unit of ground-ball shape (easier to square up), and
                        // added per unit of fly-ball shape (harder)
     foulLine: 45       // the foul lines, degrees from straightaway center

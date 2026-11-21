@@ -121,7 +121,7 @@ function targets(B3, from, to, seed) {
         continue;
       }
       if (e.e === 'sb') { c.sb++; continue; }
-      if (e.e === 'cs') { c.cs++; continue; }
+      if (e.e === 'cs') { c.cs++; if (e.p === starter[1 - e.h]) c.spOuts++; continue; }
       if (e.e !== 'pa') continue;
       if (e.p === starter[1 - e.h]) c.spOuts += e.out;
       c.pa++;
@@ -444,7 +444,7 @@ function main() {
         }
         const want = per * (d.key || 1);
         const ok = d.key ? Math.abs(v - want) <= 0.2 * want : v < per * 1.2;
-        out.push('  ' + d.label.padEnd(26) + txt.padEnd(58) + (d.key ? 'key spot, ' + (d.key === 1 ? 'a point ' : 'half    ') : 'elsewhere       ') + (ok ? 'ok' : 'MISS'));
+        out.push('  ' + d.label.padEnd(26) + txt.padEnd(58) + (d.key ? 'key spot, ' + (d.key === true || d.key === 1 ? 'a point ' : 'half    ') : 'elsewhere       ') + (ok ? 'ok' : 'MISS'));
       }
       out.push('');
     }

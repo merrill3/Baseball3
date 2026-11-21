@@ -146,6 +146,7 @@
       score: [0, 0],
       line: [[], []], // runs by inning, per team
       halfRuns: 0,
+      halfPitches: 0, // pitches thrown this half-inning (0: it hasn't started; step 1.4)
       walkoff: false,
       log: [],
       over: false, result: null,
@@ -163,13 +164,13 @@
   }
 
   function startHalf(g) {
-    g.outs = 0; g.balls = 0; g.strikes = 0; g.halfRuns = 0;
+    g.outs = 0; g.balls = 0; g.strikes = 0; g.halfRuns = 0; g.halfPitches = 0;
     g.bases = [null, null, null];
     if (g.rules.placedRunner && g.inning > g.rules.innings) {
       // The runner on second is the batter before this inning's leadoff hitter. His run is unearned.
       const b = bat(g);
       const id = b.lineup[(b.spot + 8) % 9];
-      g.bases[1] = { id: id, resp: fld(g).pitcher, earned: false };
+      g.bases[1] = { id: id, resp: fld(g).pitcher, earned: false, placed: true };
       emit(g, { e: 'placed', r: id, base: 2 });
     }
   }
@@ -237,6 +238,7 @@
           bases = a.runners;
         }
         for (const base of bases) if (d.runners.indexOf(base) < 0) fail('steal: no runner can go from base ' + base);
+        if (bases.some((b, i) => bases.indexOf(b) !== i)) fail('steal: a runner is listed twice');
         if (bases.indexOf(1) >= 0 && g.bases[1] && bases.indexOf(2) < 0) fail('steal: the runner on first can go only if the runner on second goes too');
         g.pending = null;
         g.steal = bases.length ? bases.map((base) => ({ from: base - 1, runner: g.bases[base - 1] })) : null;
@@ -289,6 +291,8 @@
     f.pitcher = id;
     f.used.push(id);
     f.live[id] = newLive();
+    // A pitcher who comes in before the half's first pitch takes over the placed runner (review fix, step 1.4).
+    if (g.halfPitches === 0) for (const r of g.bases) if (r && r.placed) r.resp = id;
   }
 
   // ---- Pitches ----
@@ -298,6 +302,7 @@
   function pitchDone(g, a, out) {
     const f = fld(g), p = g.pitch;
     f.live[f.pitcher].pitches++;
+    g.halfPitches++;
     const ev = { e: 'pitch', p: f.pitcher, b: batterId(g), t: p.type, v: p.speed, x: round2(p.x), z: round2(p.z), c: g.balls + '-' + g.strikes, r: out.r };
     if (a.swing) ev.tm = a.timing;
     if (out.r === 'X' && out.contact) { ev.ev = out.contact.ev; ev.la = out.contact.la; ev.sp = out.contact.sp; }

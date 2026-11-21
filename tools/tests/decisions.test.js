@@ -116,7 +116,7 @@ module.exports = function (t) {
     const g = newGame(B3, 'bad answers');
     const tries = {
       change: [{ pitcher: 'HOM-SP' }, { pitcher: 'nobody' }, 'yes'],
-      steal: [{ runners: [3] }, { runners: 1 }, 7],
+      steal: [{ runners: [3] }, { runners: 1 }, 7, { runners: [1, 1] }],
       pitch: [{ type: 'XX', x: 0, z: 2 }, { type: 'FF', x: 0 }, { type: 'FF', x: NaN, z: 2 }, null],
       swing: [{ swing: 'yes' }, { swing: true }, { swing: true, timing: Infinity }, null],
       tagup: [{ go: 1 }, null]

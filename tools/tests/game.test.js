@@ -177,6 +177,26 @@ module.exports = function (t) {
     assert.strictEqual(leadoff.c, '0-0');
   });
 
+  t.test('a pitcher brought in before an extra inning\'s first pitch takes over the placed runner', () => {
+    const B3 = loadCore();
+    let checked = 0;
+    for (let n = 0; n < 400 && checked < 3; n++) {
+      let fresh = null;
+      const ctl = {
+        change: (d, g) => {
+          if (g.inning >= 10 && !g.halfPitches && g.bases[1] && g.bases[1].placed && d.bullpen.length) { fresh = d.bullpen[0]; return { pitcher: fresh }; }
+          return B3.manager.cpu.change(d, g);
+        },
+        pitch: (d, g) => {
+          if (fresh) { assert.strictEqual(g.bases[1].resp, fresh, 'the placed runner is charged to the new pitcher'); fresh = null; checked++; }
+          return B3.manager.cpu.pitch(d, g);
+        }
+      };
+      B3.game.play(B3.game.create(Object.assign(pair(), { type: 'regular', rng: B3.rng.create('placed ' + n) })), [ctl, ctl]);
+    }
+    assert.ok(checked >= 1, 'some game went to extra innings');
+  });
+
   t.test('extra innings by game type', () => {
     // Regular season: a runner on second, the batter before the leadoff man; his run is unearned.
     const reg = playGame(scripted({ '10.0': [single2] }), { type: 'regular' });

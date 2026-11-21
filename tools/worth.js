@@ -33,7 +33,8 @@ function conditions(from) {
   for (const k of PIT) rows.push({ name: k, own: pitching[k], set: (p, kind) => { if (kind === 'pitcher') p.ratings[k] = up; } });
   // Defense and running (step 1.4): every fielder (Framing: the catcher), every hitter as a runner.
   const defense = { range: 'BABIP', hands: 'E DP', arm: 'XB CS', framing: 'K BB', speed: 'BABIP XB SB', baserunning: 'XB SB CS' };
-  for (const k of DEF.concat(['framing'])) rows.push({ name: k, own: defense[k], set: (p, kind) => { if (kind === 'hitter' && k in p.ratings) p.ratings[k] = up; } });
+  // (These stay at 60 whatever --from is, so their row is always 60 -> 70.)
+  for (const k of DEF.concat(['framing'])) rows.push({ name: k, own: defense[k], set: (p, kind) => { if (kind === 'hitter' && k in p.ratings) p.ratings[k] = 70; } });
   rows.push({ name: 'grades', own: 'whiff K', set: (p, kind) => { if (kind === 'pitcher') for (const t in p.arsenal) p.arsenal[t].grade = up; } });
   rows.push({ name: 'putAway', own: 'whiff K', set: (p, kind, B3) => { if (kind === 'pitcher') p.arsenal[B3.ratings.putAway(p.pitches, grades(p))].grade = up; } });
   rows.push({ name: 'stamina SP', own: 'SPpit SPip', set: (p, kind) => { if (kind === 'pitcher' && p.role === 'SP') p.ratings.stamina += 10; } });

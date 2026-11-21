@@ -96,7 +96,7 @@ function measure(B3, s, set, opts) {
     const sn = s.snaps[n];
     g.inning = 1; g.half = sn.h; g.outs = sn.outs; g.balls = 0; g.strikes = 0;
     g.bases = sn.bases.map(copyBase);
-    g.score = [0, 0]; g.line = [[], []]; g.halfRuns = 0; g.walkoff = false;
+    g.score = [0, 0]; g.line = [[], []]; g.halfRuns = 0; g.halfPitches = 1; g.walkoff = false;
     g.log = []; g.over = false; g.result = null; g.steal = null; g.pitch = null; g.play = null; g.lastPlay = null;
     const bt = g.teams[sn.h], f = g.teams[1 - sn.h];
     bt.spot = sn.spot;
@@ -120,13 +120,14 @@ function measure(B3, s, set, opts) {
       }
       if (pa || g.over || g.half !== sn.h || g.inning !== 1) break;
     }
+    // After the plate appearance, from the game itself: a steal on its last pitch counts too (review fix).
     let after = 0;
     if (pa) {
       counts.pa++;
       if (pa.res === 'K' || pa.res === 'BB' || pa.res === 'HR' || pa.res === 'E' || pa.res === 'DP') counts[pa.res]++;
       if (pa.res === '1B' || pa.res === '2B' || pa.res === '3B' || pa.res === 'HR') counts.H++;
-      if (pa.o < 3) after = s.RE[key(pa.o, pa.bs)];
     }
+    if (!g.over && g.half === sn.h && g.inning === 1 && g.outs < 3) after = s.RE[key(g.outs, g.bases)];
     const v = after + g.score[sn.h] - s.RE[sn.k];
     sum += v; sumSq += v * v;
     side[sn.h][0] += v; side[sn.h][1]++;
