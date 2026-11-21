@@ -283,6 +283,20 @@
     }
   };
 
+  // A runner moving forward at v0 who stops: the seconds and feet it takes him.
+  function drift(rn, v0) {
+    const a = T().BALL.accel, v = Math.min(v0 || 0, rn.run.speed);
+    return { t: v / a, d: v * v / (2 * a) };
+  }
+
+  // Seconds for a runner s feet off his bag (moving away at v0) to stop, turn and get back to it.
+  function backTime(rn, s, v0) {
+    const dr = drift(rn, v0);
+    const d = s + dr.d;
+    if (d <= 0.5) return dr.t;
+    return dr.t + 0.3 + Math.max(d / (0.8 * rn.run.speed), runTime(d, rn.run.speed, 0));
+  }
+
   // A runner's track: from his start (s feet past his base, moving at v0, from time t0) to each base he
   // reaches, ending on base endBase, or put out on the way to base out.base at time out.t.
   function runTrack(S, rn, t0, times, endBase, out, s, v0) {
@@ -298,8 +312,10 @@
       S.put(tr.path, lastT, base(b));
     }
     if (!out && endBase === rn.from && s > 0.5) {
-      // He holds: back to his bag.
-      S.put(tr.path, t0 + 0.3 + s / (0.8 * rn.run.speed), base(rn.from));
+      // He holds: he stops (a runner still shuffling forward drifts a little farther), then goes back to his bag.
+      const dr = drift(rn, v0);
+      if (dr.d > 0) S.put(tr.path, t0 + dr.t, pathPt(rn.from, s + dr.d));
+      S.put(tr.path, t0 + backTime(rn, s, v0), base(rn.from));
     }
     if (out) {
       // Where he is when the tag or force is made (never past the base).
@@ -491,9 +507,11 @@
       if (!rn) { runners[i] = null; continue; }
       if (!rn.going) {
         runners[i] = i + 1;
-        back[i] = 0;
+        // Back to the bag to tag (runTrack stops his shuffle and runs him back; never before the catch).
+        // A tag-up leaves from the bag only once he is back on it.
+        back[i] = Math.max(tc, backTime(rn, rn.s0, rn.v0));
         const tr = runTrack(S, rn, 0, null, rn.from, null);
-        S.put(tr.path, Math.max(tc, 0.3 + rn.s0 / (0.8 * rn.run.speed)), base(rn.from)); // back to the bag to tag
+        S.put(tr.path, back[i], base(rn.from));
         continue;
       }
       // He sees the catch, stops and turns back.
