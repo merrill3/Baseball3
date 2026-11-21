@@ -210,6 +210,12 @@
                        // was 0.08)
     collision: 0.23,   // exit speed = collision x pitch speed at the plate + (1 + collision) x bat speed, for a
                        // squared-up ball (step 1.5: Savant's 0.23 with bat speed in real units; step 1.4 had 0.12)
+    speedCost: 0.04,   // a faster bat costs accuracy (step 1.5, owner's choice, Session 10): the *where* spread is
+                       // multiplied by e^(speedCost x mph of his average bat speed above BAT.batSpeed), tuned so each mph
+                       // moves whiffs, squared-up % and average exit speed as across real hitters (tools/ratingstats.js)
+    barrelCost: 0.0035, // and along the bat (the same choice): exit speed is multiplied by e^(-barrelCost x those mph), so
+                       // each mph of average bat speed adds about as much exit speed as across real hitters (0.57 mph
+                       // on average, 0.83 at the top) instead of the squared-up formula's 1.23
     effort: 0.5,       // share of the *where* spread added per standard deviation of a swing's bat speed above his own
                        // average (taken off below it): a harder swing than his usual is less accurate (step 1.5)
     batSd: 3.8,        // mph: one swing's bat speed against his average (step 1.5: Savant's fast-swing rate, 75+ mph,

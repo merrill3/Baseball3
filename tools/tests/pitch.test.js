@@ -119,9 +119,21 @@ module.exports = function (t) {
     assert.ok(trial(env, MID, env.B3.tune.SWING.missMs + 1, 300).every((x) => x.r.r === 'S'), 'too early or late misses');
   });
 
-  t.test('Raw Power sets exit speed; Launch sets the launch-angle band and spray', () => {
-    const ev = (batSpeed) => avg(inPlay(trial(setup({ bat: { batSpeed } }), MID, 0)).map((x) => x.r.contact.ev));
-    near(ev(80) - ev(66), 14 * 1.2 * 0.85, 4, 'exit speed per mph of bat speed');
+  t.test('Raw Power sets exit speed at a cost in accuracy; Launch sets the launch-angle band and spray', () => {
+    // free: without the cost, the squared-up formula's 1.23 per mph (less the average mishit)
+    const swings = (batSpeed, free) => {
+      const env = setup({ bat: { batSpeed } });
+      if (free) { env.B3.tune.SWING.speedCost = 0; env.B3.tune.SWING.barrelCost = 0; }
+      return trial(env, MID, 0);
+    };
+    const ev = (rows) => avg(inPlay(rows).map((x) => x.r.contact.ev));
+    const whiff = (rows) => rate(rows, (x) => x.r.r === 'S');
+    near(ev(swings(80, true)) - ev(swings(66, true)), 14 * 1.2 * 0.85, 4, 'exit speed per mph of bat speed, without the cost');
+    // The cost (step 1.5, owner's choice, Session 10): a faster bat misses more and gains less exit speed per mph.
+    const fast = swings(80), slow = swings(66);
+    near(ev(fast) - ev(slow), 14 * 0.63, 2.5, 'exit speed per mph of bat speed, with the cost');
+    assert.ok(whiff(fast) > whiff(slow) + 0.05, 'a faster bat misses more: ' + whiff(fast).toFixed(3) + ' against ' + whiff(slow).toFixed(3));
+    near(whiff(swings(80, true)), whiff(swings(66, true)), 0.03, 'no cost, no extra misses');
     const tight = inPlay(trial(setup({ bat: { launchK: 12, launchSd: 4, sprayNoise: 8 } }), MID, 0));
     const loose = inPlay(trial(setup({ bat: { launchK: 30, launchSd: 12, sprayNoise: 30 } }), MID, 0));
     assert.ok(sd(tight.map((x) => x.r.contact.la)) < sd(loose.map((x) => x.r.contact.la)) - 6, 'launch-angle spread');

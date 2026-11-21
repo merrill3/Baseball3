@@ -115,7 +115,10 @@
     // easier to square up, a fly-ball shape harder (SWING.shapeSd per unit of shape).
     const s = (pitch.shape || 0) / T().RATE.shape;
     const tilt = 1 - (s > 0 ? S.shapeSd[0] : S.shapeSd[1]) * s;
-    const sd = tilt * Math.sqrt(read.contactSd * read.contactSd + bite * bite + loc * loc);
+    // A faster bat costs accuracy (step 1.5, owner's choice, Session 10): the whole spread grows by speedCost per mph
+    // of his average bat speed above an average hitter's (BAT.batSpeed), so Raw Power brings swing and miss, as in MLB.
+    const cost = Math.exp(S.speedCost * (w.b.bat.batSpeed - T().BAT.batSpeed));
+    const sd = cost * tilt * Math.sqrt(read.contactSd * read.contactSd + bite * bite + loc * loc);
     return { mean: mean, sd: sd, rec: read.rec, bats: w.bats };
   }
 
@@ -139,7 +142,10 @@
     if (Math.abs(off) > radius * S.foulBack) { out.r = 'F'; return out; } // glancing: fouled back
     // Exit speed: bat speed and pitch speed (Savant's most a swing can give), less for an off-center hit and for bad timing.
     const u = off / (radius * S.foulBack);
-    const top = S.collision * pitch.speed * S.plateShare + (1 + S.collision) * bat;
+    // A faster bat also meets the ball a little off the barrel's sweet spot more often (step 1.5, owner's choice, Session 10:
+    // a faster bat costs accuracy along the bat too): barrelCost of the exit speed per mph of his average bat speed.
+    const along = Math.exp(-S.barrelCost * (w.b.bat.batSpeed - T().BAT.batSpeed));
+    const top = along * (S.collision * pitch.speed * S.plateShare + (1 + S.collision) * bat);
     // A pitch away from the middle is hit off the end of the bat or jammed: less exit speed (step 1.3).
     const away = Math.max(0, B3.data.zoneEdge(pitch.x, pitch.z) + S.edgeFrom);
     // Off center (step 1.5): the loss grows with the *where* error to offPow, a little less under the ball than over it.

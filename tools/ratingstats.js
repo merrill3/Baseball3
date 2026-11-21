@@ -30,8 +30,13 @@ const RATINGS = {
   contact: { kind: 'hitter', own: [['zContact', 'bat.iz_contact_percent', 1], ['whiff', 'bat.whiff_percent', -1]] },
   timing: { kind: 'hitter', own: [['whiff95', 'vs95.whiff_per_swing', -1]] },
   launch: { kind: 'hitter', own: [['sweet', 'bat.sweet_spot_percent', 1], ['pu', 'bat.popups_percent', -1]] },
+  // Raw Power's per-mph checks (step 1.5, owner's choice, Session 10: a faster bat costs accuracy, so each mph moves
+  // whiffs, squared-up % and average exit speed as it does across real hitters).
   rawPower: { kind: 'hitter', own: [['batSpeed', 'track.avg_bat_speed', 1], ['maxEV', 'evbat.max_hit_speed', 1], ['ev50', 'evbat.ev50', 1], ['fast', 'track.hard_swing_rate', 1]],
-    unit: ['batSpeed', 'maxEV', 'batspeed.max_hit_speed'] },
+    units: [['batSpeed', 'maxEV', 'batspeed.max_hit_speed'], ['batSpeed', 'ev50', 'batspeed.ev50'], ['batSpeed', 'ev', 'batspeed.avg_hit_speed'],
+      ['batSpeed', 'whiff', 'batspeed.whiff_percent'], ['batSpeed', 'zContact', 'batspeed.iz_contact_percent'], ['batSpeed', 'k', 'batspeed.k_percent'],
+      ['batSpeed', 'squared', 'batspeed.squared_up_per_bat_contact'], ['batSpeed', 'hard', 'batspeed.hard_hit_percent'],
+      ['batSpeed', 'barrel', 'batspeed.barrel_batted_rate'], ['batSpeed', 'iso', 'batspeed.isolated_power']] },
   recognition: { kind: 'hitter', own: [['offWhiff', 'off.whiff_per_swing', -1], ['offChaseMinusFb', 'off.chase_minus_fb', -1]] },
   discipline: { kind: 'hitter', own: [['zMinusO', 'bat.zswing_minus_chase', 1], ['chase', 'bat.oz_swing_percent', -1]] },
   velocity: { kind: 'pitcher', own: [['fbSpeed', 'pit.ff_avg_speed', 1]],
@@ -240,6 +245,7 @@ function stats(a) {
   const out = {
     runs: a.runs / a.games, pa: a.pa,
     k: pc(a.k, a.pa), bb: pc(a.bb, a.pa), avg: h / a.ab, obp: (h + a.bb) / (a.pa), slg: (a.h1 + 2 * a.h2 + 3 * a.h3 + 4 * a.hr) / a.ab,
+    iso: (a.h2 + 2 * a.h3 + 3 * a.hr) / a.ab,
     hrPa: pc(a.hr, a.pa), babip: (h - a.hr) / (a.ab - a.k - a.hr + a.sf),
     swing: pc(a.sw, a.n), zone: pc(a.zone, a.n), zSwing: pc(a.zsw, a.zone), chase: pc(a.osw, a.out),
     zMinusO: pc(a.zsw, a.zone) - pc(a.osw, a.out),
@@ -346,7 +352,6 @@ function popReport(res, real) {
     const seasons = [];
     for (const id in res) if (id.startsWith('pop:' + kind[0] + ':')) for (const x of res[id]) {
       const st = stats(x.acc);
-      st.iso = st.slg - st.avg;
       st.era = x.acc.outs ? 27 * x.acc.er / x.acc.outs : NaN;
       seasons.push(st);
     }
