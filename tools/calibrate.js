@@ -1,7 +1,7 @@
 // Calibration (M1 step 1.4): the target table (DESIGN.md section 7, with the extra engine targets), the
 // equal-value check, defense and running at their key spots, the tendencies and the pitch shape.
 // Usage: node tools/calibrate.js [--part=targets,value,defense,styles,shape] [--games=3000] [--samples=1500]
-//                                [--seed=1] [--jobs=N] [--only=contact,arm,...] [--tweak=file.js]
+//                                [--seed=1] [--jobs=N] [--only=contact,arm,...] [--tweak=file.js] [--json=file]
 //
 //   targets  plays --games seeded regular-season games between rated test teams (a league-like spread,
 //            tools/lib/testteams.js) and prints each league-wide target with its band
@@ -45,7 +45,8 @@ function args() {
     jobs: parseInt(opt('jobs', String(os.cpus().length)), 10),
     only: opt('only', null),
     tweak: opt('tweak', null) ? path.resolve(opt('tweak')) : null,
-    fitout: opt('fitout', null)
+    fitout: opt('fitout', null),
+    json: opt('json', null)
   };
 }
 
@@ -390,7 +391,7 @@ function main() {
   jobs.sort((a, b) => (b.targets ? 1 : 0) - (a.targets ? 1 : 0));
   const t0 = Date.now();
   pool(jobs, o.jobs, o.tweak, (res) => {
-    const out = [];
+    const out = [], valueRows = [];
     if (plan.targets.length) out.push(targetReport(merge(plan.targets.map((i) => res[i]))), '');
     const B = base !== null ? res[base] : null;
     let lineupValue = null;
@@ -412,6 +413,7 @@ function main() {
         const ok = check.every((s) => Math.abs(s.v - TARGET) <= BAND * TARGET);
         if (sign > 0) all.push(steps[2].v);
         out.push('  ' + row.k.padEnd(12) + steps.map((s) => (s.v.toFixed(3) + '±' + s.se.toFixed(3)).padStart(15)).join('') + '   ' + (ok ? 'ok' : 'MISS'));
+        valueRows.push({ k: row.k, kind: sign > 0 ? 'hitter' : 'pitcher', from: LEVELS.slice(0, -1), steps: steps, ok: ok });
       }
       if (all.length) lineupValue = all.reduce((a, b) => a + b, 0) / all.length;
       // DESIGN.md section 7: Contact moves AVG more than Raw Power does (+10 from 60, hits per at-bat).
@@ -508,6 +510,8 @@ function main() {
     }
     out.push('(' + ((Date.now() - t0) / 1000).toFixed(0) + ' s, ' + o.jobs + ' processes' + (o.tweak ? ', tweak ' + o.tweak : '') + ')');
     console.log(out.join('\n'));
+    // --json=file: the equal-value rows for the chart page (tools/ratingstats.js --value=file).
+    if (o.json) require('fs').writeFileSync(o.json, JSON.stringify({ date: new Date().toISOString().slice(0, 10), target: TARGET, band: BAND, value: valueRows }));
   });
 }
 

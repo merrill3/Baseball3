@@ -15,6 +15,7 @@ Saves (from M2) stay in your browser under Baseball3's own names, separate from 
 - `node tools/contact.js 300`: prints pitch and contact numbers (whiffs, fouls, exit speed, launch angle, spray) by pitch type, speed, timing and matchup. It checks nothing.
 - `node tools/hits.js 300`: prints hit types, where hits land, steals, tag-ups and the league batting line. It checks nothing.
 - `node tools/worth.js 1000`: "10 points are worth": what +10 points of each rating does to runs and to its own stats (add `--styles` for the tendencies, `--pairs` for pairs of ratings). It checks nothing and takes a few minutes.
+- `node tools/ratingstats.js`: each rating from 20 to 99 against real 2024–2026 players (its own stat, each unit's effect, and a test population against real regulars); `--html=page.html` writes a chart page. About 2 minutes; it checks nothing.
 - `node tools/calibrate.js`: the calibration report: the target table (DESIGN.md section 7), the equal-value check for every rating, defense and running at their key spots, the tendencies and the pitch shape. About 10 minutes; `--part=targets` (about a minute) or `--part=speed` run one part.
 - `node tools/e2e/boot-check.js`: opens the page from disk in Chromium at desktop and phone sizes and checks for errors. Needs Playwright.
 

@@ -1,6 +1,7 @@
 // Ratings against real stats (M1 step 1.5; DESIGN.md section 10, "Ratings measured against stats").
 // Usage: node tools/ratingstats.js [--games=400] [--only=contact,velocity,...] [--seed=1] [--jobs=N]
-//                                  [--tweak=file.js] [--json=out.json]
+//                                  [--tweak=file.js] [--json=out.json] [--part=sweep,pop] [--popteams=40]
+//                                  [--html=page.html] [--value=calibrate.json]
 // For each rating it moves one side's players to 20, 30, ... 99 (everyone else at 60, Balanced) and reads:
 //   layer 1  the rating's own stat (the one that isolates its job) against the real ladder: the real
 //            players' percentiles mirrored around the 50th (owner's choice, Session 8): 20 = the worst
@@ -10,7 +11,8 @@
 //   and the downstream stats (K%, BB%, AVG, OBP, SLG, exit speed ...) for reading.
 // Direct physical inputs (bat speed, fastball speed, sprint speed, arm, Stamina) are read from the
 // rating hooks without games. --json writes every number for the chart page. It checks nothing (exit 0).
-// The population check (layer 3) and the chart page come next (step 1.5 task 2).
+// --part=pop adds the population check (layer 3); --html writes the chart page (tools/lib/ratingspage.js),
+// with the equal-value tables from `node tools/calibrate.js --part=value --json=file` when --value=file.
 'use strict';
 const os = require('os');
 const path = require('path');
@@ -51,7 +53,11 @@ function args() {
     jobs: parseInt(opt('jobs', String(os.cpus().length)), 10),
     only: opt('only', null),
     tweak: opt('tweak', null) ? path.resolve(opt('tweak')) : null,
-    json: opt('json', null)
+    json: opt('json', null),
+    parts: opt('part', 'sweep,pop').split(','),
+    html: opt('html', null),
+    value: opt('value', null),
+    popTeams: parseInt(opt('popteams', '40'), 10)
   };
 }
 
@@ -83,11 +89,68 @@ function attack(B3, x, z) {
   return { zone: u <= 0.67 ? 'heart' : u <= 1.33 ? 'shadow' : u <= 2 ? 'chase' : 'waste', meat: meat };
 }
 
+// Counts one game's events for the side that bats (side 0: away bats) into accFor(e)'s accumulator.
+function addGame(B3, g, side, accFor) {
+  const S = B3.tune.SWING;
+  const bt = g.teams[side], pt = g.teams[1 - side];
+  for (const e of g.log) {
+    if (e.h !== side) continue;
+    const a = accFor(e);
+    if (!a) continue;
+    if (e.e === 'pa') {
+      a.pa++;
+      const r = e.res;
+      if (r === 'K') a.k++; else if (r === 'BB') a.bb++; else if (r === 'SF') a.sf++;
+      if (r === '1B') a.h1++; else if (r === '2B') a.h2++; else if (r === '3B') a.h3++; else if (r === 'HR') a.hr++;
+      if (r !== 'BB' && r !== 'SF') a.ab++;
+      continue;
+    }
+    if (e.e !== 'pitch') continue;
+    a.n++;
+    const inZ = B3.data.inZone(e.x, e.z);
+    const swung = e.r === 'S' || e.r === 'F' || e.r === 'X';
+    const az = attack(B3, e.x, e.z);
+    a[az.zone === 'chase' ? 'chaseZ' : az.zone]++;
+    if (az.meat) a.meat++;
+    if (az.zone === 'shadow' && !swung) { a.shTake++; if (e.r === 'C') a.shCalled++; }
+    if (FB[e.t]) { a.fbN++; a.fbV += e.v; }
+    if (inZ) a.zone++; else { a.out++; if (OFF[e.t]) a.offOut++; if (FB[e.t]) a.fbOut++; }
+    if (!swung) continue;
+    a.sw++;
+    if (inZ) a.zsw++; else a.osw++;
+    a.bySw[e.t] = (a.bySw[e.t] || 0) + 1;
+    const bi = bt.inp[e.b];
+    a.swings++;
+    a.batSpeedSum += bi.bat.batSpeed;
+    if (e.r === 'S') { a.whiff++; a.byWhiff[e.t] = (a.byWhiff[e.t] || 0) + 1; } else { a.contact++; if (inZ) a.zcontact++; }
+    if (e.r === 'F') a.foul++;
+    if (OFF[e.t]) { a.offSw++; if (e.r === 'S') a.offWhiff++; }
+    if (!inZ && OFF[e.t]) a.offOutSw++;
+    if (!inZ && FB[e.t]) a.fbOutSw++;
+    if (e.v >= 95) { a.sw95++; if (e.r === 'S') a.whiff95++; }
+    if (e.r === 'X' && e.ev !== undefined) {
+      a.bip++;
+      a.evSum += e.ev; a.evs.push(e.ev);
+      a.laSum += e.la; a.laSq += e.la * e.la;
+      if (e.ev >= 95) a.hard++;
+      if (barrel(e.ev, e.la)) a.barrel++;
+      if (e.la >= 8 && e.la <= 32) a.sweet++;
+      if (e.la < 10) a.gb++; else if (e.la < 25) a.ld++; else if (e.la <= 50) a.fb++; else a.pu++;
+      const pi = pt.inp[e.p];
+      const bats = bi.bats === 'S' ? (pi.throws === 'L' ? 'R' : 'L') : bi.bats;
+      const toward = bats === 'R' ? -e.sp : e.sp; // plus is the pull side
+      if (toward > 15) a.pull++; else if (toward < -15) a.oppo++; else a.straight++;
+      const top = S.collision * e.v * S.plateShare + (1 + S.collision) * bi.bat.batSpeed;
+      if (e.ev >= 0.8 * top) a.squared++;
+    }
+  }
+}
+
+// The sweep: one side's players of cond.kind at rating cond.k = cond.L, everyone else 60.
 function measure(B3, cond, games, seed) {
   const { averagePair } = require('./lib/testteams');
-  const S = B3.tune.SWING;
   const a = newAcc();
-  const side = cond.kind === 'hitter' ? 0 : 1; // the half whose events we read: away bats (0) or away pitches (1)
+  const side = cond.kind === 'hitter' ? 0 : 1; // the half we read: away bats (0) or away pitches (1)
   for (let n = 0; n < games; n++) {
     const teams = averagePair();
     for (const id in teams.away.players) {
@@ -100,64 +163,60 @@ function measure(B3, cond, games, seed) {
     const g = B3.game.sim(Object.assign(teams, { type: 'regular', rng: B3.rng.create('rs:' + seed + ':' + n) }));
     a.games++;
     a.runs += g.score[side === 0 ? 0 : 1];
-    const bt = g.teams[side], pt = g.teams[1 - side];
-    for (const e of g.log) {
-      if (e.h !== side) continue;
-      if (e.e === 'pa') {
-        a.pa++;
-        const r = e.res;
-        if (r === 'K') a.k++; else if (r === 'BB') a.bb++; else if (r === 'SF') a.sf++;
-        if (r === '1B') a.h1++; else if (r === '2B') a.h2++; else if (r === '3B') a.h3++; else if (r === 'HR') a.hr++;
-        if (r !== 'BB' && r !== 'SF') a.ab++;
-        continue;
-      }
-      if (e.e !== 'pitch') continue;
-      a.n++;
-      const inZ = B3.data.inZone(e.x, e.z);
-      const swung = e.r === 'S' || e.r === 'F' || e.r === 'X';
-      const az = attack(B3, e.x, e.z);
-      a[az.zone === 'chase' ? 'chaseZ' : az.zone]++;
-      if (az.meat) a.meat++;
-      if (az.zone === 'shadow' && !swung) { a.shTake++; if (e.r === 'C') a.shCalled++; }
-      if (FB[e.t]) { a.fbN++; a.fbV += e.v; }
-      if (inZ) a.zone++; else a.out++;
-      if (!swung) continue;
-      a.sw++;
-      if (inZ) a.zsw++; else a.osw++;
-      a.bySw[e.t] = (a.bySw[e.t] || 0) + 1;
-      const bi = bt.inp[e.b];
-      a.swings++;
-      a.batSpeedSum += bi.bat.batSpeed;
-      if (e.r === 'S') { a.whiff++; a.byWhiff[e.t] = (a.byWhiff[e.t] || 0) + 1; } else { a.contact++; if (inZ) a.zcontact++; }
-      if (e.r === 'F') a.foul++;
-      if (OFF[e.t]) { a.offSw++; if (e.r === 'S') a.offWhiff++; }
-      if (!inZ && OFF[e.t]) { a.offOutSw++; }
-      if (!inZ && FB[e.t]) { a.fbOutSw++; }
-      if (e.v >= 95) { a.sw95++; if (e.r === 'S') a.whiff95++; }
-      if (e.r === 'X' && e.ev !== undefined) {
-        a.bip++;
-        a.evSum += e.ev; a.evs.push(e.ev);
-        a.laSum += e.la; a.laSq += e.la * e.la;
-        if (e.ev >= 95) a.hard++;
-        if (barrel(e.ev, e.la)) a.barrel++;
-        if (e.la >= 8 && e.la <= 32) a.sweet++;
-        if (e.la < 10) a.gb++; else if (e.la < 25) a.ld++; else if (e.la <= 50) a.fb++; else a.pu++;
-        const pi = pt.inp[e.p];
-        const bats = bi.bats === 'S' ? (pi.throws === 'L' ? 'R' : 'L') : bi.bats;
-        const toward = bats === 'R' ? -e.sp : e.sp; // plus is the pull side
-        if (toward > 15) a.pull++; else if (toward < -15) a.oppo++; else a.straight++;
-        const top = S.collision * e.v * S.plateShare + (1 + S.collision) * bi.bat.batSpeed;
-        if (e.ev >= 0.8 * top) a.squared++;
-      }
-    }
-    // Pitches outside the zone by class (for chase on off-speed and on fastballs).
-    for (const e of g.log) {
-      if (e.h !== side || e.e !== 'pitch' || B3.data.inZone(e.x, e.z)) continue;
-      if (OFF[e.t]) a.offOut++;
-      if (FB[e.t]) a.fbOut++;
-    }
+    addGame(B3, g, side, () => a);
   }
   return a;
+}
+
+// The population check (layer 3): test players with realistic mixed ratings (Claude's default: about 12.2
+// points per standard deviation around 60, so 40 and 80 are the 5th and 95th percentiles, and a shared
+// part with correlation POP_R between one player's ratings), each playing about a season against average
+// opponents. Returns one accumulator per player (with his innings pitched for pitchers).
+const POP_SD = 12.2, POP_R = 0.2;
+function popRatings(rng, keys) {
+  const common = rng.normal(0, 1), out = {};
+  for (const k of keys) out[k] = Math.round(Math.max(20, Math.min(99, 60 + POP_SD * (Math.sqrt(POP_R) * common + Math.sqrt(1 - POP_R) * rng.normal(0, 1)))));
+  return out;
+}
+function measurePop(B3, spec) {
+  const { averagePair, HIT, PIT } = require('./lib/testteams');
+  const rng = B3.rng.create('pop:' + spec.seed + ':' + spec.kind + ':' + spec.team);
+  const teams = averagePair();
+  const draws = {};
+  for (const id in teams.away.players) {
+    const p = teams.away.players[id];
+    if (spec.kind === 'hitter' && !p.pitches) Object.assign(p.ratings, draws[id] = popRatings(rng, HIT));
+    if (spec.kind === 'pitcher' && p.pitches) {
+      const r = popRatings(rng, PIT.concat(p.pitches.map((t) => 'g:' + t)));
+      for (const t of p.pitches) { p.arsenal[t].grade = r['g:' + t]; delete r['g:' + t]; }
+      Object.assign(p.ratings, r);
+      draws[id] = r;
+    }
+  }
+  // Each player's games are cut into "player-seasons" of CHUNK plate appearances (batters faced), so the
+  // spread carries the same sampling noise as real seasons; a last piece of 250 or more counts too.
+  const CHUNK = 500, side = spec.kind === 'hitter' ? 0 : 1;
+  const chunks = {};
+  const cur = (id) => {
+    const list = chunks[id] = chunks[id] || [];
+    if (!list.length || list[list.length - 1].pa >= CHUNK) { const a = newAcc(); a.outs = 0; a.er = 0; list.push(a); }
+    return list[list.length - 1];
+  };
+  for (let n = 0; n < spec.games; n++) {
+    const g = B3.game.sim(Object.assign(JSON.parse(JSON.stringify(teams)), { type: 'regular', rng: B3.rng.create('pg:' + spec.seed + ':' + spec.kind + ':' + spec.team + ':' + n) }));
+    // Outs and runs first (they go to the chunk the plate appearance belongs to, before addGame counts it).
+    for (const e of g.log) {
+      if (e.h !== side || e.e !== 'pa') continue;
+      const a = cur(spec.kind === 'hitter' ? e.b : e.p);
+      a.outs += e.out;
+      if (spec.kind === 'pitcher') for (const sc of e.sc) { const r = cur(sc.p); r.runs++; r.er += sc.er; }
+      a.games = 1;
+    }
+    addGame(B3, g, side, (e) => cur(spec.kind === 'hitter' ? e.b : e.p));
+  }
+  const out = [];
+  for (const id in chunks) for (const a of chunks[id]) if (a.pa >= 250) out.push({ id: id, acc: a, ratings: draws[id] || null });
+  return out;
 }
 
 // Summary stats from an accumulator.
@@ -214,7 +273,7 @@ function worker() {
   if (tweak && tweak !== '-') require(tweak)(B3);
   process.on('message', (m) => {
     if (m.done) process.exit(0);
-    process.send({ id: m.id, out: measure(B3, m.cond, m.games, m.seed) });
+    process.send({ id: m.id, out: m.pop ? measurePop(B3, m.pop) : measure(B3, m.cond, m.games, m.seed) });
   });
   process.send({ ready: true });
 }
@@ -257,6 +316,46 @@ function ladder(real, key, sign) {
   return t;
 }
 
+// Layer 3: the spread (5th to 95th percentile) of combined stats over the test population's
+// player-seasons against real ones.
+const POP_STATS = {
+  hitter: [['K%', 'k', 'bat.k_percent', 1], ['BB%', 'bb', 'bat.bb_percent', 1], ['AVG', 'avg', 'bat.batting_avg', 3], ['OBP', 'obp', 'bat.on_base_percent', 3],
+    ['SLG', 'slg', 'bat.slg_percent', 3], ['ISO', 'iso', 'bat.isolated_power', 3], ['BABIP', 'babip', 'bat.babip', 3], ['exit speed', 'ev', 'bat.exit_velocity_avg', 1],
+    ['hard-hit %', 'hard', 'bat.hard_hit_percent', 1], ['barrel %', 'barrel', 'bat.barrel_batted_rate', 1], ['whiff %', 'whiff', 'bat.whiff_percent', 1],
+    ['chase %', 'chase', 'bat.oz_swing_percent', 1], ['zone contact %', 'zContact', 'bat.iz_contact_percent', 1], ['sweet-spot %', 'sweet', 'bat.sweet_spot_percent', 1],
+    ['pull %', 'pull', 'bat.pull_percent', 1], ['oppo %', 'oppo', 'bat.opposite_percent', 1], ['ground-ball %', 'gb', 'bat.groundballs_percent', 1]],
+  pitcher: [['K%', 'k', 'pit.k_percent', 1], ['BB%', 'bb', 'pit.bb_percent', 1], ['ERA', 'era', 'pit.p_era', 2], ['AVG against', 'avg', 'pit.batting_avg', 3],
+    ['SLG against', 'slg', 'pit.slg_percent', 3], ['exit speed against', 'ev', 'pit.exit_velocity_avg', 1], ['hard-hit % against', 'hard', 'pit.hard_hit_percent', 1],
+    ['ground-ball %', 'gb', 'pit.groundballs_percent', 1], ['whiff %', 'whiff', 'pit.whiff_percent', 1], ['chase % against', 'chase', 'pit.oz_swing_percent', 1],
+    ['edge %', 'edge', 'pit.edge_percent', 1], ['zone %', 'zone', 'pit.in_zone_percent', 1]]
+};
+function popReport(res, real) {
+  const q = (xs, p) => { const v = xs.filter(Number.isFinite).sort((a, b) => a - b); return v.length ? v[Math.min(v.length - 1, Math.floor(p * v.length))] : NaN; };
+  const rep = {};
+  for (const kind of ['hitter', 'pitcher']) {
+    const seasons = [];
+    for (const id in res) if (id.startsWith('pop:' + kind[0] + ':')) for (const x of res[id]) {
+      const st = stats(x.acc);
+      st.iso = st.slg - st.avg;
+      st.era = x.acc.outs ? 27 * x.acc.er / x.acc.outs : NaN;
+      seasons.push(st);
+    }
+    const rows = [];
+    console.log('\nPopulation check, ' + kind + 's: ' + seasons.length + ' test player-seasons (250+ PA; ratings about 60 +- ' + POP_SD + ', r ' + POP_R + ') against real 2024-2026');
+    console.log('  stat                   engine p5    p25    p50    p75    p95  |   real p5    p25    p50    p75    p95');
+    for (const [lab, key, rk, d] of POP_STATS[kind]) {
+      const xs = seasons.map((s2) => s2[key]);
+      const e = [0.05, 0.25, 0.5, 0.75, 0.95].map((p) => q(xs, p));
+      const r = real.pct[rk];
+      const rr = r ? [r.p5, r.p25, r.p50, r.p75, r.p95] : [NaN, NaN, NaN, NaN, NaN];
+      rows.push({ label: lab, key: key, real: rk, engine: e, target: rr });
+      console.log('  ' + lab.padEnd(22) + e.map((x) => fmt(x, d).padStart(7)).join('') + '  |' + rr.map((x) => fmt(x, d).padStart(7)).join(''));
+    }
+    rep[kind] = { n: seasons.length, rows: rows };
+  }
+  return rep;
+}
+
 function fmt(x, d) { return Number.isFinite(x) ? x.toFixed(d === undefined ? 1 : d) : '-'; }
 
 function main() {
@@ -268,7 +367,7 @@ function main() {
   const names = o.only ? o.only.split(',') : Object.keys(RATINGS);
   const chunk = Math.max(1, Math.ceil(o.games / 4));
   const jobs = [];
-  for (const k of names) {
+  for (const k of (o.parts.indexOf('sweep') >= 0 ? names : [])) {
     const R = RATINGS[k];
     if (!R) { console.error('unknown rating ' + k); process.exit(1); }
     if (k === 'speed' || k === 'arm' || k === 'stamina') continue; // direct only for now
@@ -278,10 +377,17 @@ function main() {
       }
     }
   }
+  if (o.parts.indexOf('pop') >= 0) {
+    // Hitters: 9 per team, about 118 games for a 500-PA season each. Pitchers: three times the teams at
+    // 40 games each (the starter's two seasons; relievers rarely reach 250 batters faced).
+    for (let t = 0; t < o.popTeams; t++) jobs.push({ id: 'pop:h:' + t, pop: { kind: 'hitter', team: t, games: 118, seed: o.seed } });
+    for (let t = 0; t < 3 * o.popTeams; t++) jobs.push({ id: 'pop:p:' + t, pop: { kind: 'pitcher', team: t, games: 40, seed: o.seed } });
+  }
   const t0 = Date.now();
   pool(jobs, o.jobs, o.tweak, (res) => {
-    const out = { games: o.games, levels: LEVELS, ratings: {} };
-    for (const k of names) {
+    const out = { games: o.games, levels: LEVELS, ratings: {}, pop: null };
+    if (o.parts.indexOf('pop') >= 0) out.pop = popReport(res, real);
+    for (const k of (o.parts.indexOf('sweep') >= 0 ? names : [])) {
       const R = RATINGS[k];
       const rows = {};
       for (const L of LEVELS) {
@@ -290,14 +396,14 @@ function main() {
       }
       const own = R.own.map(([ek, rk, sign]) => ({ engine: ek, real: rk, sign: sign, target: rk ? ladder(real, rk, sign) : null,
         values: LEVELS.map((L) => rows[L][ek]) }));
-      out.ratings[k] = { kind: R.kind, rows: rows, own: own };
-      console.log('\n' + k + ' (' + R.kind + 's; ' + (jobs.some((j) => j.cond.k === k) ? o.games + ' games per level' : 'direct') + ')');
+      out.ratings[k] = { kind: R.kind, rows: rows, own: own, direct: !jobs.some((j) => j.cond && j.cond.k === k), units: [] };
+      console.log('\n' + k + ' (' + R.kind + 's; ' + (jobs.some((j) => j.cond && j.cond.k === k) ? o.games + ' games per level' : 'direct') + ')');
       console.log('  level ' + LEVELS.map((L) => String(L).padStart(7)).join(''));
       for (const ow of own) {
         console.log('  ' + ow.engine.padEnd(16).slice(0, 16) + LEVELS.map((L) => fmt(rows[L][ow.engine], 2).padStart(7)).join(''));
         if (ow.target) console.log('  real ' + (ow.real.padEnd(11).slice(0, 11)) + LEVELS.map((L) => fmt(ow.target[L], 2).padStart(7)).join(''));
       }
-      if (jobs.some((j) => j.cond.k === k)) {
+      if (jobs.some((j) => j.cond && j.cond.k === k)) {
         for (const [lab, key, d] of [['K%', 'k', 1], ['BB%', 'bb', 1], ['AVG', 'avg', 3], ['SLG', 'slg', 3], ['EV', 'ev', 1], ['hard%', 'hard', 1], ['runs', 'runs', 2]]) {
           console.log('  ' + lab.padEnd(16) + LEVELS.map((L) => fmt(rows[L][key], d).padStart(7)).join(''));
         }
@@ -307,11 +413,19 @@ function main() {
         const a = rows[50], b = rows[70];
         const per = (b[ey] - a[ey]) / (b[ex] - a[ex]);
         const rs = real.slope[rk];
+        if (Number.isFinite(per)) out.ratings[k].units.push({ label: ey + ' per ' + ex, engine: per, real: rk });
         if (Number.isFinite(per)) console.log('  per unit of ' + ex + ', ' + ey + ' (50 to 70): engine ' + fmt(per, 3) + ', real ' + (rs ? fmt(rs.per, 3) + ' +- ' + fmt(rs.se, 3) + ' (' + rk + ')' : 'n/a'));
       }
     }
     console.log('\n(' + Math.round((Date.now() - t0) / 1000) + ' s, ' + o.jobs + ' processes)');
     if (o.json) fs.writeFileSync(o.json, JSON.stringify(out));
+    if (o.html) {
+      const value = o.value ? JSON.parse(fs.readFileSync(o.value, 'utf8')) : null;
+      let engine = 'working tree';
+      try { engine = 'commit ' + require('child_process').execSync('git rev-parse --short HEAD', { cwd: __dirname }).toString().trim(); } catch (e) { /* not a git checkout */ }
+      fs.writeFileSync(o.html, require('./lib/ratingspage').page(out, value, { date: new Date().toISOString().slice(0, 10), engine: engine, real: real }));
+      console.log('wrote ' + o.html);
+    }
   });
 }
 
