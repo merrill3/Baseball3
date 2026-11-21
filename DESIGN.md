@@ -146,6 +146,22 @@ Claude's defaults (to check when M2 builds the league): codes are 2–3 letters 
 
 League games, over several simulated seasons. M1 tunes the league-wide rates; M2 re-checks them over full seasons and adds the per-player targets.
 
+**New league baseline** (owner's choice, Session 8, Nov 21, 2026: "in between" real recent MLB and the older targets below; the exact bands are Claude's default, confirmed by the owner). Real 2024–2026 MLB averaged about 4.44 runs, .244/.315/.401 and 1.14 home runs per team-game (Baseball-Reference); 2019 had 4.83 runs, .252/.323/.435 and 1.39. Step 1.5 tunes to these bands, which replace the first seven rows of the table below and the walk row:
+
+| Measure | Band |
+|---|---|
+| Runs per team-game | 4.6–4.7 |
+| AVG / OBP / SLG | .250–.255 / .318–.325 / .415–.425 |
+| Home runs per team-game | 1.25–1.35 |
+| Strikeouts | 21.5–23% of plate appearances (real: 22–23% every season since 2019) |
+| Walks | 8–9% of plate appearances |
+| Doubles / triples per team-game | 1.5–1.8 / 0.1–0.2 |
+| Steals | about 0.9 attempts per team-game, about 78% safe (real since the 2023 rules) |
+
+Chase rate, whiffs, pitches per plate appearance, starters' workloads and errors stay, re-checked against real 2024–2026 numbers. The per-player targets (standouts, .300 hitters, the batting champion, regulars under .240) are re-set from real seasons near this batting average (2019, 2023) and checked in M2 (Claude's default).
+
+**Older targets** (until Session 8):
+
 | Measure | Target |
 |---|---|
 | Runs per team-game [52] | about 4.3–4.6 |
@@ -173,7 +189,7 @@ League games, over several simulated seasons. M1 tunes the league-wide rates; M2
 | Starters | about 5.3–5.8 innings and 85–95 pitches a start |
 | Errors | about 0.5 per team-game |
 
-**Equal-value check** (Claude's default, from the ratings interview; M1 step 1.4): for each rating in section 10 except Stamina, +10 points at 40, 60 and 80 is worth about the same in runs, within about ±20%, across several test hitters and pitchers. Defense and running ratings are checked at their key positions (the value rule in section 10). How it is measured (Claude's default, Session 5): only the tested rating moves (everyone else stays at 60), for a whole lineup or staff, by paired replays of the same plate appearances (`tools/lib/value.js`); the target is about 0.3 runs per team-game for +10 points (so one hitter's +10 is about 5 runs a season).
+**Equal-value check** (Claude's default, from the ratings interview; M1 step 1.4; **from Session 8 a report, not a gate**: where it clashes with the real stats in section 10, realism wins and the gap is reported, owner's choice): for each rating in section 10 except Stamina, +10 points at 40, 60 and 80 is worth about the same in runs, within about ±20%, across several test hitters and pitchers. Defense and running ratings are checked at their key positions (the value rule in section 10). How it is measured (Claude's default, Session 5): only the tested rating moves (everyone else stays at 60), for a whole lineup or staff, by paired replays of the same plate appearances (`tools/lib/value.js`); the target is about 0.3 runs per team-game for +10 points (so one hitter's +10 is about 5 runs a season).
 
 **Calibration results** (M1 step 1.4, Session 5, Nov 21, 2026; `node tools/calibrate.js`: 3,000 games between rated test teams, 115,000 replayed plate appearances per condition; noise about ±0.02–0.05 on each value)
 - **Targets:** runs 4.53 per team-game, K 20.8%, AVG .258, SLG .438, OBP .319, doubles 1.53, triples 0.07, home runs 1.54 (the owner accepted about 1.56), walks 8.3%, chase 30.3%, whiffs 25.9% of swings, starters 5.35 innings and 89.8 pitches, errors 0.50: all inside their bands. **Miss:** 3.92 pitches per plate appearance (target 3.8–3.9). Steals: 0.77 attempts a team-game, 74% safe (Claude's aim: about 0.5–0.8 at about 75%). Platoon edge: OBP .326 and SLG .451 against opposite-handed pitchers, .312 and .426 against same-handed.
@@ -187,7 +203,7 @@ League games, over several simulated seasons. M1 tunes the league-wide rates; M2
 - Played and simmed games use the same model. There is no special edge in games you play. Re-add one only if playtests ask for it [56].
 - 25 hidden archetypes for player generation: later, as in Baseball1 [57].
 - A "regular" has 502 or more plate appearances; a "qualified" starter has 162 or more innings (Claude's default, as in Baseball1).
-- Targets come from general baseball knowledge, not research (as in Baseball1).
+- Targets came from general baseball knowledge, not research (as in Baseball1). From Session 8 they come from real data: Baseball-Reference, FanGraphs and Baseball Savant, 2024–2026 (Claude's default).
 
 ## 8. Workload, WAR and form (confirmed Nov 20, 2026)
 - **Bullpen rest** (M2) [58]: no reliever pitches 3 days in a row. A long outing needs extra rest: over 20 pitches means 1 day off, over 35 means 2, over 50 means 3. Roles are set each day from the rested arms: closer (9th or later, lead of 0–3), two setup men (7th and 8th of a close game), middle relief.
@@ -241,7 +257,7 @@ The owner was interviewed on a full ratings redesign in a separate chat (merrill
 
 | Rating | Job | Main stats |
 |---|---|---|
-| Velocity | Attacks hitters' timing: late swings, weaker and opposite-field contact; a small strikeout bump (about +1% per 10 points) | exit speed against, hard-hit %, opposite-field % |
+| Velocity | Attacks hitters' timing: late swings, weaker and opposite-field contact, and strikeouts as real velocity gives them (owner's choice, Session 8, replacing the interview's "small strikeout bump, about +1% per 10 points") | fastball speed; whiff %, K %, exit speed and hard-hit % against per mph |
 | Command | Scatter around the target: walks and hitting corners | walk %, edge %, meatball % |
 | Deception | Hides pitch type and speed; the mirror of Recognition | chase %, off-speed whiff % for its grade |
 | Stamina | Pitches per outing. Weighted by role and outside the equal-value rule: it counts for starters, barely for relievers | pitches per start, innings |
@@ -261,8 +277,17 @@ The owner was interviewed on a full ratings redesign in a separate chat (merrill
 - **Hands and Speed in the value rule** (owner's choices, Session 5, Nov 20, 2026): Hands' key spot is shortstop (second base, third base and catcher get less). Speed is worth a full hitting point in center field, with its running and fielding together; less at other spots, and least at DH, where it only runs.
 - **Arm and Baserunning are worth half a point** (owner's choice, Session 5, Nov 21, 2026): a point of Arm (in right field and at catcher) and of Baserunning (for a regular) is worth about half a point of a hitting rating. A full point would need unrealistic play: a 99 baserunner would take leads of about 20 feet and read the ball almost at once (about 25 runs a season; the best real ones gain about 8), and strong arms would throw out several times more runners than real ones.
 
-- **Speed's range** (owner's choice, Session 7, Nov 21, 2026): realistic, about 23.5 ft/s at 20, 27 at 60 and about 31 at 99, with each ft/s toned down in the physics so Speed still fits the equal-value rule above.
-- **Ratings measured against stats** (owner's choice, Session 7, Nov 21, 2026; built before step 2.1): a tool measures how each rating from 20 to 99 moves its stats, standard and Statcast-style (hard-hit %, sweet-spot launch-angle %, squared-up % and the others Claude finds necessary), against realistic target ranges, and the engine is tuned to match. The physics engine stays; stats lead to wins as before. Claude picks the stat list and target ranges and interviews the owner where needed.
+- **Speed's range** (owner's choice, Session 7, Nov 21, 2026): realistic, about 23.5 ft/s at 20, 27 at 60 and about 31 at 99 (Savant: about 24.5 / 27.2 / 30.5). **Each ft/s now does what it does in real baseball** (owner's choice, Session 8, replacing Session 7's "toned down"); if Speed is then worth more than a hitting point, that is reported (realism wins, below).
+- **Ratings measured against stats** (owner's choice, Session 7, Nov 21, 2026; built in step 1.5, before step 2.1): a tool measures how each rating from 20 to 99 moves its stats against real target ranges, and the engine is tuned to match. The physics engine stays; stats lead to wins as before. **How** (owner's choices from the Session 8 interview, Nov 21, 2026, unless marked):
+  - **The ladder:** a rating's own stat follows real players' percentiles, mirrored around the 50th: 60 = MLB average; 50 and 70 = bottom and top 25%; 40 and 80 = bottom and top 5%; 20 = the worst big leaguer; 99 = the best real player in that skill.
+  - **Three layers:** (1) each rating's *own stat*, the one that isolates its job, follows the ladder; (2) each unit of it (a mph of fastball or bat speed, a ft/s of sprint speed, an inch of movement, a mph of arm) moves the downstream stats as much as in real baseball (layer 2 for every rating is Claude's default, from the owner's Velocity choice); (3) combined stats (K%, BB%, AVG, OBP, SLG, ISO, BABIP, HR per fly ball, exit speed, hard-hit %, barrel %; pitchers' K%, BB%, ERA, HR/9, GB%) are checked on a test population with realistic mixed ratings: their spread (5th to 95th percentile) must match real regulars'.
+  - **Realism wins** over the equal-value rule. Claude first tries to keep equal value without breaking realism, and reports each gap; the overall weights each rating by its real worth (as Arm and Baserunning count half). The report shows the equal-value tables at every step, pitching included (the owner checks them).
+  - **Stat groups:** all four: hitting and pitching core; bat tracking (bat speed, fast-swing rate, squared-up %, blasts); pitch by pitch type (whiff %, chase %, exit speed and run value by grade; edge % and meatball % by Command; CSW %); running and defense (sprint speed, home to first, arm strength by position, pop time, framing, outs above average, steal and extra-base rates).
+  - **Raw Power** stays a ceiling (bat speed) that multiplies with the contact losses (the owner suggested using it only as a maximum that Contact and Timing realize; the engine already works that way). Bat speed widens to the real spread, and Contact and Timing gate it harder (a smaller sweet spot), tuned until max and average exit speed, squared-up % and blasts match real data.
+  - **Velocity** (the owner's concern that it gets too weak, as in Baseball1): its mph and each mph's effect on whiffs, strikeouts, contact and runs follow real data; if it still ends up weak anywhere, Claude reports why.
+  - **Physics:** Claude may add or adjust small physical effects where tuning alone can't match real data, each labeled Claude's default and reported for the owner to keep or drop; no engine rewrite.
+  - **The report:** the tool writes one self-contained HTML chart page (each rating's engine line from 20 to 99 against the real band, the per-unit effects, the population check, the equal-value tables); Claude publishes it as a private link; the key numbers go into this file.
+  - **Claude's defaults** (confirmed by the owner in the summary): real data from 2024–2026 player-seasons pooled (hitters with 250+ plate appearances, pitchers with 250+ batters faced), 99 = the best player-season; exit speed and hard contact nudged a little above real so the league fits the new baseline (section 7); the test population's ratings spread about 12 points per standard deviation around 60, mildly correlated (M2's generation then matches it). Own stats: Contact: zone contact %; Timing: whiff % and squared-up % against 95+ mph; Launch: sweet-spot % and launch-angle spread; Raw Power: bat speed, max and 90th-percentile exit speed; Recognition: whiff % and chase % on breaking and off-speed pitches; Discipline: swing/take run value and zone swing % minus chase %; Velocity: fastball speed; Command: edge % and meatball %; Deception: chase % against; pitch grades: movement above the type's average and whiff % for the type; shape: ground-ball %; Stamina: pitches per start; Speed: sprint speed and home to first; Baserunning: extra bases taken %, steal success, baserunning runs; Arm: arm strength by position, catchers' pop time; Range: outs above average, outfield jump; Hands: errors per chance, double plays turned; Framing: strike rate on borderline takes. Tendencies: Patient and Aggressive near the bottom and top 15% of real swing %; Nibbler and Attacker likewise on zone %.
 
 **The whole set**
 - **Top end:** steep past about 85, the same shape for every rating. Bonuses from combining ratings are capped.

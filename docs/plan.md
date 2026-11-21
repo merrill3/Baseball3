@@ -1,9 +1,9 @@
-**Docs version: 26** (2026-11-21): Session 8: owner's choice on the runners' margin (base and outs rule) in DESIGN.md section 10; Stopped at updated.
+**Docs version: 27** (2026-11-21): Session 8: the ratings-to-stats interview's choices in DESIGN.md sections 7 and 10 (new league baseline, the ladder, three layers, realism wins); step 1.5's plan; Stopped at updated.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 8 under way on branch `ccr-856b53aa-oc98im` (from `ccr-85acc383-8ehj83`; not merged; `main` is at Session 5's end). **Read `state.md` sections 6–9 first.** The open decision is answered (keep the base/outs rule). Now: the ratings-to-stats interview (answers in `state.md` section 9), then the tool and tuning, then re-check running, then one calibration, then step 2.1.
+**Stopped at:** Session 8 under way on branch `ccr-856b53aa-oc98im` (from `ccr-85acc383-8ehj83`; not merged; `main` is at Session 5's end). **Read `state.md` sections 6–9 first.** The ratings-to-stats interview is done and confirmed (DESIGN.md sections 7 and 10). Step 1.5's plan is in M1 below; now on task 1 (real data).
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 
@@ -41,7 +41,7 @@ Confirmed by the owner on Nov 20, 2026 (order and sizes from `docs/proposal.md` 
 ## Current milestones
 
 ### M1: Game engine, headless
-**Status:** built: step 1.1 done (Session 2); step 1.2 done (Session 3); step 1.3 done (Session 4); step 1.4 done (Session 5). Waiting on the gate: the owner reads the calibration report (DESIGN.md section 7, "Calibration results"), then the merge to `main` with the owner's OK.
+**Status:** in progress: step 1.1 done (Session 2); step 1.2 done (Session 3); step 1.3 done (Session 4); step 1.4 done (Session 5); step 1.5 under way (Sessions 6–8; added in Session 7, owner's choice). The gate: the owner reads step 1.5's report, then the merge to `main` with the owner's OK.
 **Goal:** A headless engine that plays full games pitch by pitch, for simulated games and games you play alike, and hits the calibration targets with rated test teams.
 **Why now:** It is first in the owner's order. The season, the game view and every later number run on it. Baseball1's lesson: calibrate before building on top, because every later tuning change ripples through WAR, workload and contracts.
 
@@ -174,6 +174,19 @@ Step 1.4 (S5): defense and running ratings, calibration, close
 - Speed's physical range is narrow (60 = 27 ft/s, 99 = about 28.6 ft/s) because a point of Speed in center field is worth a full hitting point. Fast players will look only a little faster in the field view (M4). The owner may want to revisit.
 - Saturation at the ends: Recognition near 99 and Deception near 20 lose value (a hitter who reads nearly everything has little left to gain); their tables stop at the fit's guard.
 - A season takes about 25 s (task 13's plan above).
+
+**Step 1.5: base running, ratings against real stats, one calibration** (added Session 7, owner's choice; planned in Session 8 from the interview in `state.md` sections 6 and 9; the choices are in DESIGN.md sections 7 and 10). Estimate: about 2–3 sessions from Session 8 (medium-low confidence), with a safe stop after each task.
+
+Done before Session 8 (Sessions 6–7, Claude's defaults, provisional): runners judge drops, secondary leads, outfielders charging and playing in, throws after a hit at a share of top arm, the break-even rule by base and outs (owner's choice, Session 8), `tools/running.js` and `tools/running-sweep.js`.
+
+Tasks (commit and push after each):
+1. [ ] Real data: fetch 2024–2026 player-seasons and league rates (Savant, Baseball-Reference, FanGraphs) into one target file in `tools/lib/` with each stat's percentiles (worst, 5th, 25th, 50th, 75th, 95th, best) and the per-unit slopes (per mph of fastball speed, bat speed and arm; per ft/s; per inch of movement). Done when: the file holds every own stat in DESIGN.md section 10 or marks it as not available, with its source, and the league baseline.
+2. [ ] `tools/ratingstats.js`: sweeps each rating from 20 to 99 (everyone else at 60) and reads its own stat and downstream stats; the population check; the equal-value tables (pitching included); writes the HTML chart page. Done when: it runs on the current engine and prints each miss against the targets; the page opens from disk with no console errors.
+3. [ ] Batted balls first: spray (pull/center/oppo), launch angle, exit speed, ground-ball speed to the outfield, bat speed's real spread and the Raw Power gate (Contact and Timing). Done when: the batted-ball rows and Raw Power's, Contact's, Timing's and Launch's own stats are inside their bands, or each miss is reported.
+4. [ ] Plate discipline and pitches: zone contact, chase, whiff by pitch type and grade, edge and meatball %, Velocity's real mph and per-mph effects, Deception, Recognition, Discipline, Stamina, the tendencies. Done when: as task 3, for these.
+5. [ ] Running and defense: re-check base running against the real 2024 rates (`state.md` section 7: first to third, home to first 0.13 s fast), Speed's real range and per-ft/s effect, Arm, Range, Hands, Framing, Baserunning. Done when: as task 3, for these.
+6. [ ] The population check and the league baseline (DESIGN.md section 7): runs 4.6–4.7 and the other bands. Done when: inside, or each miss reported.
+7. [ ] One calibration: re-fit the step tables (`node tools/calibrate.js --part=fit`), the full `node tools/calibrate.js`, tests updated, DESIGN.md sections 7 and 10 with the results, the chart page published; one independent review agent on step 1.5's code (it spans several sessions). Done when: the tests pass and the owner has the report.
 
 **Testing**
 - [x] `node tools/test.js` prints `all tests passed` (78 tests, about 70 s)
