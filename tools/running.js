@@ -18,7 +18,7 @@ function run(games, seed, avgTeams, tweak) {
   if (tweak) tweak(B3);
   const c = {
     s2: { all: cell(), lt2: cell(), two: cell(), ground: cell(), line: cell(), fly: cell(), popup: cell() },
-    s1: { all: cell(), lt2: cell(), two: cell() },
+    s1: { all: cell(), lt2: cell(), two: cell(), ground: cell(), line: cell(), fly: cell(), popup: cell(), LF: cell(), CF: cell(), RF: cell() },
     d1: { all: cell(), lt2: cell(), two: cell() },
     hits: 0, ofSingles: 0
   };
@@ -26,6 +26,7 @@ function run(games, seed, avgTeams, tweak) {
     const r = p.runners[i];
     const cells = [c[k].all, outs === 2 ? c[k].two : c[k].lt2];
     if (c[k][bb]) cells.push(c[k][bb]);
+    if (c[k][p.fielder]) cells.push(c[k][p.fielder]);
     for (const x of cells) { x.n++; if (r >= need) x.xb++; if (r === 0) x.out++; }
   };
   const inPlay = B3.ball.inPlay;
@@ -91,6 +92,10 @@ if (require.main === module) {
   row('all', c.s1.all, 'about 25-30%');
   row('fewer than two outs', c.s1.lt2);
   row('two outs', c.s1.two);
+  for (const k of ['ground', 'line', 'fly']) row('  on a ' + k + ' ball', c.s1[k]);
+  row('  to left field', c.s1.LF, 'about 10-15%');
+  row('  to center field', c.s1.CF, 'about 25-30%');
+  row('  to right field', c.s1.RF, 'about 40-50%');
   console.log('First to home on a double');
   row('all', c.d1.all, 'about 40-45%');
   row('fewer than two outs', c.d1.lt2);

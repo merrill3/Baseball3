@@ -297,6 +297,16 @@
     return dr.t + 0.3 + Math.max(d / (0.8 * rn.run.speed), runTime(d, rn.run.speed, 0));
   }
 
+  // Seconds of margin a runner on a hit wants before going on to base b with this many outs: the margin
+  // at which his chance of being safe reaches the break-even rate for that base and out count (from run
+  // expectancy, BALL.breakEven), or BALL.dare where there is none (Session 7, Claude's default).
+  function dareFor(b, outs) {
+    const B = T().BALL, be = B.breakEven && B.breakEven[b];
+    if (!be) return B.dare;
+    const p = be[Math.min(2, outs)];
+    return B.dareShift + B.playSd * Math.log(p / (1 - p));
+  }
+
   // A runner's track: from his start (s feet past his base, moving at v0, from time t0) to each base he
   // reaches, ending on base endBase, or put out on the way to base out.base at time out.t.
   function runTrack(S, rn, t0, times, endBase, out, s, v0) {
@@ -787,7 +797,7 @@
         const nb = to + 1;
         if (nb >= aheadEnd && nb < 4) break;
         const est = tBall(nb, true) + B.tag - at(nb) + g.rng.normal(0, rn.run.judge);
-        if (est > B.dare) to = nb; else break;
+        if (est > dareFor(nb, g.outs)) to = nb; else break;
       }
       if (to < 4 && to >= aheadEnd) to = aheadEnd - 1;
       plans[i] = { rn: rn, to: to, at: at, st: st };
