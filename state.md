@@ -69,3 +69,9 @@ With the work-in-progress physics:
 
 ## 5. Prompt for the next session
 "Start Session 7 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from the branch `ccr-5b4b0818-qu6w9c` (not main: Session 6's work is not merged). Read CLAUDE.md, then `state.md` and the "Stopped at:" line in docs/plan.md. First ask me the decisions in state.md section 4, one at a time. Baseball1 is reference only; never change it."
+
+## 6. Session 7 answers (Nov 21, 2026; branch `ccr-85acc383-8ehj83`, started from `ccr-5b4b0818-qu6w9c`)
+- Decision 1, order: **finish the base-running work first**, then step 2.1 (owner's choice, Session 7).
+- Decision 2, Speed's range: **realistic range (about 23.5 / 27 / 31 ft/s at 20 / 60 / 99), with each ft/s toned down** so Speed still fits the equal-value rule (owner's choice, Session 7).
+- Step 2.1 Q2, the overall's scale: **stretched 20–99** (about 50 an average regular, 70+ all-star, 80+ MVP type) (owner's choice, Session 7).
+- Step 2.1 Q3, the schedule's mix: **balanced-ish**: about 52 division games (13 vs each rival), 64 vs the other 10 league teams, 46 interleague (every other-league team at least once, plus a natural rival) (owner's choice, Session 7).
