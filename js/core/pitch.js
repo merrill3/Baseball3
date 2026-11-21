@@ -126,9 +126,11 @@
     const e = expect(g, pitch);
     // With two strikes he shortens up (step 1.4): a smaller *where* error, less exit speed.
     const two = g.strikes >= 2;
-    const off = r.normal(e.mean, e.sd * (two ? S.twoStrike[0] : 1));
     // This swing's bat speed (step 1.5, Savant's units): his average, varying swing to swing, slower with two strikes.
-    const bat = w.b.bat.batSpeed + r.normal(0, S.batSd) - (two ? S.twoStrike[1] : 0);
+    // A swing harder than his usual is a little less accurate (step 1.5: effort), a softer one a little more.
+    const z = Math.min(S.batCap, r.normal(0, 1)); // he can't swing faster than his ceiling
+    const bat = w.b.bat.batSpeed + S.batSd * z - (two ? S.twoStrike[1] : 0);
+    const off = r.normal(e.mean, e.sd * (two ? S.twoStrike[0] : 1) * Math.max(0.5, 1 + S.effort * z));
     const out = { r: 'S', off: Math.round(off * 100) / 100, bat: Math.round(bat * 10) / 10 };
     // A mistimed swing meets the ball with less of the bat in its path (the arc is off), so it misses more.
     const v = tm / S.missMs;

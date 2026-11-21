@@ -21,10 +21,10 @@
     timingTop: 92,     // Timing: the pitch speed (mph) around which he starts to run late (a soft step, TIMING.lateSoft)
     batSpeed: 71.7,    // Raw Power: average bat speed in mph (Savant's bat tracking: the sweet spot's speed at
                        // contact; step 1.5, real units, was 90.3 in the engine's own); each swing varies by SWING.batSd
-    launchK: 12,       // Launch: degrees of launch angle per inch of *where* error near the bat's center (lower is a
+    launchK: 15,       // Launch: degrees of launch angle per inch of *where* error near the bat's center (lower is a
                        // tighter band); it bends steeper toward the bat's edge (SWING.launchCurve; step 1.5, was 22)
     launchSd: 12,      // Launch: extra launch-angle noise in degrees (the swing's own plane; step 1.5, was 15)
-    sprayNoise: 28,    // Launch: spray-direction noise in degrees (spray control), on a mishit at the glancing edge
+    sprayNoise: 29,    // Launch: spray-direction noise in degrees (spray control), on a mishit at the glancing edge
                        // (SWING.sprayBase; step 1.5, was 20 on every ball)
     recognition: 0.75, // Recognition: share of a pitch's movement and speed change he reads (0 to 1)
     judgeSd: 0.45,     // Discipline: feet of noise in judging where a pitch will cross, for swing or take
@@ -196,7 +196,8 @@
 
   const SWING = {
     radius: 2.75,      // bat radius plus ball radius, inches: a bigger *where* error misses
-    foulBack: 0.52,    // share of radius past which contact is a glancing foul (tipped back)
+    foulBack: 0.45,    // share of radius past which contact is a glancing foul (tipped back; step 1.5, was 0.52: about
+                       // half of all bat contact is foul, as in MLB)
     missMs: 80,        // a *when* error past this many ms misses the ball
     timeRadius: 0.7,   // share of the bat's reach (radius) lost at missMs; scales with the square of the *when*
                        // error (step 1.3: so velocity and Timing move whiffs, not only exit speed)
@@ -209,29 +210,33 @@
                        // was 0.08)
     collision: 0.23,   // exit speed = collision x pitch speed at the plate + (1 + collision) x bat speed, for a
                        // squared-up ball (step 1.5: Savant's 0.23 with bat speed in real units; step 1.4 had 0.12)
+    effort: 0.5,       // share of the *where* spread added per standard deviation of a swing's bat speed above his own
+                       // average (taken off below it): a harder swing than his usual is less accurate (step 1.5)
     batSd: 3.8,        // mph: one swing's bat speed against his average (step 1.5: Savant's fast-swing rate, 75+ mph,
                        // is about 19% of swings at a 71.7 average)
+    batCap: 1.3,       // his hardest swing: batSd x this above his average (step 1.5: Raw Power is a ceiling; Statcast's
+                       // hardest-hit balls stop near 110 mph for an average bat)
     plateShare: 0.9,   // pitch speed at the plate as a share of release speed
-    offLoss: 0.47,     // exit speed lost at the glancing edge (scales with the *where* error to offPow; step 1.5, was 0.42
+    offLoss: 0.45,     // exit speed lost at the glancing edge (scales with the *where* error to offPow; step 1.5, was 0.42
                        // with a square)
-    offPow: 2.4,       // the power: a near-center hit loses little, a mishit near the edge a lot (step 1.5)
-    offUnder: 0.85,    // share of that loss when the bat passes under the ball (step 1.5: Statcast's fly balls come off
+    offPow: 2.5,       // the power: a near-center hit loses little, a mishit near the edge a lot (step 1.5)
+    offUnder: 0.89,    // share of that loss when the bat passes under the ball (step 1.5: Statcast's fly balls come off
                        // harder than its ground balls)
-    timeLoss: 0.46,    // exit speed lost at missMs (scales with the square of the *when* error)
-    lateLoss: 1,       // a late swing loses this share more than an early one (step 1.5: the bat isn't up to speed yet;
+    timeLoss: 0.28,    // exit speed lost at missMs (scales with the square of the *when* error; step 1.5, was 0.45)
+    lateLoss: 0.75,       // a late swing loses this share more than an early one (step 1.5: the bat isn't up to speed yet;
                        // Statcast's opposite-field balls come off slower than pulled ones)
-    evSd: 3.5,         // exit-speed noise, mph (step 1.5, was 2.5)
-    attack: 17.5,      // launch angle of a dead-center hit at the middle of the zone, degrees (step 1.5, was 13.5)
-    launchCurve: 1.28, // per square inch: the *where* error's launch angle grows as off x (1 + launchCurve x off^2), so
+    evSd: 1,           // exit-speed noise, mph (step 1.5, was 2.5: a swing's own bat speed carries most of the spread)
+    attack: 19.5,      // launch angle of a dead-center hit at the middle of the zone, degrees (step 1.5, was 13.5)
+    launchCurve: 1.5, // per square inch: the *where* error's launch angle grows as off x (1 + launchCurve x off^2), so
                        // a ball hit far under the center pops up and one far over it is chopped (step 1.5)
-    heightLA: 14,      // degrees of launch angle per foot the pitch is above the middle of the zone (2.55 ft; step 1.5,
+    heightLA: 13.5,      // degrees of launch angle per foot the pitch is above the middle of the zone (2.55 ft; step 1.5,
                        // was 7)
-    pullAt0: -9.5,     // spray of a perfectly timed swing, degrees toward the pull side (minus is pull; step 1.5, was -6)
+    pullAt0: -7.5,     // spray of a perfectly timed swing, degrees toward the pull side (minus is pull; step 1.5, was -6)
     sprayPerMs: 1.0,   // degrees of spray per ms of *when* error (early pulls, late goes the other way)
     insidePull: 12,    // degrees toward the pull side per foot the pitch is inside
-    sprayBase: 0.3,    // share of the batter's spray noise on a dead-center hit, growing to all of it at the glancing edge
+    sprayBase: 0.35,    // share of the batter's spray noise on a dead-center hit, growing to all of it at the glancing edge
                        // (step 1.5: a squared-up ball goes where the bat points; a mishit squirts)
-    sprayLA: 1.3,      // degrees toward the opposite field per degree of launch angle he gets from hitting under the
+    sprayLA: 1.4,      // degrees toward the opposite field per degree of launch angle he gets from hitting under the
                        // ball's center (step 1.5: a ball hit under slices the other way; Statcast 2024: 27% of fly balls
                        // are pulled and 57% of pop-ups go the other way, against 49% of ground balls pulled)
     twoStrike: [0.64, 2], // with two strikes a hitter shortens up (step 1.4): [share of his *where* spread, mph of bat
@@ -265,7 +270,7 @@
                        // distances by exit speed: 230 / 280 / 315 / 345 / 370 / 395 ft for 74 / 86 / 93 / 98 / 102 / 108 mph)
     dragRef: 140,      // ft/s (95 mph) at which the first flight's drag is `drag` ...
     dragPow: 0.3,      // ... and it grows as (dragRef / speed) to this power below it, falls above it (step 1.5)
-    lift: 0.0006,      // backspin lift per foot on balls hit in the air (step 1.5, was 0.0009: Statcast 2024 fly balls
+    lift: 0.00065,      // backspin lift per foot on balls hit in the air (step 1.5, was 0.0009: Statcast 2024 fly balls
                        // average 314 ft, and 12% of those hit 95-100 mph and 41% at 100-105 mph are home runs)
     sliceLift: 0.015,  // share of that lift lost per degree a ball goes toward the opposite field (step 1.5: it leaves with
                        // slice spin; Statcast 2024 fly balls carry 338 ft pulled, 326 to center, 285 the other way)
