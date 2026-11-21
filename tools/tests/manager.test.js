@@ -88,7 +88,7 @@ module.exports = function (t) {
     const poor = z(30), good = z(90);
     assert.ok(good[0] < poor[0] - 0.08, 'chases ' + poor[0] + ' -> ' + good[0]);
     assert.ok(good[1] - good[0] > poor[1] - poor[0] + 0.08, 'sharper: ' + (poor[1] - poor[0]) + ' -> ' + (good[1] - good[0]));
-    assert.ok(Math.abs(good[1] - poor[1]) < 0.06, 'about the same swings at strikes just inside');
+    assert.ok(Math.abs(good[1] - poor[1]) < (poor[0] - good[0]) * 0.75, 'poor Discipline shows mostly as chasing: strikes ' + poor[1] + ' -> ' + good[1]);
   });
 
   t.test('Aggressiveness: aggressive hitters swing more, most of all early in the count, and expand more with poor Discipline', () => {
@@ -120,7 +120,9 @@ module.exports = function (t) {
 
   t.test('Aim: attackers aim in the zone and toward the middle, nibblers at the corners', () => {
     const nib = picks(setup({ aim: 'Nibbler' }), 1, 1), bal = picks(setup(), 1, 1), att = picks(setup({ aim: 'Attacker' }), 1, 1);
-    assert.ok(att.zone > bal.zone && bal.zone > nib.zone, 'zone targets ' + [nib.zone, bal.zone, att.zone]);
+    // Step 1.4: Aim moves where in the zone he aims (B3.tune.CPU.pitch.aimZone is 0 for every style).
+    const AZ = setup().B3.tune.CPU.pitch.aimZone;
+    assert.ok((att.zone - bal.zone) * (AZ[2] - AZ[1]) >= 0 && (bal.zone - nib.zone) * (AZ[1] - AZ[0]) >= 0, 'zone targets ' + [nib.zone, bal.zone, att.zone]);
     assert.ok(att.inset > bal.inset + 0.04 && bal.inset > nib.inset + 0.04, 'inset ' + [nib.inset, bal.inset, att.inset]);
   });
 

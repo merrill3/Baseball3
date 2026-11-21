@@ -16,10 +16,10 @@
 
   // Hitting (DESIGN.md section 10: each input names the rating whose job it is).
   const BAT = {
-    contactSd: 1.38,   // Contact: spread of the *where* error, inches between bat and ball centers
+    contactSd: 1.34,   // Contact: spread of the *where* error, inches between bat and ball centers
     timingSd: 20,      // Timing: spread of a CPU hitter's *when* error at 92 mph, in ms
     timingTop: 92,     // Timing: the pitch speed (mph) around which he starts to run late (a soft step, TIMING.lateSoft)
-    batSpeed: 89.9,    // Raw Power: bat speed in mph; sets exit speed on a squared-up ball
+    batSpeed: 90.4,    // Raw Power: bat speed in mph; sets exit speed on a squared-up ball
     launchK: 22,       // Launch: degrees of launch angle per inch of *where* error (lower is a tighter band)
     launchSd: 15,      // Launch: extra launch-angle noise in degrees
     sprayNoise: 20,    // Launch: spray-direction noise in degrees (spray control)
@@ -32,7 +32,7 @@
   // Pitching. Grades and shapes are per pitch type: { FF: 1.1, SL: 0.9 }; a missing type is average.
   const PIT = {
     velo: 93.5,        // Velocity: four-seam fastball speed in mph; other types are a share of it
-    commandSd: 0.59,   // Command: scatter around the target, feet on each axis
+    commandSd: 0.48,   // Command: scatter around the target, feet on each axis
     deception: 1,      // Deception: multiplier on the share of movement and speed change a hitter doesn't read
                        // (the mirror of Recognition; step 1.4, was taken off his recognition)
     stamina: null,     // Stamina: pitches before fatigue sets in; null means the role's value in STAMINA
@@ -130,22 +130,22 @@
     // runs at every level and for every rating (the equal-value check); a rating without a table steps
     // one per 10 points.
     steps: {
-      contact: [[20, -2.883], [30, -2.25], [40, -1.564], [50, -0.817], [60, 0], [70, 0.893], [80, 1.865], [90, 2.909], [100, 4.003], [110, 5.111]],
-      timing: [[20, -2.301], [30, -1.743], [40, -1.065], [50, -0.467], [60, 0], [70, 0.572], [80, 1.309], [90, 2.414], [100, 4.182], [110, 7.011]],
-      launch: [[20, -3.235], [30, -2.328], [40, -1.513], [50, -0.745], [60, 0], [70, 0.742], [80, 1.498], [90, 2.291], [100, 3.154], [110, 4.157]],
-      rawPower: [[20, -2.09], [30, -1.555], [40, -1.027], [50, -0.508], [60, 0], [70, 0.495], [80, 0.976], [90, 1.442], [100, 1.892], [110, 2.328]],
-      recognition: [[20, -2.504], [30, -2.021], [40, -1.482], [50, -0.829], [60, 0], [70, 1.042], [80, 2.641], [90, 5.199], [100, 9.293], [110, 15.842]],
-      discipline: [[20, -5.427], [30, -3.589], [40, -2.398], [50, -1.152], [60, 0], [70, 0.955], [80, 2.062], [90, 3.56], [100, 5.957], [110, 9.792]],
-      velocity: [[20, -8.543], [30, -4.763], [40, -2.4], [50, -0.923], [60, 0], [70, 0.709], [80, 1.755], [90, 2.606], [100, 3.253], [110, 3.899]],
-      command: [[20, -2.032], [30, -1.642], [40, -1.093], [50, -0.57], [60, 0], [70, 0.889], [80, 2.311], [90, 4.587], [100, 8.229], [110, 14.055]],
-      deception: [[20, -9.669], [30, -5.401], [40, -2.734], [50, -1.067], [60, 0], [70, 0.775], [80, 1.431], [90, 2.031], [100, 2.518], [110, 3.006]],
-      grade: [[20, -8.028], [30, -5.503], [40, -3.275], [50, -1.473], [60, 0], [70, 1.24], [80, 2.312], [90, 3.257], [100, 4.106], [110, 4.904]],
-      range: [[20, -2.147], [30, -1.577], [40, -1.039], [50, -0.517], [60, 0], [70, 0.524], [80, 1.067], [90, 1.646], [100, 2.292], [110, 3.08]],
-      hands: [[20, -2.525], [30, -1.971], [40, -1.37], [50, -0.716], [60, 0], [70, 0.784], [80, 1.642], [90, 2.571], [100, 3.556], [110, 4.566]],
-      arm: [[20, -1.999], [30, -1.602], [40, -1.205], [50, -0.675], [60, 0], [70, 0.86], [80, 2.043], [90, 2.713], [100, 3.785], [110, 5.5]],
-      framing: [[20, -1.025], [30, -0.809], [40, -0.568], [50, -0.299], [60, 0], [70, 0.328], [80, 0.672], [90, 1.016], [100, 1.341], [110, 1.637]],
-      speed: [[20, -1.284], [30, -0.984], [40, -0.672], [50, -0.345], [60, 0], [70, 0.368], [80, 0.768], [90, 1.211], [100, 1.722], [110, 2.355]],
-      baserunning: [[20, -5.343], [30, -3.998], [40, -2.655], [50, -1.32], [60, 0], [70, 1.3], [80, 2.574], [90, 3.819], [100, 5.033], [110, 6.234]]
+      contact: [[20, -4.044], [30, -3.167], [40, -2.217], [50, -1.17], [60, 0], [70, 1.336], [80, 2.903], [90, 4.819], [100, 7.313], [110, 10.52]],
+      timing: [[20, -2.535], [30, -1.972], [40, -1.409], [50, -0.787], [60, 0], [70, 0.687], [80, 1.786], [90, 3.113], [100, 5.236], [110, 8.632]],
+      launch: [[20, -3.046], [30, -2.229], [40, -1.462], [50, -0.726], [60, 0], [70, 0.731], [80, 1.486], [90, 2.288], [100, 3.18], [110, 4.266]],
+      rawPower: [[20, -2.341], [30, -1.738], [40, -1.146], [50, -0.566], [60, 0], [70, 0.552], [80, 1.09], [90, 1.613], [100, 2.122], [110, 2.618]],
+      recognition: [[20, -2.382], [30, -1.85], [40, -1.369], [50, -0.746], [60, 0], [70, 0.946], [80, 2.287], [90, 4.433], [100, 7.866], [110, 13.358]],
+      discipline: [[20, -4.112], [30, -3.042], [40, -2.014], [50, -1.014], [60, 0], [70, 0.945], [80, 2.147], [90, 3.667], [100, 5.975], [110, 8.284]],
+      velocity: [[20, -15.069], [30, -8.4], [40, -4.233], [50, -1.628], [60, 0], [70, 1.236], [80, 2.057], [90, 2.746], [100, 3.379], [110, 4.008]],
+      command: [[20, -3.317], [30, -2.508], [40, -1.698], [50, -0.87], [60, 0], [70, 0.92], [80, 1.899], [90, 2.952], [100, 4.098], [110, 5.368]],
+      deception: [[20, -7.939], [30, -4.465], [40, -2.294], [50, -0.937], [60, 0], [70, 0.739], [80, 1.358], [90, 1.896], [100, 2.376], [110, 2.812]],
+      grade: [[20, -7.141], [30, -4.387], [40, -2.666], [50, -1.304], [60, 0], [70, 1.461], [80, 2.408], [90, 3.128], [100, 3.831], [110, 4.534]],
+      range: [[20, -2.101], [30, -1.611], [40, -1.099], [50, -0.563], [60, 0], [70, 0.593], [80, 1.22], [90, 1.884], [100, 2.591], [110, 3.347]],
+      hands: [[20, -2.405], [30, -1.882], [40, -1.313], [50, -0.69], [60, 0], [70, 0.774], [80, 1.653], [90, 2.665], [100, 3.836], [110, 5.129]],
+      arm: [[20, -1.867], [30, -1.409], [40, -0.949], [50, -0.481], [60, 0], [70, 0.5], [80, 1.03], [90, 1.605], [100, 2.254], [110, 3.048]],
+      framing: [[20, -1.179], [30, -0.902], [40, -0.613], [50, -0.312], [60, 0], [70, 0.322], [80, 0.653], [90, 0.991], [100, 1.334], [110, 1.678]],
+      speed: [[20, -1.896], [30, -1.365], [40, -0.88], [50, -0.43], [60, 0], [70, 0.423], [80, 0.847], [90, 1.283], [100, 1.743], [110, 2.236]],
+      baserunning: [[20, -4.679], [30, -3.113], [40, -1.966], [50, -0.956], [60, 0], [70, 0.949], [80, 1.936], [90, 3.027], [100, 4.392], [110, 6.576]]
     },
     shape: 4,          // degrees off the launch angle at shape +1 (ground-ball tilt); -1 is a fly-ball tilt
     // Stamina: pitches before fatigue sets in, by rating (straight lines between; past 100 the last
@@ -325,13 +325,15 @@
       behind: 1.8,         // fastballs (FF, SI, FC) x this when 2 balls ahead of the strikes (2-0, 3-0, 3-1)
       putAway: 2.5,        // the put-away pitch x this with two strikes
       // Chance the target is in the zone, by balls (rows) and strikes (columns).
-      zone: [[0.63, 0.52, 0.31], [0.72, 0.62, 0.42], [0.83, 0.77, 0.57], [0.92, 0.9, 0.82]],
-      aimZone: [-0.02, 0, 0.02], // targets in the zone added by Aim (Nibbler, Balanced, Attacker)
+      zone: [[0.53, 0.42, 0.21], [0.62, 0.52, 0.32], [0.73, 0.67, 0.47], [0.82, 0.8, 0.72]],
+      aimZone: [0, 0, 0], // targets in the zone added by Aim (Nibbler, Balanced, Attacker)
       // Targets in the zone: feet inside the nearest side and top or bottom, by Aim (Nibbler, Balanced,
       // Attacker). A nibbler works the corners; an attacker comes in toward the middle.
-      inset: [[0.3, 0.82], [0.36, 0.9], [0.42, 0.98]],
+      inset: [[0.24, 0.72], [0.3, 0.8], [0.36, 0.88]],
       groove: 0.04,        // feet of extra inset (toward the middle) on targets in the zone with three balls
       chase: [0.03, 0.5],  // targets outside the zone: feet off the edge
+      commandAim: [0.5, 0.4, 1.5], // targets (insets and feet off the edge) x (his scatter / the average's) to this
+                           // power, between these limits: sharper command aims nearer the edges (step 1.4)
       low: { FF: 0.4, SI: 0.75, FC: 0.55, SL: 0.7, CU: 0.8, CH: 0.8, FS: 0.85 } // share of targets kept low, by type
     },
     pull: {

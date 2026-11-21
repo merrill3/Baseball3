@@ -88,16 +88,18 @@
       });
       const type = d.pitches[r.weighted(w)];
       const aim = pit.aim || 0;
+      const cm = Math.min(P.commandAim[2], Math.max(P.commandAim[1], Math.pow(pit.commandSd / B3.tune.PIT.commandSd, P.commandAim[0])));
       const away = B3.pitch.who(g).bats === 'L' ? -1 : 1; // the side of the plate away from the batter
       const low = r.chance(P.low[type]);
       if (r.chance(P.zone[d.balls][d.strikes] + P.aimZone[aim + 1])) {
-        const inset = P.inset[aim + 1], gr = d.balls === 3 ? P.groove : 0;
+        // His targets follow his Command (step 1.4): sharper command aims nearer the edges, inside and out.
+        const inset = P.inset[aim + 1].map((x) => x * cm), gr = d.balls === 3 ? P.groove : 0;
         const side = r.chance(0.55) ? away : -away;
         const x = side * (Z.halfWidth - r.range(inset[0], inset[1]) - gr);
         const dz = r.range(inset[0], inset[1]) + gr;
         return { type: type, x: x, z: low ? Z.bottom + dz : Z.top - dz };
       }
-      const off = r.range(P.chase[0], P.chase[1]);
+      const off = r.range(P.chase[0], P.chase[1]) * cm;
       if (low) return { type: type, x: away * r.range(-0.3, Z.halfWidth), z: Z.bottom - off };
       if (r.chance(0.5)) return { type: type, x: r.range(-0.5, 0.5), z: Z.top + off };
       return { type: type, x: away * (Z.halfWidth + off), z: r.range(Z.bottom + 0.2, Z.top - 0.2) };
