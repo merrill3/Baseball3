@@ -1,6 +1,6 @@
 # Diamond Dash (Baseball3): design decisions
 
-Every product decision for Baseball3, with who made it. So far the rules, the game loop, pitches, swings, balls in play, the hitting and pitching ratings and the CPU's choices are built (M1 steps 1.1–1.3, headless); this file says what will be built. `docs/plan.md` says when.
+Every product decision for Baseball3, with who made it. So far the rules, the game loop, pitches, swings, balls in play, every rating (hitting, pitching, defense and running) and the CPU's choices are built and calibrated (M1, headless); this file says what will be built. `docs/plan.md` says when.
 
 **Labels**
 - **Owner's choice:** the owner decided it.
@@ -169,7 +169,15 @@ League games, over several simulated seasons. M1 tunes the league-wide rates; M2
 | Starters | about 5.3–5.8 innings and 85–95 pitches a start |
 | Errors | about 0.5 per team-game |
 
-**Equal-value check** (Claude's default, from the ratings interview; M1 step 1.4): for each rating in section 10 except Stamina, +10 points at 40, 60 and 80 is worth about the same in runs, within about ±20%, across several test hitters and pitchers. Defense and running ratings are checked at their key positions (the value rule in section 10).
+**Equal-value check** (Claude's default, from the ratings interview; M1 step 1.4): for each rating in section 10 except Stamina, +10 points at 40, 60 and 80 is worth about the same in runs, within about ±20%, across several test hitters and pitchers. Defense and running ratings are checked at their key positions (the value rule in section 10). How it is measured (Claude's default, Session 5): only the tested rating moves (everyone else stays at 60), for a whole lineup or staff, by paired replays of the same plate appearances (`tools/lib/value.js`); the target is about 0.3 runs per team-game for +10 points (so one hitter's +10 is about 5 runs a season).
+
+**Calibration results** (M1 step 1.4, Session 5, Nov 21, 2026; `node tools/calibrate.js`: 3,000 games between rated test teams, 115,000 replayed plate appearances per condition; noise about ±0.02–0.05 on each value)
+- **Targets:** runs 4.53 per team-game, K 20.8%, AVG .258, SLG .438, OBP .319, doubles 1.53, triples 0.07, home runs 1.54 (the owner accepted about 1.56), walks 8.3%, chase 30.3%, whiffs 25.9% of swings, starters 5.35 innings and 89.8 pitches, errors 0.50: all inside their bands. **Miss:** 3.92 pitches per plate appearance (target 3.8–3.9). Steals: 0.77 attempts a team-game, 74% safe (Claude's aim: about 0.5–0.8 at about 75%). Platoon edge: OBP .326 and SLG .451 against opposite-handed pitchers, .312 and .426 against same-handed.
+- **Equal value** (+10 at 40, 60, 80; target 0.24–0.36): inside for Contact (0.29, 0.30, 0.34), Timing (0.27, 0.31, 0.33), Raw Power (0.31, 0.32, 0.36), Recognition (0.26, 0.29, 0.34), Velocity (0.26, 0.36, 0.31) and grades (0.28, 0.28, 0.36). **Small misses:** Launch 0.30, 0.36, 0.38; Discipline 0.33, 0.31, 0.38; Command 0.44, 0.26, 0.34; Deception 0.34, 0.38, 0.37. At the start of step 1.4 the same table ran from 0.02 (Velocity) to 0.86 (Raw Power at 80). Contact moves AVG more than Raw Power (+.008 against +.006 for +10).
+- **Defense and running** (one player at 70; a hitting point is 0.035 runs per team-game): Range at SS 0.037 and in CF 0.040, Hands at SS 0.041, Framing at C 0.034, Speed in CF 0.040 (running 0.014, fielding 0.026): a full point. Arm in RF 0.014 and Baserunning for a regular 0.016: half a point (owner's choice). **Miss:** Arm at C 0.048 ±0.018 (noisy; it should be about 0.018). Elsewhere less, as the rule says: Range at 1B 0.016, Hands at 2B 0.025, Arm in LF 0.021, Speed at DH 0.003.
+- **Tendencies** (runs per team-game against Balanced, for a whole lineup or staff): Patient +0.07, +0.03, −0.03 and Aggressive +0.00, +0.01, +0.08 at Discipline 40, 60, 80 (neutral, and Aggressive pays off as Discipline rises). Nibbler +0.18, +0.11, −0.04 and Attacker −0.13, −0.03, +0.05 runs allowed at Command 40, 60, 80 (Nibbler pays off as Command rises; Nibbler at 60 sits just past ±0.1). Against stuff: Attacker −0.04 and −0.13 runs allowed at Velocity 40 and 80, −0.01 and −0.06 at grades 40 and 80; Nibbler +0.08 and +0.10, +0.09 and +0.15 (good stuff rewards Attacker, as the owner suggested; the Nibbler side is small).
+- **Pitch shape:** +0.5, −0.5, +1 and −1 on every pitch: +0.03, +0.01, +0.01, −0.04 runs allowed (value-neutral, owner's choice).
+- **Speed:** a season's 2,430 games take about 25 s in one process (budget about 10 s; the owner accepted about 13 s for now). See docs/plan.md for the plan.
 
 - Built in from the start (M1–M2), not added later [55].
 - Played and simmed games use the same model. There is no special edge in games you play. Re-add one only if playtests ask for it [56].

@@ -124,7 +124,7 @@ How the code is organized and the rules every file follows. Decisions about what
 - **Size:** full box scores are kept only for your games and recent days. The save's size is measured at the end of every milestone.
 
 ## Testing
-- `node tools/test.js`: every Node test (77 tests, about 60 s). It must print `all tests passed` after every change. The Node loader (`tools/lib/load.js`) makes `Math.random` throw, so any stray call in `js/core/` fails while tests and tools run.
+- `node tools/test.js`: every Node test (78 tests, about 70 s). It must print `all tests passed` after every change. The Node loader (`tools/lib/load.js`) makes `Math.random` throw, so any stray call in `js/core/` fails while tests and tools run.
 - `node tools/gametest.js 1000 7`: 1,000 seeded games of all six types, each checked by `tools/lib/gamecheck.js`; prints `all checks passed` and a checksum that repeats from run to run (about 6 s with the full physics).
 - `node tools/e2e/boot-check.js [outDir]`: browser check from `file://` at both sizes; screenshots go to `outDir` (default `tools/e2e/out/`, not committed). Needs Playwright (`require('playwright')`).
 - `node tools/contact.js 300`: pitch and contact distributions to read (step 1.2); it checks nothing.
