@@ -261,7 +261,8 @@
     gather: 0.25,      // seconds to pick up a ball in the outfield
     accel: 20,         // ft/s per second: how fast runners and fielders reach top speed
     throwShort: 0.9,   // average speed of a throw as a share of release speed, up to 100 ft
-    throwLong: 0.68,   // ... at 300 ft and more (an arc, a bounce or a relay); in between it slides
+    throwLong: 0.68,   // ... at throwFar and more (an arc, a bounce or a relay); in between it slides
+    throwFar: 300,     // feet where a throw reaches throwLong's share
     tag: 0.12,         // seconds to apply a tag (a force needs none)
     playSd: 0.07,      // seconds: how sharply a close play's chance falls off
     turn: 0.12,        // seconds a runner loses rounding a base
@@ -270,12 +271,20 @@
     pivot: 0.45,       // seconds for the pivot man to catch and throw on a double play
     infield: 125,      // feet: grounders past this have left the infield
     lead: [12, 18, 12], // feet: leads off first, second and third
+    shuffle: [6, 8, 5], // feet a runner who isn't stealing adds on the pitch (his secondary lead), off each base
+    shuffleV: 5,       // ft/s he is still moving toward the next base when the ball is hit
+    chargeFt: 15,      // feet an outfielder must come in toward home to field a hit for it to count as charging it
+    chargeGain: 0.3,   // seconds quicker his throw is then (momentum toward the infield)
+    frontSp: 5,        // degrees: a grounder hit left of this is in front of a runner on second (he holds till it's through)
     armBlind: 0.5,     // share of a fielder's arm above (or below) his position's that runners don't see when they
                        // judge a throw (step 1.4: so a strong arm throws out runners who test it, not only holds them)
     dare: 0.08,        // seconds of margin a runner wants before taking an extra base: one number for every
                        // runner, not a player trait (owner's choice, Session 3)
     halfway: 0.45,     // share of the way a runner goes on a fly ball that may be caught
     dropRead: 1,       // a runner at halfway breaks this many reads (RUN.read) after the ball drops
+    dropSure: 0.4,     // seconds a fielder must be judged short of a ball in the air for runners to go before it lands
+    dropJudge: 1,      // the runner's error judging that, as a multiple of his RUN.judge
+    airRead: 2,        // ... and then he goes after this many reads (a line drive's freeze)
     foulRoom: 28,      // feet of foul ground beyond the lines where a foul fly can be caught
     backstop: 55       // feet behind home plate to the backstop
   };

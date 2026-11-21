@@ -67,7 +67,7 @@
   // their average speed falls smoothly from throwShort (up to 100 ft) to throwLong (300 ft and more).
   function throwTime(d, arm) {
     const B = T().BALL;
-    const u = Math.min(1, Math.max(0, (d - 100) / 200));
+    const u = Math.min(1, Math.max(0, (d - 100) / (B.throwFar - 100)));
     return 0.05 + d / (arm * MPH * (B.throwShort + (B.throwLong - B.throwShort) * u));
   }
 
@@ -207,7 +207,8 @@
       const inp = bt.inp[rn.id].run;
       const going = !!(steal && steal.some((s) => s.from === i && s.runner === rn));
       const lead = B.lead[i] + (inp.lead || 0); // Baserunning: a bigger lead (step 1.4)
-      let s0 = lead, v0 = 0;
+      // Not stealing: his secondary lead, still moving toward the next base as the ball is hit (Session 6).
+      let s0 = lead + B.shuffle[i], v0 = B.shuffleV;
       if (going) {
         // He broke with the pitcher's first move: by contact he is well down the line at full speed.
         const tRun = T().STEAL.delivery + (pitch ? pitch.ms / 1000 : 0.4) - inp.jump;
@@ -719,7 +720,8 @@
   }
 
   // A hit to the outfield (or a ball that drops in): runners take what the throw allows.
-  function hit(g, c, path, D, off, S, got, inAir) {
+  const OUTF = { LF: 1, CF: 1, RF: 1 };
+  function hit(g, c, path, D, off, S, got, inAir, airMargin) {
     const B = T().BALL;
     const fd = got.fd, tp = got.t, pp = got.p;
     const bb = bbType(c.la);
@@ -727,21 +729,33 @@
     fieldAt(S, fd, pp, tp);
     S.event(tp, 'field', { pos: fd.pos });
     if (path.wall && path.wall.t < tp) S.event(path.wall.t, 'wall');
-    const ready = tp + B.gather + fd.xfer;
+    // An outfielder who charged in to field it throws sooner than one who went back or to the wall (Session 6).
+    const charged = OUTF[fd.pos] && dist(pp, base(0)) < dist(fd.at, base(0)) - B.chargeFt;
+    const ready = tp + B.gather + fd.xfer - (charged ? B.chargeGain : 0);
     S.ballAt(ready, pp, 5);
     const tBall = (b, seen) => Math.max(ready + throwTime(dist(pp, base(b)), seen ? fd.armSeen : fd.arm), cover(D, b, [fd.pos]).t);
     const R = off.runners, bt = off.batter;
     const twoOut = g.outs === 2;
     const landT = path.land ? path.land.t : 0;
-    // When each runner really starts: with two outs on contact; on a ball in the air that might be
-    // caught, from halfway once he reads that it drops (Baserunning); on a ground ball, after his read.
+    // When each runner really starts: with two outs on contact; on a ball in the air, he judges whether a
+    // fielder can get to it (airMargin: the best fielder's seconds to spare, with an error from his
+    // Baserunning): if it clearly drops he goes after a longer read (a line drive's freeze), else from
+    // halfway once he reads that it drops; on a ground ball, after his read, except that a runner on second
+    // who isn't forced holds on a grounder hit in front of him (to the left side) until it is through the
+    // infield (Session 6).
+    const forced = forcedOn(g);
+    let passT = 0;
+    for (const p of path.pts) if (p[4] >= B.infield) { passT = p[0]; break; }
     const start = (rn) => {
       if (rn.going) return { t: 0, s: rn.s0, v: rn.v0 };
-      if (twoOut) return { t: rn.run.read, s: rn.s0, v: 0 };
-      if (inAir) return { t: landT + rn.run.read * B.dropRead, s: Math.max(rn.s0, B.halfway * 90), v: rn.run.speed * 0.4 };
-      return { t: rn.run.read, s: rn.s0, v: 0 };
+      if (twoOut) return { t: rn.run.read, s: rn.s0, v: rn.v0 };
+      if (inAir) {
+        if (airMargin + g.rng.normal(0, rn.run.judge * B.dropJudge) < -B.dropSure) return { t: rn.run.read * B.airRead, s: rn.s0, v: 0 };
+        return { t: landT + rn.run.read * B.dropRead, s: Math.max(rn.s0, B.halfway * 90), v: rn.run.speed * 0.4 };
+      }
+      if (rn.from === 2 && !forced[1] && c.sp < B.frontSp) return { t: Math.max(rn.run.read, passT + rn.run.read), s: rn.s0, v: 0 };
+      return { t: rn.run.read, s: rn.s0, v: rn.v0 };
     };
-    const forced = forcedOn(g);
     const plans = [];
     let aheadEnd = 5;
     for (let i = 2; i >= 0; i--) {
@@ -858,8 +872,10 @@
     }
     const inAir = !path.land || path.land.r > 40 || contact.la >= 10;
     const penalty = {};
+    let airMargin = -Infinity;
     if (inAir) {
       const best = bestCatch(path, D, false);
+      if (best) airMargin = best.margin;
       if (best && best.margin > -0.4) {
         const p = best.margin >= 0.35 ? 1 : logistic((best.margin - B.catchAt) / B.catchSd);
         if (g.rng.chance(p)) {
@@ -882,7 +898,7 @@
     }
     if (path.land) S.event(path.land.t, 'land');
     const got = firstToBall(path, D, penalty, ground ? B.infield : 0);
-    const play = hit(g, contact, path, D, off, S, got, inAir && !ground);
+    const play = hit(g, contact, path, D, off, S, got, inAir && !ground, airMargin);
     play.script = S.done();
     return play;
   }
