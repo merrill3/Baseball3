@@ -135,7 +135,9 @@
     // runs at every level and for every rating (the equal-value check); a rating without a table steps
     // one per 10 points.
     steps: {
-      contact: [[20, -4.044], [30, -3.167], [40, -2.217], [50, -1.17], [60, 0], [70, 1.336], [80, 2.903], [90, 4.819], [100, 7.313], [110, 10.52]],
+      // Contact (step 1.5 task 4): step 1.4's table x 0.6 now that Contact scales the whole *where* spread (SWING.contactAll),
+      // so the test population's whiff and zone-contact spreads match MLB's (the owner's ladder rule, Session 10).
+      contact: [[20, -2.426], [30, -1.9], [40, -1.33], [50, -0.702], [60, 0], [70, 0.802], [80, 1.742], [90, 2.891], [100, 4.388], [110, 6.312]],
       timing: [[20, -2.535], [30, -1.972], [40, -1.409], [50, -0.787], [60, 0], [70, 0.687], [80, 1.786], [90, 3.113], [100, 5.236], [110, 8.632]],
       launch: [[20, -3.046], [30, -2.229], [40, -1.462], [50, -0.726], [60, 0], [70, 0.731], [80, 1.486], [90, 2.288], [100, 3.18], [110, 4.266]],
       // Raw Power (step 1.5): mph of average bat speed from 71.7, on the real ladder (Savant 2024-2026: the worst
@@ -210,7 +212,7 @@
                        // was 0.08)
     collision: 0.23,   // exit speed = collision x pitch speed at the plate + (1 + collision) x bat speed, for a
                        // squared-up ball (step 1.5: Savant's 0.23 with bat speed in real units; step 1.4 had 0.12)
-    contactAll: 0,     // Contact's reach (step 1.5 task 4): the location and movement parts of the *where* spread are
+    contactAll: 1,     // Contact's reach (step 1.5 task 4): the location and movement parts of the *where* spread are
                        // multiplied by (his Contact spread / an average hitter's) to this power (0: Contact moves only its
                        // own part, as in steps 1.2-1.5 task 3; 1: the whole spread)
     speedCost: 0.04,   // a faster bat costs accuracy (step 1.5, owner's choice, Session 10): the *where* spread is

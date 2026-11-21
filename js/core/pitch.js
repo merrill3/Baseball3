@@ -120,7 +120,7 @@
     const cost = Math.exp(S.speedCost * (w.b.bat.batSpeed - T().BAT.batSpeed));
     // Contact also scales the location and movement parts (step 1.5 task 4: bat control; contactAll is the power on
     // his spread against an average hitter's, 0 for his own part only), so the best contact hitters reach real zone contact.
-    const m = Math.pow(read.contactSd / T().BAT.contactSd, S.contactAll);
+    const m = Math.pow(w.b.bat.contactSd / T().BAT.contactSd, S.contactAll); // his own Contact, not the platoon edge
     const sd = cost * tilt * Math.sqrt(read.contactSd * read.contactSd + m * m * (bite * bite + loc * loc));
     return { mean: mean, sd: sd, rec: read.rec, bats: w.bats };
   }
