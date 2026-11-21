@@ -320,6 +320,13 @@ The owner was interviewed on a full ratings redesign in a separate chat (merrill
   - Location matters from near the middle of the zone, so a pitch down the middle is the easiest to hit. The CPU's Balanced pitcher aims where an average pitcher does best, and most walks come from pitches aimed off the plate on purpose rather than from scatter.
   - With two strikes a hitter shortens up (a smaller *where* error, a little less exit speed).
   - A ball that comes down behind home plate is foul (a pop-up straight up drifts back on its backspin).
+- **Physics changed in step 1.5, task 3** (Session 9; each Claude's default under the owner's Q6 choice, provisional until task 7's calibration, for the owner to keep or drop; fitted to Statcast 2024–2026 league batted balls in `tools/lib/real.js`, `real.batted`):
+  - Bat speed is in real units: Raw Power's average bat speed follows the real ladder (62.4 / 67.3 / 71.7 / 76.1 / 81.2 mph at 20 / 40 / 60 / 80 / 99), exit speed uses Savant's collision (1.23 × bat speed + 0.23 × pitch speed at the plate for a squared-up ball), each swing's speed varies around his average up to a ceiling (his hardest swing), and he swings 2 mph slower with two strikes.
+  - A swing harder than his usual is a little less accurate, a softer one a little more (his average swing is unchanged, so Raw Power keeps its one job).
+  - The launch angle bends steeper toward the bat's edge (big mishits pop up or are chopped), and the off-center loss grows faster near the edge; a ball hit under the center loses a little less speed than one hit over it.
+  - About half of all bat contact is foul (a narrower fair band), as in MLB.
+  - A ball hit under the center drifts to the opposite field; a squared-up ball goes where the swing's timing points it, a mishit squirts more; a late swing loses more exit speed than an early one; a ball hit the other way slices and carries less.
+  - The first flight's drag rises at lower speeds (the drag crisis); less backspin lift; ground balls lose more speed on each bounce; infielders take 0.25 s longer from catch to throw (catchers and pitchers unchanged).
 
 ## 11. Later and parked
 - **Clutch:** parked for later (owner's choice, Nov 20, 2026).
