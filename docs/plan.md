@@ -1,9 +1,9 @@
-**Docs version: 27** (2026-11-21): Session 8: the ratings-to-stats interview's choices in DESIGN.md sections 7 and 10 (new league baseline, the ladder, three layers, realism wins); step 1.5's plan; Stopped at updated.
+**Docs version: 28** (2026-11-21): Session 8: step 1.5 task 1 done (real data), task 2 started; Stopped at updated.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 8 under way on branch `ccr-856b53aa-oc98im` (from `ccr-85acc383-8ehj83`; not merged; `main` is at Session 5's end). **Read `state.md` sections 6–9 first.** The ratings-to-stats interview is done and confirmed (DESIGN.md sections 7 and 10). Step 1.5's plan is in M1 below; now on task 1 (real data).
+**Stopped at:** Session 8 under way on branch `ccr-856b53aa-oc98im` (from `ccr-85acc383-8ehj83`; not merged; `main` is at Session 5's end). **Read `state.md` sections 6–9 first.** The ratings-to-stats interview is done (DESIGN.md sections 7 and 10). Step 1.5 task 1 (real data) is done; task 2 (`tools/ratingstats.js`) has a first version and a first sweep (findings in `state.md` section 9); next: its population check and chart page.
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 
@@ -180,7 +180,7 @@ Step 1.4 (S5): defense and running ratings, calibration, close
 Done before Session 8 (Sessions 6–7, Claude's defaults, provisional): runners judge drops, secondary leads, outfielders charging and playing in, throws after a hit at a share of top arm, the break-even rule by base and outs (owner's choice, Session 8), `tools/running.js` and `tools/running-sweep.js`.
 
 Tasks (commit and push after each):
-1. [ ] Real data: fetch 2024–2026 player-seasons and league rates (Savant, Baseball-Reference, FanGraphs) into one target file in `tools/lib/` with each stat's percentiles (worst, 5th, 25th, 50th, 75th, 95th, best) and the per-unit slopes (per mph of fastball speed, bat speed and arm; per ft/s; per inch of movement). Done when: the file holds every own stat in DESIGN.md section 10 or marks it as not available, with its source, and the league baseline.
+1. [x] Real data: fetch 2024–2026 player-seasons and league rates (Savant, Baseball-Reference, FanGraphs) into one target file in `tools/lib/` with each stat's percentiles (worst, 5th, 25th, 50th, 75th, 95th, best) and the per-unit slopes (per mph of fastball speed, bat speed and arm; per ft/s; per inch of movement). Done when: the file holds every own stat in DESIGN.md section 10 or marks it as not available, with its source, and the league baseline. **Result (Session 8):** `tools/realdata.js` (98 sources), `tools/lib/realbuild.js`, `tools/lib/real.js` (202 spreads, 71 slopes, league rates); home runs per PA missing; Hands' errors by position and Stamina's pitches before fatigue have no direct real stat (pitches per start stands in).
 2. [ ] `tools/ratingstats.js`: sweeps each rating from 20 to 99 (everyone else at 60) and reads its own stat and downstream stats; the population check; the equal-value tables (pitching included); writes the HTML chart page. Done when: it runs on the current engine and prints each miss against the targets; the page opens from disk with no console errors.
 3. [ ] Batted balls first: spray (pull/center/oppo), launch angle, exit speed, ground-ball speed to the outfield, bat speed's real spread and the Raw Power gate (Contact and Timing). Done when: the batted-ball rows and Raw Power's, Contact's, Timing's and Launch's own stats are inside their bands, or each miss is reported.
 4. [ ] Plate discipline and pitches: zone contact, chase, whiff by pitch type and grade, edge and meatball %, Velocity's real mph and per-mph effects, Deception, Recognition, Discipline, Stamina, the tendencies. Done when: as task 3, for these.
