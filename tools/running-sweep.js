@@ -13,5 +13,5 @@ for (const set of sets) {
   const all = ['s2', 's1', 'd1'].reduce((a, k) => ({ n: a.n + c[k].all.n, xb: a.xb + c[k].all.xb }), { n: 0, xb: 0 });
   console.log(JSON.stringify(set).padEnd(70), 'R', (r.runs / games / 2).toFixed(2), '2-H', p(c.s2.all), p(c.s2.lt2), p(c.s2.two),
     ' 1-3', p(c.s1.all), ' 1-H', p(c.d1.all), p(c.d1.lt2), p(c.d1.two), ' XBT', p(all),
-    ' DP', (r.ev.DP / games / 2).toFixed(2), 'SF', (r.ev.SF / games / 2).toFixed(2));
+    ' BR 1-3', p(c.br.s1), '2-H', p(c.br.s2), '1-H', p(c.br.d1), ' DP', (r.ev.DP / games / 2).toFixed(2), 'SF', (r.ev.SF / games / 2).toFixed(2));
 }

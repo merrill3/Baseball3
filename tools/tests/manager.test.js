@@ -203,7 +203,9 @@ module.exports = function (t) {
         B3.game.play(B3.game.create(Object.assign(t, { type: 'regular', rng: B3.rng.create('tag ' + n) })), [ctl, null]);
       }
       const rate = (lo, hi) => { const x = seen.filter((s) => s.dist >= lo && s.dist < hi); return x.filter((s) => s.go).length / Math.max(1, x.length); };
-      return { deep: rate(300, 999), mid: rate(230, 290), shallow: rate(0, 180) };
+      // Medium catches: the mean of 20-ft bins, so a different mix of distances between runs doesn't count.
+      const mid = (rate(230, 250) + rate(250, 270) + rate(270, 290)) / 3;
+      return { deep: rate(300, 999), mid: mid, shallow: rate(0, 180) };
     };
     const avg = run(27, 250), fast = run(30, 250);
     assert.ok(avg.deep > 0.9, 'deep catches: ' + avg.deep);

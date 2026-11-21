@@ -20,6 +20,7 @@ function run(games, seed, avgTeams, tweak) {
     s2: { all: cell(), lt2: cell(), two: cell(), ground: cell(), line: cell(), fly: cell(), popup: cell() },
     s1: { all: cell(), lt2: cell(), two: cell(), ground: cell(), line: cell(), fly: cell(), popup: cell(), LF: cell(), CF: cell(), RF: cell() },
     d1: { all: cell(), lt2: cell(), two: cell() },
+    br: { s1: cell(), s2: cell(), d1: cell() }, // Baseball-Reference's way: every single or double, any other runners
     hits: 0, ofSingles: 0
   };
   const add = (k, i, outs, bb, p, need) => {
@@ -33,6 +34,10 @@ function run(games, seed, avgTeams, tweak) {
   B3.ball.inPlay = function (g, contact, steal) {
     const bases = g.bases.slice(), outs = g.outs;
     const p = inPlay(g, contact, steal);
+    const brAdd = (x, r, need) => { x.n++; if (r >= need) x.xb++; if (r === 0) x.out++; };
+    if (p.code === '1B' && bases[0]) brAdd(c.br.s1, p.runners[0], 3);
+    if (p.code === '1B' && bases[1]) brAdd(c.br.s2, p.runners[1], 4);
+    if (p.code === '2B' && bases[0]) brAdd(c.br.d1, p.runners[0], 4);
     if (p.code === '1B' && OF[p.fielder]) {
       c.ofSingles++;
       if (bases[1]) add('s2', 1, outs, p.bb, p, 4);
@@ -102,6 +107,10 @@ if (require.main === module) {
   row('two outs', c.d1.two);
   const all = ['s2', 's1', 'd1'].reduce((a, k) => ({ n: a.n + c[k].all.n, xb: a.xb + c[k].all.xb, out: a.out + c[k].all.out }), { n: 0, xb: 0, out: 0 });
   row('XBT% (all three together)', all, 'about 40%, out about 2-3%');
+  console.log('Counted the way Baseball-Reference does (every single or double, infield ones included; real: 2024 MLB)');
+  row('first to third on a single', c.br.s1, '31.6%');
+  row('second to home on a single', c.br.s2, '61.3%');
+  row('first to home on a double', c.br.d1, '37.8%');
   const tg = res.games * 2, ev = res.ev;
   console.log('Per team-game: double plays ' + (ev.DP / tg).toFixed(2) + ' (real about 0.7), sac flies ' + (ev.SF / tg).toFixed(2) +
     ' (real about 0.25), tag-up outs ' + (ev.tagOut / tg).toFixed(3) + ', steal attempts ' + ((ev.sb + ev.cs) / tg).toFixed(2) + ' at ' + (100 * ev.sb / Math.max(1, ev.sb + ev.cs)).toFixed(0) + '% safe');

@@ -144,7 +144,10 @@
       let at = F.pos[pos];
       if (pos !== 'P' && pos !== 'C') {
         const d = (B3.data.OUTFIELD.indexOf(pos) >= 0 ? F.shade.outfield : F.shade.infield) * pull;
-        const r = len(at[0], at[1]), a = Math.atan2(at[0], at[1]) / D2R + d;
+        let r = len(at[0], at[1]);
+        const a = Math.atan2(at[0], at[1]) / D2R + d;
+        // With a runner on second, outfielders play a little shallower to cut down the run at home (Session 7).
+        if (B3.data.OUTFIELD.indexOf(pos) >= 0 && g.bases[1]) r -= T().BALL.ofIn;
         at = B3.data.polar(r, a);
       }
       const P = POS[pos];
@@ -761,7 +764,10 @@
     const charged = OUTF[fd.pos] && dist(pp, base(0)) < dist(fd.at, base(0)) - B.chargeFt;
     const ready = tp + B.gather + fd.xfer - (charged ? B.chargeGain : 0);
     S.ballAt(ready, pp, 5);
-    const tBall = (b, seen) => Math.max(ready + throwTime(dist(pp, base(b)), seen ? fd.armSeen : fd.arm), cover(D, b, [fd.pos]).t);
+    // An outfielder's throw on a hit goes at a share of his top arm (Statcast's arm strength is his hardest throws).
+    // The share fades to his full arm by throwFar: a long throw (a relay home on a double) is all-out anyway.
+    const eff = (d) => (OUTF[fd.pos] ? 1 - (1 - B.ofEffort) * Math.max(0, 1 - d / B.throwFar) : 1);
+    const tBall = (b, seen) => { const d = dist(pp, base(b)); return Math.max(ready + throwTime(d, (seen ? fd.armSeen : fd.arm) * eff(d)), cover(D, b, [fd.pos]).t); };
     const R = off.runners, bt = off.batter;
     const twoOut = g.outs === 2;
     const landT = path.land ? path.land.t : 0;

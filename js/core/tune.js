@@ -285,6 +285,9 @@
     // (Session 7, Claude's default). Still one rule for every runner, not a player trait.
     breakEven: { 3: [0.73, 0.73, 0.9], 4: [0.93, 0.75, 0.42] },
     dareShift: 0,      // seconds added to every break-even margin (a calibration knob)
+    ofIn: 12,          // feet outfielders play in with a runner on second (Session 7, provisional)
+    ofEffort: 0.55,    // share of an outfielder's top arm speed on a short throw after a hit, rising to all of it by
+                       // throwFar (Statcast arm strength is his hardest throws; Session 7, provisional)
     halfway: 0.45,     // share of the way a runner goes on a fly ball that may be caught
     dropRead: 1,       // a runner at halfway breaks this many reads (RUN.read) after the ball drops
     dropSure: 0.4,     // seconds a fielder must be judged short of a ball in the air for runners to go before it lands
