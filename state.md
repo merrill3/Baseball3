@@ -1,6 +1,6 @@
-# State (Nov 21, 2026): Session 9 ended; read sections 11–12 first
+# State (Nov 21, 2026): Session 10 ended; read sections 13–14 first
 
-Sections 1–5 are Session 6's hand-off (history). Session 7's answers are in section 6, its base-running work in section 7, its hand-off in section 8. Session 8's interview, data and tools are in section 9, its hand-off in section 10. Session 9's batted-ball work is in section 11, and the next steps in section 12.
+Sections 1–5 are Session 6's hand-off (history). Session 7's answers are in section 6, its base-running work in section 7, its hand-off in section 8. Session 8's interview, data and tools are in section 9, its hand-off in section 10. Session 9's batted-ball work is in section 11, its hand-off in section 12. Session 10's decisions and work are in section 13, and the next steps in section 14.
 
 # Session 6 state: stopped mid-session at the owner's request
 
@@ -230,3 +230,19 @@ Branch `ccr-c6a00ca8-poeorz` (from `ccr-856b53aa-oc98im`); everything is committ
 - Tests: 78 pass; `gametest.js 1000 7` passes (checksum `4b0aec9e`); boot check passes.
 - Tried and not kept: doubling the unread-movement surprise (`TYPE.surprise`) and the CPU's `lookShare` for Recognition widened off-speed whiff (0.88–0.93×) but pushed K% to 24–28% median and 39–43% at p95. In this engine a rating that adds whiffs adds strikeouts about one for one, and Recognition, Timing and Discipline move K% two to three times as much as they move whiff %; real K% spreads no wider than whiff %. That coupling is the next thing to look at.
 - Tools: `tools/ratingstats.js` exports `measurePop`; `POPR` and `POPPC` environment variables override the population's correlations for experiments. Scratch helpers this session (not committed): a population regression of each stat on the drawn ratings (per sd of rating, Contact / Timing / Launch / Raw Power / Recognition / Discipline): K% −4.4 / −1.9 / −0.6 / +3.0 / −2.2 / −1.4; off-speed whiff −4.9 / −0.8 / −0.4 / +3.3 / −1.5 / −0.8; off-speed chase minus fastball −0.1 / 0.1 / −0.3 / 0.2 / −1.8 / 0.9; AVG .019 / .007 / .014 / .005 / .010 / .006 (Session 8's population, Contact 0.75×).
+
+## 14. Hand-off for Session 11
+Branch `ccr-08aef3dd-o7z9fx` (from `ccr-c6a00ca8-poeorz`); everything is committed and pushed. `main` is still at Session 5's end (`1feb3da`); Sessions 6–10 are not merged. Tests: 78 pass; `gametest.js 1000 7` checksum `4b0aec9e`; boot check passes.
+
+**Done in Session 10:** three owner's choices (a faster bat costs accuracy; the league's spread wins over a single rating's ladder; the test population draws ratings independently with Raw Power against Contact at −0.3), all in DESIGN.md section 10; Raw Power's cost built and measured; the population check redrawn (tendencies, swing and pitch-group rows); task 4 part 1, Contact. The chart page is republished (link in section 13's last lines, or in the session's closing message).
+
+**Next: step 1.5 task 4, in this order** (Claude's plan; each change Claude's default, reported; the target is the population's spreads first, then each rating's ladder):
+1. Recognition: off-speed whiff (0.81× MLB's width, median 26.9 [32.5]) and off-speed chase minus fastball chase (0.64×, median 10.3 [6.8]). First find why Recognition, Timing and Discipline move K% two to three times as much as whiff % (likely fouls before two strikes and take decisions), so widening Recognition doesn't blow up K% (now 1.10× wide). Doubling `TYPE.surprise` alone pushed K% to a 24% median and 39% at p95.
+2. The pitch-type balance at an average grade: sinker whiff 20.5 [12.9], slider 26.4 [33.9], change-up 25.9 [31.4], splitter 23.0 [34.0] (`TYPE` bite and surprise); then the grades' ranges (slider whiff 17.9–32.7 from 20 to 99 [13.7–60.2]).
+3. Timing (whiff against 95+ flat above 80), Deception (chase against 26.0–33.9 [20.2–40.7]), Velocity's real mph ladder (engine 69.4 / 86.7 / 93.5 / 96.8 / 99.8 at 20 / 40 / 60 / 80 / 99 [82.3 / 90.7 / 94.4 / 97.9 / 101.4]) and per-mph effects (whiffs, not weak contact), Command (meatballs fall at low Command [rise]; edge too wide at the top), Discipline, Stamina, the tendencies (swing % 1.24× wide).
+4. The pitchers' population: K% 14.4–36.4 [15.6–31.7] before today's independent ratings (re-read it first).
+5. Then tasks 5–7 as planned. Task 7's step-table refit must keep the league's spreads (the owner's ladder rule), so equal value stays a report (Contact 0.44–0.67 and Raw Power 0.37–0.50 runs per +10 now).
+
+Run `node tools/ratingstats.js --part=pop` (about 30 s) for the population alone; `--only=contact --part=sweep` (about 10 s) for one rating; the full page with `node tools/calibrate.js --part=value --json=value.json` then `node tools/ratingstats.js --html=page.html --value=value.json` (about 7 minutes).
+
+**Prompt for the next session:** "Start Session 11 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from the branch `ccr-08aef3dd-o7z9fx` (not main: Sessions 6–10 are not merged). Read CLAUDE.md, then `state.md` (sections 13–14 first) and the "Stopped at:" line in docs/plan.md. Continue step 1.5 task 4 (Recognition next). Baseball1 is reference only; never change it."
