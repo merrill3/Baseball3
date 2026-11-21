@@ -14,7 +14,8 @@
 //                                                                                  (DESIGN.md section 10), 20-99
 //   arsenal     { FF: { grade, shape }, ... }   a grade (20-99) and a shape (-1 fly-ball tilt to +1
 //                                               ground-ball tilt) for each of his pitch types
-//   tendencies  { aggressiveness: Patient | Balanced | Aggressive, aim: Nibbler | Balanced | Attacker }
+//   tendencies  { aggressiveness: Patient | Balanced | Aggressive, aim: Nibbler | Balanced | Attacker,
+//                 swingPath: Ground-ball | Level | Lift (Session 11) }
 // Each rating sets the inputs for its one job and nothing else; the scales are B3.tune.RATE. Range and
 // Arm are graded against the fielder's position: at 60 he has his position's first step and arm
 // (B3.tune.POS); Range multiplies the first step (fld.first) and Arm adds mph (fld.armPlus). Framing
@@ -146,6 +147,7 @@
     for (const k in rate.fld) fld[k] = hook(T.FLD[k], rate.fld[k], e[rate.fld[k][0]]);
     for (const k in rate.run) run[k] = hook(T.RUN[k], rate.run[k], e[rate.run[k][0]]);
     bat.aggressiveness = tendency(player, 'aggressiveness');
+    bat.swingPath = tendency(player, 'swingPath');
     pit.aim = tendency(player, 'aim');
     if (has(player.ratings, 'stamina')) pit.stamina = stamina(e.stamina);
     // The arsenal: a movement multiplier and extra drop per type, and the put-away pitch.

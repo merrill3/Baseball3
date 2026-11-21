@@ -172,7 +172,9 @@ function measure(B3, cond, games, seed) {
       const kind = p.pitches ? 'pitcher' : 'hitter';
       if (kind !== cond.kind) continue;
       if (cond.k === 'grades') for (const t in p.arsenal) p.arsenal[t].grade = cond.L;
-      else p.ratings[cond.k] = cond.L;
+      else if (cond.k) p.ratings[cond.k] = cond.L;
+      if (cond.also) Object.assign(p.ratings, cond.also); // more ratings (the tendencies' payoff checks, Session 11)
+      if (cond.tend) p.tendencies = Object.assign({}, p.tendencies, cond.tend);
     }
     const g = B3.game.sim(Object.assign(teams, { type: 'regular', rng: B3.rng.create('rs:' + seed + ':' + n) }));
     a.games++;
@@ -207,9 +209,12 @@ function measurePop(B3, spec) {
   // Nibbler / Balanced / Attacker pitchers at 1 : 2 : 1, from their own stream so the ratings draws stay the same.
   const srng = B3.rng.create('popstyle:' + spec.seed + ':' + spec.kind + ':' + spec.team);
   const style = (words) => words[srng.weighted([1, 2, 1])];
+  const prng = B3.rng.create('poppath:' + spec.seed + ':' + spec.kind + ':' + spec.team);
   for (const id in teams.away.players) {
     const p = teams.away.players[id];
     if (spec.kind === 'hitter' && !p.pitches) p.tendencies = { aggressiveness: style(['Patient', 'Balanced', 'Aggressive']) };
+    // Swing path (Session 11) from a third stream, so the other draws stay the same.
+    if (spec.kind === 'hitter' && !p.pitches) p.tendencies.swingPath = ['Ground-ball', 'Level', 'Lift'][prng.weighted([1, 2, 1])];
     if (spec.kind === 'pitcher' && p.pitches) p.tendencies = { aim: style(['Nibbler', 'Balanced', 'Attacker']) };
   }
   for (const id in teams.away.players) {

@@ -32,7 +32,8 @@
     recognition: 0.75, // Recognition: share of a pitch's movement and speed change he reads (0 to 1)
     judgeSd: 0.45,     // Discipline: feet of noise in judging where a pitch will cross, for swing or take
     judgeLean: 0.1,    // Discipline: feet he leans toward seeing a ball as a strike (the CPU's swing choice)
-    aggressiveness: 0  // tendency (-1 Patient, 0 Balanced, 1 Aggressive): the CPU's swing choice
+    aggressiveness: 0, // tendency (-1 Patient, 0 Balanced, 1 Aggressive): the CPU's swing choice
+    swingPath: 0       // tendency (-1 Ground-ball, 0 Level, 1 Lift; owner's choice, Session 11): his swing's tilt
   };
 
   // Pitching. Grades and shapes are per pitch type: { FF: 1.1, SL: 0.9 }; a missing type is average.
@@ -166,7 +167,8 @@
     stamina: [[20, 18], [30, 28], [40, 45], [50, 68], [60, 92], [70, 102], [80, 110], [90, 117], [100, 123]],
     tendency: {
       aggressiveness: { Patient: -1, Balanced: 0, Aggressive: 1 },
-      aim: { Nibbler: -1, Balanced: 0, Attacker: 1 }
+      aim: { Nibbler: -1, Balanced: 0, Attacker: 1 },
+      swingPath: { 'Ground-ball': -1, Level: 0, Lift: 1 }
     }
   };
 
@@ -259,6 +261,14 @@
     shapeSd: [0.112, 0.09], // the shape's counterweight (step 1.4, owner's choice: value-neutral): share of the
                        // *where* spread taken off per unit of ground-ball shape (easier to square up), and
                        // added per unit of fly-ball shape (harder)
+    // Swing path (owner's choice, Session 11: a hitter's own shape; the sizes are Claude's defaults): per unit of
+    // swingPath (+1 Lift, -1 Ground-ball), degrees added to his launch angle (real: the 15th and 85th percentiles of
+    // hitters' average launch angle sit about 4.5 degrees from the median), degrees of spray toward his pull side
+    // (real: +0.8 pull points per degree of launch angle), and the share of his *where* spread added (taken off for
+    // Ground-ball): the counterweight that keeps it about value-neutral (real: +0.19 whiff points per degree).
+    pathLA: 3.7,
+    pathPull: 5,
+    pathSd: [0.035, 0.02], // [share taken off per unit of Ground-ball, share added per unit of Lift]
     foulLine: 45       // the foul lines, degrees from straightaway center
   };
 

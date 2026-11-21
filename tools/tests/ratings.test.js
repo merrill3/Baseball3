@@ -158,6 +158,11 @@ module.exports = function (t) {
     assert.strictEqual(B3.ratings.inputs(hitter({}, { tendencies: { aggressiveness: 'Patient' } })).bat.aggressiveness, -1);
     assert.strictEqual(B3.ratings.inputs(pitcher({}, { tendencies: { aim: 'Nibbler' } })).pit.aim, -1);
     assert.strictEqual(B3.ratings.inputs(pitcher({}, { tendencies: { aim: 'Attacker' } })).pit.aim, 1);
+    // Swing path (owner's choice, Session 11): Ground-ball -1, Level 0, Lift 1.
+    assert.strictEqual(B3.ratings.inputs(hitter({}, { tendencies: { swingPath: 'Lift' } })).bat.swingPath, 1);
+    assert.strictEqual(B3.ratings.inputs(hitter({}, { tendencies: { swingPath: 'Ground-ball' } })).bat.swingPath, -1);
+    assert.strictEqual(B3.ratings.inputs(hitter({})).bat.swingPath, 0);
+    assert.throws(() => B3.ratings.inputs(hitter({}, { tendencies: { swingPath: 'Chop' } })), /Ground-ball, Level, Lift/);
     assert.throws(() => B3.ratings.inputs(hitter({ contact: 100 })), /contact must be a number from 20 to 99/);
     assert.throws(() => B3.ratings.inputs(hitter({ contact: '70' })), /contact/);
     assert.throws(() => B3.ratings.inputs(pitcher({}, { arsenal: { SL: { grade: 10 } } })), /SL grade/);

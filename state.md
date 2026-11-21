@@ -1,6 +1,6 @@
-# State (Nov 21, 2026): Session 11 under way; read section 15 first
+# State (Nov 21, 2026): Session 11 ended; read sections 15–16 first
 
-Sections 1–5 are Session 6's hand-off (history). Session 7's answers are in section 6, its base-running work in section 7, its hand-off in section 8. Session 8's interview, data and tools are in section 9, its hand-off in section 10. Session 9's batted-ball work is in section 11, its hand-off in section 12. Session 10's decisions and work are in section 13, and the next steps in section 14. Session 11 (merge or split, then task 4) is in section 15.
+Sections 1–5 are Session 6's hand-off (history). Session 7's answers are in section 6, its base-running work in section 7, its hand-off in section 8. Session 8's interview, data and tools are in section 9, its hand-off in section 10. Session 9's batted-ball work is in section 11, its hand-off in section 12. Session 10's decisions and work are in section 13, and the next steps in section 14. Session 11 (merge or split, then task 4) is in section 15, its hand-off in section 16.
 
 # Session 6 state: stopped mid-session at the owner's request
 
@@ -262,3 +262,23 @@ Run `node tools/ratingstats.js --part=pop` (about 30 s) for the population alone
 - Contact now sets whiffs against 95+: 34.0 / 25.6 / 22.0 / 12.4 / 4.7 at 20 / 40 / 60 / 80 / 99 (real ladder 52 / 34 / 22 / 10 / 2.5).
 - Population (p5–p95 width against MLB's): K% 1.09×, whiff 1.02×, zone contact 1.08×, AVG 1.19× (was 1.10×), SLG 1.08×, exit speed 1.04×, squared-up 1.19× (level 9–12 points high). Real per sd of squared-up beyond whiffs and bat speed: K% −1.5, AVG +.010, SLG +.019, exit speed +1.1 mph; the engine's squared-up moves exit speed about 1.7× as much per point.
 - Tests: 78 pass (the pitch test checks `bat.square` moves exit speed and not whiffs); `gametest.js 1000 7` passes (checksum `9bfec0a2`); boot check passes.
+
+**Built: the Swing path tendency (Claude's defaults for the sizes, provisional until task 7).** `bat.swingPath` (−1 Ground-ball, 0 Level, 1 Lift) from `tendencies.swingPath`; per step: `SWING.pathLA` 3.7° of launch angle, `pathPull` 5° toward the pull side, `pathSd` [0.035, 0.02] (the *where* spread: Ground-ball −3.5%, Lift +2%). The population and the rated test teams draw it 1 : 2 : 1 (the population from its own stream, so the other draws stay the same); the average test teams are Level.
+- A lineup (everything else 60, 800 games), Ground-ball / Level / Lift: launch angle 10.4 / 15.2 / 19.7 [real p15 / p50 / p85 9.0 / 13.7 / 18.0], ground-ball % 49.0 / 40.9 / 34.3, pull % 35.2 / 39.8 / 43.2, whiff % 23.3 / 24.8 / 25.2, K% 19.4 / 20.9 / 21.9, AVG .260 / .254 / .243, SLG .406 / .429 / .436, runs 4.73 / 4.89 / 4.84.
+- Payoffs (runs): Raw Power 40: 4.06 / 3.90 / 3.76; Raw Power 80: 5.58 / 5.99 / 5.91; Speed 40: 4.51 / 4.75 / 4.42; Speed 80: 5.19 / 5.05 / 5.00.
+- Tried first: no counterweight and pathLA 4.5: Ground-ball 4.63, Level 5.07, Lift 4.75 (both styles lose to Level: the engine's batted balls peak around the league's launch angle; real wOBA moves only +.001 per degree).
+- Population (width against MLB's): ground-ball % 0.90× (was 0.47×), pull % 0.68× (was 0.60×), oppo % 0.71×; AVG 1.06×, SLG 1.21×, K% 1.17× (sampling noise in the p5 and p95 is about ±1 point).
+- League (`batted.js 1000 1`): unchanged, runs 4.80, .255 / .312 / .428, K 20.8%.
+- Tests: 79 pass (Swing path in the ratings and pitch tests); `gametest.js 1000 7` passes (checksum `250cd3a2`: the rated test teams now draw a swing path); boot check passes.
+
+## 16. Hand-off for Session 12
+Branch `ccr-050ac00d-3jd0c3` (from `ccr-08aef3dd-o7z9fx`); everything is committed and pushed. `main` is still at Session 5's end (`1feb3da`); Sessions 6–11 are not merged.
+
+**Done in Session 11:** the merge-or-split check against real data (`tools/realskills.js`) and the owner's two choices, both built: Timing squares up (`bat.square`; `timingTop` is Contact's), and the Swing path tendency. The chart page was not republished (still Session 10's, https://claude.ai/artifact/KsfcoshntKFj31isjEtZt8); its Timing row now reads squared-up %, so the next full run shows the new job.
+
+**Next: step 1.5 task 4, in this order** (Claude's plan):
+1. Recognition: off-speed whiff (0.84× MLB's width now, median 26.8 [32.5]) and off-speed chase minus fastball chase (median 9.8 [6.8]); first the K/whiff coupling (Recognition, Discipline and, before today, Timing moved K% two to three times as much as whiff %).
+2. The pitch-type balance and the grades' ranges; Deception; Velocity (per mph: whiff +0.41 [+0.93], K +0.95 [+1.69], exit speed −0.15 [+0.05]: still weak, the owner's concern); Command; Discipline; Stamina; the tendencies (swing % wide).
+3. The pitchers' population; then tasks 5–7. Task 5 checks Speed's infield hits (the Ground-ball payoff rides on it). Task 7 refits the step tables (Timing's is steep at the top for its new job) and re-checks Swing path's neutrality.
+
+**Prompt for the next session:** "Start Session 12 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from the branch `ccr-050ac00d-3jd0c3` (not main: Sessions 6–11 are not merged). Read CLAUDE.md, then `state.md` (sections 15–16 first) and the "Stopped at:" line in docs/plan.md. Continue step 1.5 task 4 (Recognition next). Baseball1 is reference only; never change it."

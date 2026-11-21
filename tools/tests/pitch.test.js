@@ -146,6 +146,16 @@ module.exports = function (t) {
     assert.ok(sd(tight.map((x) => x.r.contact.sp)) < sd(loose.map((x) => x.r.contact.sp)) - 8, 'spray spread');
   });
 
+  t.test('Swing path (Session 11): Lift raises the launch angle and pulls more, Ground-ball the reverse; a Lift swing misses a little more', () => {
+    const rows = (swingPath) => trial(setup({ bats: 'R', bat: { swingPath } }), MID, 0, 3000);
+    const lift = rows(1), level = rows(0), gb = rows(-1);
+    const la = (r) => avg(inPlay(r).map((x) => x.r.contact.la)), pull = (r) => -avg(inPlay(r).map((x) => x.r.contact.sp));
+    const whiff = (r) => rate(r, (x) => x.r.r === 'S');
+    assert.ok(la(lift) > la(level) + 2.5 && la(gb) < la(level) - 2.5, 'launch angle: ' + [la(gb), la(level), la(lift)].map((x) => x.toFixed(1)).join(' / '));
+    assert.ok(pull(lift) > pull(level) + 2.5 && pull(gb) < pull(level) - 2.5, 'pull: ' + [pull(gb), pull(level), pull(lift)].map((x) => x.toFixed(1)).join(' / '));
+    assert.ok(whiff(lift) > whiff(gb), 'whiffs: ' + whiff(gb).toFixed(3) + ' against ' + whiff(lift).toFixed(3));
+  });
+
   t.test('Recognition and Deception mirror each other; reading pitches means fewer whiffs on breaking balls', () => {
     const CU = { type: 'CU', x: 0, z: 2.4 };
     const e = (o) => { const env = setup(o); return env.B3.pitch.expect(env.g, env.B3.pitch.throw(env.g, CU)); };

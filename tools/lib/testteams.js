@@ -60,7 +60,7 @@ function average(code, name) {
     if (kind === 'hitter') {
       for (const k of HIT.concat(DEF)) p.ratings[k] = 60;
       if (p.id.endsWith('-C')) p.ratings.framing = 60;
-      p.tendencies = { aggressiveness: 'Balanced' };
+      p.tendencies = { aggressiveness: 'Balanced', swingPath: 'Level' };
     } else {
       for (const k of PIT) p.ratings[k] = 60;
       p.ratings.stamina = STAMINA[p.role] || STAMINA.other;
@@ -83,7 +83,7 @@ function rated(code, name, rng) {
     if (kind === 'hitter') {
       for (const k of HIT.concat(DEF)) p.ratings[k] = draw(60, 10);
       if (p.id.endsWith('-C')) p.ratings.framing = draw(60, 10);
-      p.tendencies = { aggressiveness: style(['Patient', 'Balanced', 'Aggressive']) };
+      p.tendencies = { aggressiveness: style(['Patient', 'Balanced', 'Aggressive']), swingPath: style(['Ground-ball', 'Level', 'Lift']) };
     } else {
       const reliever = p.role !== 'SP';
       p.ratings.velocity = draw(reliever ? 63 : 60, 10);
