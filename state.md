@@ -75,3 +75,7 @@ With the work-in-progress physics:
 - Decision 2, Speed's range: **realistic range (about 23.5 / 27 / 31 ft/s at 20 / 60 / 99), with each ft/s toned down** so Speed still fits the equal-value rule (owner's choice, Session 7).
 - Step 2.1 Q2, the overall's scale: **stretched 20–99** (about 50 an average regular, 70+ all-star, 80+ MVP type) (owner's choice, Session 7).
 - Step 2.1 Q3, the schedule's mix: **balanced-ish**: about 52 division games (13 vs each rival), 64 vs the other 10 league teams, 46 interleague (every other-league team at least once, plus a natural rival) (owner's choice, Session 7).
+- Step 2.1 Q4, reserve squad: **about 14** (26 active + 14 = 40) (owner's choice, Session 7).
+- Step 2.1 Q5, starting balance: **realistic spread** (a few teams expected at about 95–100 wins, a few at about 60–65, most in between) (owner's choice, Session 7).
+- Step 2.1 Q6, names: **realistic mix with lots of variety** (mostly American, many Latin American, some Asian and others) (owner's choice, Session 7).
+- New idea from the owner (Session 7, with Q6): "work out exactly how pitcher and hitter ratings affect sabermetric stats in-game, which in turn affect end performance". Being clarified.
