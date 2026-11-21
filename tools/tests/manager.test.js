@@ -174,7 +174,7 @@ module.exports = function (t) {
     const avg = env(), fast = env({ speed: 80 }), quick = env({ baserunning: 80 }), arm = env({}, { arm: 80 }), hands = env({}, { hands: 80 });
     assert.ok(odds(fast) > odds(avg) + 0.05, 'Speed: ' + odds(fast) + ' vs ' + odds(avg));
     assert.ok(odds(quick) > odds(avg) + 0.02, 'Baserunning (the jump)');
-    assert.ok(odds(arm) < odds(avg) - 0.05, 'the catcher\'s Arm');
+    assert.ok(odds(arm) < odds(avg) - 0.03, 'the catcher\'s Arm (runners see half of it, BALL.armBlind)');
     assert.ok(odds(hands) < odds(avg) - 0.01, 'the catcher\'s quick release (Hands)');
     // He goes more often with better odds, and almost never when they are poor (only when he misjudges them).
     const slow = env({ speed: 35, baserunning: 35 }, { arm: 80 });
