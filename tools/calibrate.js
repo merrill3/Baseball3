@@ -199,20 +199,24 @@ function ratingCond(k, L) {
 }
 
 const DEFENSE = [
-  // [label, condition, key spot?, how to read: 'def' runs saved | 'off' runs scored | 'both' (away only)]
+  // [label, condition, key spot (share of a point) or false, how to read: 'def' runs saved | 'lineup' runs
+  // scored for every hitter, / 9 | 'both' one away player's runs scored minus runs allowed]
   ['Range at SS', { kind: 'hitter', pos: 'SS', k: 'range', L: 70 }, true, 'def'],
   ['Range at CF', { kind: 'hitter', pos: 'CF', k: 'range', L: 70 }, true, 'def'],
   ['Range at 1B', { kind: 'hitter', pos: '1B', k: 'range', L: 70 }, false, 'def'],
   ['Hands at SS', { kind: 'hitter', pos: 'SS', k: 'hands', L: 70 }, true, 'def'],
   ['Hands at 2B', { kind: 'hitter', pos: '2B', k: 'hands', L: 70 }, false, 'def'],
-  ['Arm in RF', { kind: 'hitter', pos: 'RF', k: 'arm', L: 70 }, true, 'def'],
-  ['Arm at C', { kind: 'hitter', pos: 'C', k: 'arm', L: 70 }, true, 'def'],
+  ['Arm in RF', { kind: 'hitter', pos: 'RF', k: 'arm', L: 70 }, 0.5, 'def'],
+  ['Arm at C', { kind: 'hitter', pos: 'C', k: 'arm', L: 70 }, 0.5, 'def'],
   ['Arm in LF', { kind: 'hitter', pos: 'LF', k: 'arm', L: 70 }, false, 'def'],
   ['Framing at C', { kind: 'hitter', pos: 'C', k: 'framing', L: 70 }, true, 'def'],
   ['Speed in CF', { kind: 'hitter', pos: 'CF', k: 'speed', L: 70, away: true }, true, 'both'],
   ['Speed at DH', { kind: 'hitter', pos: 'DH', k: 'speed', L: 70, away: true }, false, 'both'],
-  ['Baserunning (lineup / 9)', { kind: 'hitter', k: 'baserunning', L: 70 }, true, 'lineup']
+  ['Baserunning (lineup / 9)', { kind: 'hitter', k: 'baserunning', L: 70 }, 0.5, 'lineup']
 ];
+// The third field is the share of a hitting point the rating is worth at that key spot (owner's choices:
+// a full point, and half a point for Arm and Baserunning, Session 5), or false for a spot that should be
+// worth less than its key spot.
 
 // The fit (--part=fit): each table and how its value is read. read: 'hit' runs scored for a whole lineup,
 // 'pit' runs saved for a whole staff, 'def' runs saved by one fielder (the mean over its key spots),
@@ -224,10 +228,10 @@ const FIT = [
   { key: 'grade', read: 'pit', slope: TARGET, conds: (L) => [ratingCond('grades', L)] },
   { key: 'range', read: 'def', slope: TARGET / 9, conds: (L) => ['SS', 'CF'].map((pos) => ({ kind: 'hitter', pos: pos, k: 'range', L: L })) },
   { key: 'hands', read: 'def', slope: TARGET / 9, conds: (L) => [{ kind: 'hitter', pos: 'SS', k: 'hands', L: L }] },
-  { key: 'arm', read: 'def', slope: TARGET / 9, conds: (L) => ['RF', 'C'].map((pos) => ({ kind: 'hitter', pos: pos, k: 'arm', L: L })) },
+  { key: 'arm', read: 'def', slope: TARGET / 18, conds: (L) => ['RF', 'C'].map((pos) => ({ kind: 'hitter', pos: pos, k: 'arm', L: L })) },
   { key: 'framing', read: 'def', slope: TARGET / 9, conds: (L) => [{ kind: 'hitter', pos: 'C', k: 'framing', L: L }] },
   { key: 'speed', read: 'both', slope: TARGET / 9, conds: (L) => [{ kind: 'hitter', pos: 'CF', k: 'speed', L: L, away: true }] },
-  { key: 'baserunning', read: 'hit', slope: TARGET, conds: (L) => [{ kind: 'hitter', k: 'baserunning', L: L }] }
+  { key: 'baserunning', read: 'hit', slope: TARGET / 2, conds: (L) => [{ kind: 'hitter', k: 'baserunning', L: L }] }
 ];
 
 // Weighted least squares for V(u) = a u + b u^2 + c u^3 (through 0), then the u where V reaches each target.
@@ -247,17 +251,46 @@ function fitCubic(pts) {
   return x;
 }
 
+// Monotone values through the points (weighted pool-adjacent-violators), for when the cubic turns back.
+function isotonic(pts) {
+  const blocks = [];
+  for (const p of pts) {
+    blocks.push({ w: 1 / Math.max(1e-6, p.se * p.se), v: p.v, n: 1 });
+    while (blocks.length > 1 && blocks[blocks.length - 2].v > blocks[blocks.length - 1].v) {
+      const b = blocks.pop(), a = blocks.pop();
+      blocks.push({ w: a.w + b.w, v: (a.v * a.w + b.v * b.w) / (a.w + b.w), n: a.n + b.n });
+    }
+  }
+  const out = [];
+  for (const b of blocks) for (let i = 0; i < b.n; i++) out.push(b.v);
+  return pts.map((p, i) => ({ u: p.u, v: out[i] }));
+}
+
 function solveTable(pts, slope) {
   const [a, b, c] = fitCubic(pts);
   const lo = Math.min(...pts.map((p) => p.u)), hi = Math.max(...pts.map((p) => p.u));
   const V = (u) => a * u + b * u * u + c * u * u * u;
   const dV = (u) => a + 2 * b * u + 3 * c * u * u;
-  // Past the measured range, straight lines with the end slopes (a cubic can turn back).
-  const Vx = (u) => (u < lo ? V(lo) + dV(lo) * (u - lo) : u > hi ? V(hi) + dV(hi) * (u - hi) : V(u));
   let mono = true;
-  for (let u = lo; u <= hi; u += (hi - lo) / 50) if (dV(u) <= 0) mono = false;
+  for (let u = lo; u <= hi + 1e-9; u += (hi - lo) / 50) if (dV(u) <= 0) mono = false;
+  let Vx;
+  if (mono) {
+    // Past the measured range, straight lines with the end slopes (a cubic can turn back).
+    Vx = (u) => (u < lo ? V(lo) + dV(lo) * (u - lo) : u > hi ? V(hi) + dV(hi) * (u - hi) : V(u));
+  } else {
+    // Straight lines between the (monotone) points, and past the ends with the end slopes.
+    const q = isotonic(pts.concat([{ u: 0, v: 0, se: 1e-3 }]).sort((x, y) => x.u - y.u));
+    Vx = (u) => {
+      let i = 1;
+      while (i < q.length - 1 && u > q[i].u) i++;
+      const p0 = q[i - 1], p1 = q[i];
+      const s = Math.max(1e-4, (p1.v - p0.v) / (p1.u - p0.u));
+      return p0.v + s * (u - p0.u);
+    };
+  }
   const rows = [];
   for (let e = 20; e <= 110; e += 10) {
+    if (e === 60) { rows.push([60, 0]); continue; }
     const want = slope * (e - 60) / 10;
     let l = -40, h = 40;
     for (let it = 0; it < 80; it++) { const m = (l + h) / 2; if (Vx(m) < want) l = m; else h = m; }
@@ -265,9 +298,13 @@ function solveTable(pts, slope) {
   }
   // A guard where the value runs out (a fit can ask for huge steps): each 10 points' step is at most 1.6
   // times the one before it, going out from 60.
+  // Next to 60, at most 3 steps per 10 points.
   const mid = rows.findIndex((r) => r[0] === 60);
+  rows[mid + 1][1] = Math.min(rows[mid + 1][1], 3);
+  rows[mid - 1][1] = Math.max(rows[mid - 1][1], -3);
   for (let i = mid + 2; i < rows.length; i++) rows[i][1] = Math.min(rows[i][1], rows[i - 1][1] + 1.6 * (rows[i - 1][1] - rows[i - 2][1]));
   for (let i = mid - 2; i >= 0; i--) rows[i][1] = Math.max(rows[i][1], rows[i + 1][1] - 1.6 * (rows[i + 2][1] - rows[i + 1][1]));
+  for (const r of rows) r[1] = Math.round(r[1] * 1000) / 1000;
   return { rows: rows, coef: [a, b, c], mono: mono, lo: lo, hi: hi };
 }
 
@@ -388,7 +425,8 @@ function main() {
       if (lineupValue === null && plan.defense.hit) lineupValue = plan.defense.hit.map((i) => diff(B, res[i]).v).reduce((a, b) => a + b, 0) / plan.defense.hit.length;
       const per = lineupValue / 9;
       out.push('Defense and running, one player at 70 (everyone else 60), runs per team-game. The value rule: at its key spot about a hitting');
-      out.push('rating\'s lineup value / 9 = ' + per.toFixed(3) + ' (+-20%: ' + (per * 0.8).toFixed(3) + '-' + (per * 1.2).toFixed(3) + '), less elsewhere.');
+      out.push('rating\'s lineup value / 9 = ' + per.toFixed(3) + ' (+-20%: ' + (per * 0.8).toFixed(3) + '-' + (per * 1.2).toFixed(3) + '), half that for Arm and Baserunning');
+      out.push('(owner\'s choice, Session 5), less elsewhere.');
       out.push('');
       for (const d of plan.defense) {
         let txt;
@@ -401,8 +439,9 @@ function main() {
           v = off.v - def.v;
           txt = 'total ' + v.toFixed(3) + ' (running ' + off.v.toFixed(3) + '±' + off.se.toFixed(3) + ', fielding ' + (-def.v).toFixed(3) + '±' + def.se.toFixed(3) + ')';
         }
-        const ok = d.key ? Math.abs(v - per) <= 0.2 * per : v < per * 1.2;
-        out.push('  ' + d.label.padEnd(26) + txt.padEnd(58) + (d.key ? 'key spot  ' : 'elsewhere ') + (ok ? 'ok' : 'MISS'));
+        const want = per * (d.key || 1);
+        const ok = d.key ? Math.abs(v - want) <= 0.2 * want : v < per * 1.2;
+        out.push('  ' + d.label.padEnd(26) + txt.padEnd(58) + (d.key ? 'key spot, ' + (d.key === 1 ? 'a point ' : 'half    ') : 'elsewhere       ') + (ok ? 'ok' : 'MISS'));
       }
       out.push('');
     }

@@ -88,7 +88,8 @@
     const L = T().PLATOON;
     const opp = w.bats !== w.throws ? 1 : -1;
     return {
-      rec: clamp(w.b.bat.recognition - w.p.pit.deception + L.recognition * opp, 0, 0.98),
+      // Deception multiplies the share he doesn't read (step 1.4: the mirror of Recognition, which shrinks it).
+      rec: clamp(1 - (1 - w.b.bat.recognition) * w.p.pit.deception + L.recognition * opp, 0, 0.98),
       contactSd: w.b.bat.contactSd * (1 - L.contactSd * opp)
     };
   }
@@ -104,7 +105,8 @@
     const type = B3.data.PITCH[pitch.type], ff = B3.data.PITCH.FF;
     const expected = read.rec * type.vz + (1 - read.rec) * ff.vz;
     const surprise = expected - type.vz; // above 0: the ball ends lower than he thought, so the bat is over it
-    const mean = kind.surprise * surprise;
+    // A below-average grade fools him less (step 1.4: a flat slider hangs).
+    const mean = kind.surprise * surprise * Math.min(1, pitch.grade);
     // Spread: Contact, the type's bite (grade makes it bigger), and distance from the middle of the zone.
     const edge = B3.data.zoneEdge(pitch.x, pitch.z);
     const loc = S.edgeSd * Math.max(0, edge + 0.4) + S.chaseSd * Math.max(0, edge);
@@ -184,8 +186,9 @@
     const mirror = pitch.throws === 'L' ? -1 : 1;
     const hx = mirror * (rec * type.hx + (1 - rec) * ff.hx), vz = rec * type.vz + (1 - rec) * ff.vz;
     // Only movement beyond the type's average fools him (step 1.4): a below-average pitch looks like what it is.
-    const gm = Math.max(1, pitch.grade || 1);
-    const x = pitch.x + C.lookShare * (hx - mirror * type.hx * gm) / 12, z = pitch.z + C.lookShare * (vz - type.vz * gm) / 12;
+    // A below-average one fools him less (the error shrinks with the grade).
+    const g1 = pitch.grade || 1, gm = Math.max(1, g1), k = C.lookShare * Math.min(1, g1) / 12;
+    const x = pitch.x + k * (hx - mirror * type.hx * gm), z = pitch.z + k * (vz - type.vz * gm);
     return { x: x, z: z, edge: B3.data.zoneEdge(x, z) - w.b.bat.judgeLean + g.rng.normal(0, w.b.bat.judgeSd) };
   }
 

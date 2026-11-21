@@ -130,7 +130,7 @@ module.exports = function (t) {
   t.test('Recognition and Deception mirror each other; reading pitches means fewer whiffs on breaking balls', () => {
     const CU = { type: 'CU', x: 0, z: 2.4 };
     const e = (o) => { const env = setup(o); return env.B3.pitch.expect(env.g, env.B3.pitch.throw(env.g, CU)); };
-    near(e({ bat: { recognition: 0.8 }, pit: { deception: 0.3 } }).mean, e({ bat: { recognition: 0.5 } }).mean, 1e-9, 'deception takes off recognition');
+    near(e({ bat: { recognition: 0.8 }, pit: { deception: 2.5 } }).mean, e({ bat: { recognition: 0.5 } }).mean, 1e-9, 'deception multiplies what he doesn\'t read');
     assert.ok(e({ bat: { recognition: 0.5 } }).mean > e({ bat: { recognition: 0.95 } }).mean + 0.5, 'an unread curve leaves the bat over the ball');
     const whiff = (rec) => rate(trial(setup({ bat: { recognition: rec } }), CU, 'cpu'), (x) => x.r.r === 'S');
     assert.ok(whiff(0.4) > whiff(0.95) + 0.05, 'whiffs on curves fall with Recognition');
