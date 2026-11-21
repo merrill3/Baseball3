@@ -1,4 +1,4 @@
-**Docs version: 31** (2026-11-21): Session 9: step 1.5 task 3 (batted balls) done with misses reported; a Raw Power decision waits for the owner (`state.md` section 12); DESIGN.md section 10 lists the provisional physics; ARCHITECTURE.md and README.md add `tools/batted.js`.
+**Docs version: 32** (2026-11-21): Session 10: the owner's Raw Power choice (a faster bat costs accuracy) built and measured; DESIGN.md section 10 lists it.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
