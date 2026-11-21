@@ -1,6 +1,6 @@
-# State (Nov 21, 2026): Session 10 ended; read sections 13–14 first
+# State (Nov 21, 2026): Session 11 under way; read section 15 first
 
-Sections 1–5 are Session 6's hand-off (history). Session 7's answers are in section 6, its base-running work in section 7, its hand-off in section 8. Session 8's interview, data and tools are in section 9, its hand-off in section 10. Session 9's batted-ball work is in section 11, its hand-off in section 12. Session 10's decisions and work are in section 13, and the next steps in section 14.
+Sections 1–5 are Session 6's hand-off (history). Session 7's answers are in section 6, its base-running work in section 7, its hand-off in section 8. Session 8's interview, data and tools are in section 9, its hand-off in section 10. Session 9's batted-ball work is in section 11, its hand-off in section 12. Session 10's decisions and work are in section 13, and the next steps in section 14. Session 11 (merge or split, then task 4) is in section 15.
 
 # Session 6 state: stopped mid-session at the owner's request
 
@@ -246,3 +246,13 @@ Branch `ccr-08aef3dd-o7z9fx` (from `ccr-c6a00ca8-poeorz`); everything is committ
 Run `node tools/ratingstats.js --part=pop` (about 30 s) for the population alone; `--only=contact --part=sweep` (about 10 s) for one rating; the full page with `node tools/calibrate.js --part=value --json=value.json` then `node tools/ratingstats.js --html=page.html --value=value.json` (about 7 minutes).
 
 **Prompt for the next session:** "Start Session 11 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from the branch `ccr-08aef3dd-o7z9fx` (not main: Sessions 6–10 are not merged). Read CLAUDE.md, then `state.md` (sections 13–14 first) and the "Stopped at:" line in docs/plan.md. Continue step 1.5 task 4 (Recognition next). Baseball1 is reference only; never change it."
+
+## 15. Session 11 (Nov 21, 2026; branch `ccr-050ac00d-3jd0c3`, started from `ccr-08aef3dd-o7z9fx`)
+**The owner asked whether to merge or split ratings.** Claude tested each rating's own stat on real data (Savant 2024 and 2025, `tools/realskills.js`): the part the other own stats don't explain, and whether it repeats in the same players a year later (near 0 = noise, not a skill). Hitters (225): zone contact 0.71, off-speed whiff 0.65, off-speed chase minus fastball chase 0.64 (unrelated to chase), chase 0.84, bat speed 0.80, squared-up per contact 0.55 (no owner), average launch angle 0.78 and pull % 0.53 (no owner; engine spreads 0.47× and 0.60× MLB's), sweet-spot % 0.40 (itself 0.42), **whiff against 95+ mph 0.07** beyond fastball whiff (which explains 85% of it). Pitchers (144): fastball speed 0.88, off-speed whiff 0.54, chase against 0.50, walk % 0.50, zone % 0.72, meatball % 0.29 (mostly zone %), exit speed against 0.51 (sd 1.4 mph; per sd about as much xwOBA as walks; the engine's spread is 0.83× MLB's).
+
+**Owner's choices (interview, Session 11; recorded in DESIGN.md section 10):**
+1. Timing's job becomes **squaring up**: the *when* error sets where on the barrel he meets the ball, so squared-up % per contact (its own stat), exit speed for his bat speed, and where a squared-up ball goes. Handling velocity is Contact's (real data: whiff against 95+ is fastball whiff).
+2. Hitters get a **Swing path** tendency (Ground-ball / Level / Lift): his average launch angle and pull together; about value-neutral alone; **Lift pays off with Raw Power, Ground-ball with Speed**, Level the safe middle. It is the third tendency (Session 3 had said Aggressiveness and Aim stay the only ones).
+3. Everything else stays, including the Recognition / Discipline split.
+
+**Claude's defaults (confirmed in the summary):** Velocity's lateness plays against Contact, not Timing, and Timing's part in whiffs shrinks; no new pitcher rating for exit speed against; defense and running not tested; Swing path mix 1 : 2 : 1, with Ground-ball and Lift near the bottom and top 15% of real average launch angle; order: Timing, then Swing path, then Recognition.
