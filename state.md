@@ -204,3 +204,6 @@ Branch `ccr-c6a00ca8-poeorz` (from `ccr-856b53aa-oc98im`); everything is committ
 4. Tasks 6–7 as planned.
 
 **Prompt for the next session:** "Start Session 10 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from the branch `ccr-c6a00ca8-poeorz` (not main: Sessions 6–9 are not merged). Read CLAUDE.md, then `state.md` (sections 11–12 first) and the "Stopped at:" line in docs/plan.md. First ask me the Raw Power decision in state.md section 12, then continue step 1.5. Baseball1 is reference only; never change it."
+
+## 13. Session 10 (Nov 21, 2026; branch `ccr-08aef3dd-o7z9fx`, started from `ccr-c6a00ca8-poeorz`)
+**Raw Power decision (owner's choice, Session 10, Nov 21, 2026): option 1, a faster bat costs accuracy.** Every hitter's *where* spread grows with his average bat speed, tuned so each mph moves whiff %, squared-up % and average exit speed as it does across real hitters (Savant 2024–2026, per mph of average bat speed: whiff +1.38 points, squared-up per contact −0.81, average exit speed +0.57 mph; also K% +1.16, in-zone contact −0.98, hard-hit +2.19, barrels +1.08, ISO +.011). Raw Power then means "more power, more swing and miss"; its own stats (bat speed, max exit speed) stay on the ladder; Contact still sets whiffs on its own.
