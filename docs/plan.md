@@ -1,9 +1,9 @@
-**Docs version: 25** (2026-11-21): Session 7 ended: hand-off in `state.md` section 8; Stopped at updated.
+**Docs version: 26** (2026-11-21): Session 8: owner's choice on the runners' margin (base and outs rule) in DESIGN.md section 10; Stopped at updated.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 7 ended at the owner's request, on branch `ccr-85acc383-8ehj83` (not merged; `main` is at Session 5's end). **Read `state.md` sections 6–8 first.** Step 1.5 is under way: base running checked against real 2024 rates; first to third is still about 10 points low and runs are 4.87 (band 4.3–4.6); nothing is calibrated. Next: one open decision (`state.md` section 8), then the ratings-to-stats interview and work, then re-check running, then one calibration, then step 2.1. Start Session 8 with: "Start Session 8 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from the branch `ccr-85acc383-8ehj83` (not main: Sessions 6 and 7 are not merged). Read CLAUDE.md, then `state.md` (sections 6–8 first) and the "Stopped at:" line in docs/plan.md. First ask me the open decision in state.md section 8, then interview me on the ratings-to-stats work (one question at a time). Baseball1 is reference only; never change it."
+**Stopped at:** Session 8 under way on branch `ccr-856b53aa-oc98im` (from `ccr-85acc383-8ehj83`; not merged; `main` is at Session 5's end). **Read `state.md` sections 6–9 first.** The open decision is answered (keep the base/outs rule). Now: the ratings-to-stats interview (answers in `state.md` section 9), then the tool and tuning, then re-check running, then one calibration, then step 2.1.
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 

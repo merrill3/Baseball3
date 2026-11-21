@@ -115,3 +115,7 @@ Branch `ccr-85acc383-8ehj83` (from `ccr-5b4b0818-qu6w9c`); everything is committ
 **Tests now:** 78 pass; `gametest.js 1000 7` passes (checksum `b25ea22e`); boot check passes. Runs 4.87 per team-game (above the band; not calibrated).
 
 **Prompt for the next session:** "Start Session 8 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from the branch `ccr-85acc383-8ehj83` (not main: Sessions 6 and 7 are not merged). Read CLAUDE.md, then `state.md` (sections 6–8 first) and the "Stopped at:" line in docs/plan.md. First ask me the open decision in state.md section 8, then interview me on the ratings-to-stats work (one question at a time). Baseball1 is reference only; never change it."
+
+## 9. Session 8 (Nov 21, 2026; branch `ccr-856b53aa-oc98im`, started from `ccr-85acc383-8ehj83`)
+- Open decision, the runners' margin: **keep the rule by base and outs** (`BALL.breakEven`), not one number (owner's choice, Session 8). Recorded in DESIGN.md section 10.
+- Ratings-to-stats interview: under way (answers below as they come).

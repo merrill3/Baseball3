@@ -282,7 +282,8 @@
                        // runner, not a player trait (owner's choice, Session 3)
     // Break-even chance of being safe for taking third (3) or home (4) on a hit, by outs (0, 1, 2), from a
     // run-expectancy table: an out at third or home costs a lot with nobody out, little with two out
-    // (Session 7, Claude's default). Still one rule for every runner, not a player trait.
+    // (Session 7; the rule by base and outs is the owner's choice, Session 8; the rates are Claude's default).
+    // Still one rule for every runner, not a player trait.
     breakEven: { 3: [0.73, 0.73, 0.9], 4: [0.93, 0.75, 0.42] },
     dareShift: 0,      // seconds added to every break-even margin (a calibration knob)
     ofIn: 12,          // feet outfielders play in with a runner on second (Session 7, provisional)
