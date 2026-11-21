@@ -1,4 +1,8 @@
-# Session 6 state (Nov 21, 2026): stopped mid-session at the owner's request
+# State (Nov 21, 2026): Session 7 ended at the owner's request; read sections 6–8 first
+
+Sections 1–5 are Session 6's hand-off (history). Session 7's answers are in section 6, its base-running work in section 7, and the next steps in section 8.
+
+# Session 6 state: stopped mid-session at the owner's request
 
 Branch: `ccr-5b4b0818-qu6w9c`. Everything below is committed and pushed there. `main` is at Session 5's end (`1feb3da`); this branch's work is **not** merged into `main`.
 
@@ -96,3 +100,18 @@ With the work-in-progress physics:
 - **Still open:** first to third about 10 points low. The rest likely sits in where hits land (the engine has the fewest outfield singles to right) and how fast ground balls reach the outfield; the rating-to-stats work checks batted balls (spray, launch angle, exit speed) against Statcast first, then running is re-checked. Runs come back into the band through that work (hitting rates matched to real ones), then one calibration. Also to fix then: home to first 0.13 s fast; Speed's realistic range from Savant (about 24.5 at 20, 27.2 at 60, 30.5 at 99; owner's choice: realistic, toned down).
 - `manager.test.js` tag-up test now compares 20-ft bins (the old 230–290 ft group held about 20 catches and mixed distances). 78 tests pass; `gametest.js 1000 7` passes (checksum `b25ea22e`); boot check passes.
 - `running.js` prints Baseball-Reference-style rates; `running-sweep.js` too (BR columns).
+
+## 8. Hand-off for Session 8
+Branch `ccr-85acc383-8ehj83` (from `ccr-5b4b0818-qu6w9c`); everything is committed and pushed. `main` is still at Session 5's end (`1feb3da`); Sessions 6 and 7 are not merged. The session runs on the personal environment "Diamond Dash" (Baseball-Reference, FanGraphs and Baseball Savant reachable).
+
+**Open decision for the owner (ask first):** the owner's Session 3 choice says a runner's safety margin is "one engine number for every runner" (`BALL.dare`). Session 7 made it one rule by base and outs, from run-expectancy break-even rates (`BALL.breakEven`). It is still not a player trait, and it barely changes results. Keep it (Claude's suggestion), or go back to one number?
+
+**Next, in order (owner's choice, Session 7):**
+1. Ratings-to-stats work: interview the owner (one multiple-choice question at a time, then a summary), starting with the stat list and real 2024 target ranges Claude proposes from Statcast and Baseball-Reference (standard: K%, BB%, AVG, OBP, SLG, ISO, BABIP, HR/FB; Statcast-style: exit speed, hard-hit %, barrel %, sweet-spot %, squared-up %, launch-angle spread, chase %, zone contact %, whiff %; pitchers' mirrors). Then build the tool (each rating from 20 to 99 against its stats) and tune. Batted balls (spray, launch angle, exit speed, ground-ball speed to the outfield) first: they likely hold the rest of the first-to-third gap.
+2. Re-check base running against the real 2024 rates (section 7); finish first to third; fix home to first (0.13 s fast); Speed's realistic range from Savant (about 24.5 / 27.2 / 30.5 ft/s at 20 / 60 / 99), toned down per ft/s.
+3. Bring runs into 4.3–4.6, re-fit the step tables (`node tools/calibrate.js --part=fit`, about 10 minutes), run the full `node tools/calibrate.js` (about 10 minutes), update tests and DESIGN.md sections 7 and 10.
+4. Then step 2.1, starting with the summary of Claude's defaults (section 6).
+
+**Tests now:** 78 pass; `gametest.js 1000 7` passes (checksum `b25ea22e`); boot check passes. Runs 4.87 per team-game (above the band; not calibrated).
+
+**Prompt for the next session:** "Start Session 8 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from the branch `ccr-85acc383-8ehj83` (not main: Sessions 6 and 7 are not merged). Read CLAUDE.md, then `state.md` (sections 6–8 first) and the "Stopped at:" line in docs/plan.md. First ask me the open decision in state.md section 8, then interview me on the ratings-to-stats work (one question at a time). Baseball1 is reference only; never change it."
