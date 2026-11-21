@@ -30,7 +30,7 @@ const RATINGS = {
   contact: { kind: 'hitter', own: [['zContact', 'bat.iz_contact_percent', 1], ['whiff', 'bat.whiff_percent', -1]] },
   timing: { kind: 'hitter', own: [['whiff95', 'vs95.whiff_per_swing', -1]] },
   launch: { kind: 'hitter', own: [['sweet', 'bat.sweet_spot_percent', 1], ['pu', 'bat.popups_percent', -1]] },
-  rawPower: { kind: 'hitter', own: [['batSpeed', 'track.avg_bat_speed', 1], ['maxEV', 'evbat.max_hit_speed', 1], ['ev50', 'evbat.ev50', 1]],
+  rawPower: { kind: 'hitter', own: [['batSpeed', 'track.avg_bat_speed', 1], ['maxEV', 'evbat.max_hit_speed', 1], ['ev50', 'evbat.ev50', 1], ['fast', 'track.hard_swing_rate', 1]],
     unit: ['batSpeed', 'maxEV', 'batspeed.max_hit_speed'] },
   recognition: { kind: 'hitter', own: [['offWhiff', 'off.whiff_per_swing', -1], ['offChaseMinusFb', 'off.chase_minus_fb', -1]] },
   discipline: { kind: 'hitter', own: [['zMinusO', 'bat.zswing_minus_chase', 1], ['chase', 'bat.oz_swing_percent', -1]] },
@@ -69,7 +69,7 @@ function newAcc() {
     fbN: 0, fbV: 0, offSw: 0, offWhiff: 0, offOut: 0, offOutSw: 0, fbOut: 0, fbOutSw: 0, sw95: 0, whiff95: 0,
     bySw: {}, byWhiff: {},
     bip: 0, evSum: 0, evs: [], laSum: 0, laSq: 0, hard: 0, barrel: 0, sweet: 0, gb: 0, ld: 0, fb: 0, pu: 0,
-    pull: 0, straight: 0, oppo: 0, squared: 0, batSpeedSum: 0, swings: 0 };
+    pull: 0, straight: 0, oppo: 0, squared: 0, blast: 0, fast: 0, batSpeedSum: 0, swings: 0 };
 }
 
 function barrel(ev, la) {
@@ -121,7 +121,16 @@ function addGame(B3, g, side, accFor) {
     a.bySw[e.t] = (a.bySw[e.t] || 0) + 1;
     const bi = bt.inp[e.b];
     a.swings++;
-    a.batSpeedSum += bi.bat.batSpeed;
+    const bat = e.bat !== undefined ? e.bat : bi.bat.batSpeed; // this swing's bat speed (logged from step 1.5)
+    a.batSpeedSum += bat;
+    if (bat >= 75) a.fast++; // Savant's fast swing
+    // Squared-up and blasts (Savant): exit speed against the most this swing could give (1.23 x bat speed +
+    // 0.23 x pitch speed at the plate), on every contact with a measured exit speed (fouls too).
+    if (e.ev !== undefined) {
+      const sq = e.ev / (S.collision * e.v * S.plateShare + (1 + S.collision) * bat);
+      if (sq >= 0.8) a.squared++;
+      if (100 * sq + bat >= 164) a.blast++;
+    }
     if (e.r === 'S') { a.whiff++; a.byWhiff[e.t] = (a.byWhiff[e.t] || 0) + 1; } else { a.contact++; if (inZ) a.zcontact++; }
     if (e.r === 'F') a.foul++;
     if (OFF[e.t]) { a.offSw++; if (e.r === 'S') a.offWhiff++; }
@@ -140,8 +149,6 @@ function addGame(B3, g, side, accFor) {
       const bats = bi.bats === 'S' ? (pi.throws === 'L' ? 'R' : 'L') : bi.bats;
       const toward = bats === 'R' ? -e.sp : e.sp; // plus is the pull side
       if (toward > 15) a.pull++; else if (toward < -15) a.oppo++; else a.straight++;
-      const top = S.collision * e.v * S.plateShare + (1 + S.collision) * bi.bat.batSpeed;
-      if (e.ev >= 0.8 * top) a.squared++;
     }
   }
 }
@@ -227,6 +234,7 @@ function stats(a) {
   // Max exit speed per 400 batted balls (a regular's season), averaged over chunks.
   let maxSum = 0, chunks = 0;
   for (let i = 0; i + 400 <= a.evs.length; i += 400) { maxSum += Math.max.apply(null, a.evs.slice(i, i + 400)); chunks++; }
+  if (!chunks && a.evs.length >= 100) { maxSum = Math.max.apply(null, a.evs); chunks = 1; } // a shorter season: its own max
   const h = a.h1 + a.h2 + a.h3 + a.hr;
   const laMean = a.laSum / a.bip;
   const out = {
@@ -246,7 +254,7 @@ function stats(a) {
     laSd: Math.sqrt(a.laSq / a.bip - laMean * laMean),
     gb: pc(a.gb, a.bip), ld: pc(a.ld, a.bip), fb: pc(a.fb, a.bip), pu: pc(a.pu, a.bip),
     pull: pc(a.pull, a.bip), straight: pc(a.straight, a.bip), oppo: pc(a.oppo, a.bip),
-    squared: pc(a.squared, a.contact), batSpeed: a.batSpeedSum / a.swings
+    squared: pc(a.squared, a.contact), blast: pc(a.blast, a.contact), fast: pc(a.fast, a.swings), batSpeed: a.batSpeedSum / a.swings
   };
   for (const t of ['FF', 'SI', 'FC', 'SL', 'CU', 'CH', 'FS']) out['whiff' + t] = pc(a.byWhiff[t] || 0, a.bySw[t] || 0);
   return out;
@@ -323,7 +331,9 @@ const POP_STATS = {
     ['SLG', 'slg', 'bat.slg_percent', 3], ['ISO', 'iso', 'bat.isolated_power', 3], ['BABIP', 'babip', 'bat.babip', 3], ['exit speed', 'ev', 'bat.exit_velocity_avg', 1],
     ['hard-hit %', 'hard', 'bat.hard_hit_percent', 1], ['barrel %', 'barrel', 'bat.barrel_batted_rate', 1], ['whiff %', 'whiff', 'bat.whiff_percent', 1],
     ['chase %', 'chase', 'bat.oz_swing_percent', 1], ['zone contact %', 'zContact', 'bat.iz_contact_percent', 1], ['sweet-spot %', 'sweet', 'bat.sweet_spot_percent', 1],
-    ['pull %', 'pull', 'bat.pull_percent', 1], ['oppo %', 'oppo', 'bat.opposite_percent', 1], ['ground-ball %', 'gb', 'bat.groundballs_percent', 1]],
+    ['pull %', 'pull', 'bat.pull_percent', 1], ['oppo %', 'oppo', 'bat.opposite_percent', 1], ['ground-ball %', 'gb', 'bat.groundballs_percent', 1],
+    ['max exit speed', 'maxEV', 'evbat.max_hit_speed', 1], ['bat speed', 'batSpeed', 'track.avg_bat_speed', 1], ['fast-swing %', 'fast', 'track.hard_swing_rate', 1],
+    ['squared-up %', 'squared', 'track.squared_up_per_bat_contact', 1], ['blasts %', 'blast', 'track.blast_per_bat_contact', 1]],
   pitcher: [['K%', 'k', 'pit.k_percent', 1], ['BB%', 'bb', 'pit.bb_percent', 1], ['ERA', 'era', 'pit.p_era', 2], ['AVG against', 'avg', 'pit.batting_avg', 3],
     ['SLG against', 'slg', 'pit.slg_percent', 3], ['exit speed against', 'ev', 'pit.exit_velocity_avg', 1], ['hard-hit % against', 'hard', 'pit.hard_hit_percent', 1],
     ['ground-ball %', 'gb', 'pit.groundballs_percent', 1], ['whiff %', 'whiff', 'pit.whiff_percent', 1], ['chase % against', 'chase', 'pit.oz_swing_percent', 1],

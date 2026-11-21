@@ -312,6 +312,7 @@ module.exports = function build(dir, sources) {
     }
   }
 
+  const { BB_TYPES, EV_BANDS, SPRAY } = require('../realdata');
   const out = {
     built: new Date().toISOString().slice(0, 10),
     seasons: YEARS,
@@ -322,11 +323,74 @@ module.exports = function build(dir, sources) {
     league: league,
     pct: pct,
     slope: slope,
-    notes: notes
+    notes: notes,
+    batted: batted(dir, BB_TYPES, EV_BANDS, SPRAY, missing)
   };
-  const file = path.join(__dirname, 'real.js');
-  fs.writeFileSync(file, '// Real MLB targets for step 1.5, built by `node tools/realdata.js --build DIR` (tools/lib/realbuild.js).\n' +
-    '// Generated: do not edit by hand. No player names.\n\'use strict\';\nmodule.exports = ' + JSON.stringify(out, null, 1) + ';\n');
-  console.log('wrote ' + path.relative(process.cwd(), file) + ': ' + Object.keys(pct).length + ' spreads, ' + Object.keys(slope).length + ' slopes; missing: ' + (missing.join(', ') || 'none'));
+  write(out);
+  console.log('wrote tools/lib/real.js: ' + Object.keys(pct).length + ' spreads, ' + Object.keys(slope).length + ' slopes; missing: ' + (missing.join(', ') || 'none'));
 };
+
+function write(out) {
+  fs.writeFileSync(path.join(__dirname, 'real.js'), '// Real MLB targets for step 1.5, built by `node tools/realdata.js --build DIR` (tools/lib/realbuild.js).\n' +
+    '// Generated: do not edit by hand. No player names.\n\'use strict\';\nmodule.exports = ' + JSON.stringify(out, null, 1) + ';\n');
+}
+
+// League batted balls (step 1.5 task 3): the grouped searches by batting team summed into league rows.
+//   types[year][type] = { n, share, avg, slg, hr (home runs per batted ball), ev, la }
+//   grid[type][band]  = { n, share (of all 2024 batted balls), avg, slg, hr }, bands like '95-100' (mph)
+function batted(dir, types, bands, spray, missing) {
+  const sum = (f) => {
+    const p = path.join(dir, f);
+    if (!fs.existsSync(p) || fs.statSync(p).size < 100) { if (missing) missing.push(f); return null; }
+    const s = { n: 0, ab: 0, h: 0, tb: 0, hr: 0, ev: 0, la: 0 };
+    for (const r of parseCSV(fs.readFileSync(p, 'utf8'))) {
+      const n = num(r.bip) || num(r.pitches) || 0;
+      s.n += n; s.ab += num(r.abs) || 0; s.h += num(r.hits) || 0; s.hr += num(r.hrs) || 0;
+      s.tb += (num(r.singles) || 0) + 2 * (num(r.doubles) || 0) + 3 * (num(r.triples) || 0) + 4 * (num(r.hrs) || 0);
+      if (Number.isFinite(num(r.launch_speed))) s.ev += n * num(r.launch_speed);
+      if (Number.isFinite(num(r.launch_angle))) s.la += n * num(r.launch_angle);
+    }
+    return s;
+  };
+  const row = (s, total) => ({ n: s.n, share: r3(s.n / total), avg: r3(s.h / s.ab), slg: r3(s.tb / s.ab), hr: r3(s.hr / s.n), ev: r3(s.ev / s.n), la: r3(s.la / s.n) });
+  const out = { types: {}, grid: {}, note: 'Statcast regular season, batted balls by Savant type (ground ball under 10 degrees, line drive 10-25, fly ball 25-50, pop-up over 50); hr is home runs per batted ball; grid shares are of all 2024 batted balls (bands overlap at their edges by a few balls).' };
+  for (const y of [2024, 2025, 2026]) {
+    const s = {};
+    for (const t of types) s[t] = sum(`bbt_${t}_${y}.csv`);
+    if (types.some((t) => !s[t])) continue;
+    const total = types.reduce((a, t) => a + s[t].n, 0);
+    out.types[y] = {};
+    for (const t of types) out.types[y][t] = row(s[t], total);
+  }
+  const cells = {};
+  let total = 0;
+  for (const t of types) for (const [lo, hi] of bands) { const c = sum(`grid_${t}_${lo}_${hi}.csv`); if (c) { cells[t + ':' + lo + '-' + hi] = c; total += c.n; } }
+  for (const t of types) {
+    out.grid[t] = {};
+    for (const [lo, hi] of bands) { const c = cells[t + ':' + lo + '-' + hi]; if (c) { const r = row(c, total); delete r.ev; delete r.la; out.grid[t][lo + '-' + hi] = r; } }
+  }
+  // spray[type][direction] = { n, share (of that type's 2024 batted balls), avg, slg, hr, ev, la }
+  out.spray = {};
+  for (const t of types) {
+    const c = {};
+    for (const d of spray || []) c[d] = sum(`spray_${t}_${d}.csv`);
+    if ((spray || []).some((d) => !c[d])) continue;
+    const n = spray.reduce((a, d) => a + c[d].n, 0);
+    out.spray[t] = {};
+    for (const d of spray) out.spray[t][d.toLowerCase()] = row(c[d], n);
+  }
+  return out;
+}
+
+// Only the batted-ball tables, kept with the rest of the current real.js (node tools/realdata.js --batted DIR).
+function battedOnly(dir, types, bands, spray) {
+  const file = path.join(__dirname, 'real.js');
+  delete require.cache[require.resolve(file)];
+  const out = Object.assign({}, require(file));
+  out.batted = batted(dir, types, bands, spray, null);
+  write(out);
+  console.log('wrote tools/lib/real.js: batted-ball tables for ' + Object.keys(out.batted.types).join(', ') + ' and the 2024 grid');
+}
+
 module.exports.parseCSV = parseCSV;
+module.exports.battedOnly = battedOnly;

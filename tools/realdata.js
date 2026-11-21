@@ -4,6 +4,8 @@
 //       node tools/realdata.js --urls DIR | while IFS=$'\t' read f u; do
 //         [ -s "$f" ] || { curl -s -A Mozilla/5.0 -o "$f" "$u"; sleep 3; }; done
 //   node tools/realdata.js --build DIR       reads the downloads in DIR and writes tools/lib/real.js
+//   node tools/realdata.js --batted DIR      only the league batted-ball tables (real.js's `batted`), from
+//                                            the bbt_* and grid_* downloads; the rest of real.js is kept
 // Sources: Baseball Savant (Statcast leaderboards and grouped searches) and Baseball-Reference, seasons
 // 2024-2026 (Claude's default, confirmed by the owner in Session 8). The downloads are third-party data:
 // they stay outside the repo (keep DIR in a scratch folder); only the summary in tools/lib/real.js is kept.
@@ -76,6 +78,25 @@ function sources(dir) {
   }
   add('bref_bat.html', `${BREF}/leagues/majors/bat.shtml`);
   add('bref_field.html', `${BREF}/leagues/majors/field.shtml`);
+  for (const [file, url] of battedSources()) add(file, url);
+  return out;
+}
+
+// League batted balls (step 1.5 task 3, Session 9): grouped searches by batting team (30 rows, summed), for each
+// batted-ball type every season, and for 2024 each type by exit-speed band.
+const BB_TYPES = ['ground_ball', 'line_drive', 'fly_ball', 'popup'];
+const EV_BANDS = [[0, 80], [80, 90], [90, 95], [95, 100], [100, 105], [105, 130]];
+const SPRAY = ['Pull', 'Straightaway', 'Opposite'];
+function battedSources() {
+  const base = `${SAV}/statcast_search/csv?all=true&hfGT=R%7C&player_type=batter&group_by=team&min_pitches=0&min_results=0&min_pas=0` +
+    '&sort_col=pitches&player_event_sort=api_p_release_speed&sort_order=desc';
+  const out = [];
+  for (const y of YEARS) for (const t of BB_TYPES) out.push([`bbt_${t}_${y}.csv`, `${base}&hfSea=${y}%7C&hfBBT=${t}%7C`]);
+  for (const t of BB_TYPES) for (const [lo, hi] of EV_BANDS) {
+    out.push([`grid_${t}_${lo}_${hi}.csv`, `${base}&hfSea=2024%7C&hfBBT=${t}%7C&metric_1=api_h_launch_speed&metric_1_gt=${lo}&metric_1_lt=${hi}`]);
+  }
+  // 2024 spray by type (Savant's direction: pull, straightaway, opposite field).
+  for (const t of BB_TYPES) for (const d of SPRAY) out.push([`spray_${t}_${d}.csv`, `${base}&hfSea=2024%7C&hfBBT=${t}%7C&hfPull=${d}%7C`]);
   return out;
 }
 
@@ -86,9 +107,10 @@ function main() {
     return;
   }
   if (mode === '--build' && dir) return require('./lib/realbuild')(dir, sources(dir));
-  process.stderr.write('usage: node tools/realdata.js --urls DIR | --build DIR\n');
+  if (mode === '--batted' && dir) return require('./lib/realbuild').battedOnly(dir, BB_TYPES, EV_BANDS, SPRAY);
+  process.stderr.write('usage: node tools/realdata.js --urls DIR | --build DIR | --batted DIR\n');
   process.exit(1);
 }
 
 if (require.main === module) main();
-module.exports = { sources, YEARS };
+module.exports = { sources, YEARS, BB_TYPES, EV_BANDS, SPRAY };

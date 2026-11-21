@@ -68,9 +68,9 @@ const isHit = (x) => HITS.indexOf(x.p.code) >= 0;
 const atPos = (POS, k) => { const o = {}; for (const pos in POS) o[pos] = { [k]: POS[pos] }; return o; };
 
 module.exports = function (t) {
-  t.test('flight: 100 mph at 28 degrees carries about 390 ft; carry grows with exit speed', () => {
+  t.test('flight: 100 mph at 28 degrees carries about 375 ft (step 1.5: fit to Statcast fly-ball distances and home runs); carry grows with exit speed', () => {
     const B3 = loadCore();
-    near(B3.ball.flight({ ev: 100, la: 28, sp: 0 }).land.r, 390, 8, '100 mph at 28 degrees');
+    near(B3.ball.flight({ ev: 100, la: 28, sp: 0 }).land.r, 375, 8, '100 mph at 28 degrees');
     let last = 0;
     for (let ev = 70; ev <= 110; ev += 5) {
       const r = B3.ball.flight({ ev: ev, la: 28, sp: 20 }).land.r;

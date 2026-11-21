@@ -4,7 +4,7 @@
 //                                      (Command's scatter around the target, worse when tired)
 //   B3.pitch.call(g, pitch)            a taken pitch: 'C' called strike or 'B' ball (Framing at the edges)
 //   B3.pitch.resolve(g, pitch, swing)  { r, ... }: B or C on a take; on a swing S (whiff), F (foul) or
-//                                      X (in play, with contact { ev, la, sp })
+//                                      X (in play, with contact { ev, la, sp, slice }), and the swing's bat speed (bat)
 //   B3.pitch.cpuTiming(g, pitch)       a CPU hitter's *when* error in ms (Timing, Velocity, Recognition)
 //   B3.pitch.expect(g, pitch)          the *where* error's mean and spread, in inches (for tests and tools)
 //   B3.pitch.look(g, pitch)            where a CPU hitter thinks it will cross, for swing or take
@@ -127,27 +127,38 @@
     // With two strikes he shortens up (step 1.4): a smaller *where* error, less exit speed.
     const two = g.strikes >= 2;
     const off = r.normal(e.mean, e.sd * (two ? S.twoStrike[0] : 1));
-    const out = { r: 'S', off: Math.round(off * 100) / 100 };
+    // This swing's bat speed (step 1.5, Savant's units): his average, varying swing to swing, slower with two strikes.
+    const bat = w.b.bat.batSpeed + r.normal(0, S.batSd) - (two ? S.twoStrike[1] : 0);
+    const out = { r: 'S', off: Math.round(off * 100) / 100, bat: Math.round(bat * 10) / 10 };
     // A mistimed swing meets the ball with less of the bat in its path (the arc is off), so it misses more.
     const v = tm / S.missMs;
     const radius = S.radius * Math.max(0, 1 - S.timeRadius * v * v);
     if (Math.abs(tm) > S.missMs || Math.abs(off) > radius) return out; // whiff
     if (Math.abs(off) > radius * S.foulBack) { out.r = 'F'; return out; } // glancing: fouled back
-    // Exit speed: bat speed and pitch speed, less for an off-center hit and for bad timing.
+    // Exit speed: bat speed and pitch speed (Savant's most a swing can give), less for an off-center hit and for bad timing.
     const u = off / (radius * S.foulBack);
-    const top = S.collision * pitch.speed * S.plateShare + (1 + S.collision) * w.b.bat.batSpeed;
+    const top = S.collision * pitch.speed * S.plateShare + (1 + S.collision) * bat;
     // A pitch away from the middle is hit off the end of the bat or jammed: less exit speed (step 1.3).
     const away = Math.max(0, B3.data.zoneEdge(pitch.x, pitch.z) + S.edgeFrom);
-    const ev = top * (1 - S.offLoss * u * u) * (1 - S.timeLoss * v * v) * (1 - S.locLoss * away) * (two ? S.twoStrike[1] : 1) + r.normal(0, S.evSd);
+    // Off center (step 1.5): the loss grows with the *where* error to offPow, a little less under the ball than over it.
+    const lossOff = S.offLoss * Math.pow(Math.abs(u), S.offPow) * (u < 0 ? S.offUnder : 1);
+    const ev = top * (1 - lossOff) * (1 - S.timeLoss * v * v * (v > 0 ? 1 + S.lateLoss : 1)) * (1 - S.locLoss * away) + r.normal(0, S.evSd);
     // Launch angle: over the ball drives it down; high pitches go up. Launch sets the band.
     // The pitch's shape tilts it: a ground-ball shape (above 0) lowers the launch angle (step 1.3: a tilt,
     // not a quality, so it adds no movement for the hitter to misread).
-    const la = S.attack + T().TYPE[pitch.type].lift - (pitch.shape || 0) - w.b.bat.launchK * off + S.heightLA * (pitch.z - 2.55) + r.normal(0, w.b.bat.launchSd);
+    // The *where* error's part bends steeper toward the bat's edge (step 1.5): pop-ups and chopped grounders.
+    const lift = -w.b.bat.launchK * off * (1 + S.launchCurve * off * off); // degrees from hitting under (+) or over (-) the center
+    const la = S.attack + T().TYPE[pitch.type].lift - (pitch.shape || 0) + lift + S.heightLA * (pitch.z - 2.55) + r.normal(0, w.b.bat.launchSd);
     // Spray: worked out for the pull side (minus), then turned for the batter's side.
     const inside = w.bats === 'R' ? -pitch.x : pitch.x; // feet toward the batter
-    const pull = S.pullAt0 + S.sprayPerMs * tm - S.insidePull * inside + r.normal(0, w.b.bat.sprayNoise);
+    // A ball hit under the center drifts the other way (step 1.5).
+    // A squared-up ball goes where the bat points (timing); a mishit squirts more (step 1.5: sprayBase).
+    const noise = w.b.bat.sprayNoise * (S.sprayBase + (1 - S.sprayBase) * Math.min(1, Math.abs(u)));
+    const pull = S.pullAt0 + S.sprayPerMs * tm - S.insidePull * inside + S.sprayLA * Math.max(0, lift) + r.normal(0, noise);
     const sp = w.bats === 'R' ? pull : -pull;
-    out.contact = { ev: Math.round(Math.max(20, ev) * 10) / 10, la: Math.round(clamp(la, -80, 89) * 10) / 10, sp: Math.round(sp * 10) / 10 };
+    // slice: degrees toward the opposite field; that ball's sidespin costs it some carry (B3.ball.flight, step 1.5).
+    out.contact = { ev: Math.round(Math.max(20, ev) * 10) / 10, la: Math.round(clamp(la, -80, 89) * 10) / 10, sp: Math.round(sp * 10) / 10,
+      slice: Math.round(Math.max(0, pull) * 10) / 10 };
     // A ground ball outside the lines is a foul; a ball in the air goes to B3.ball, which may catch it.
     out.r = Math.abs(sp) > S.foulLine && la < 10 ? 'F' : 'X';
     return out;

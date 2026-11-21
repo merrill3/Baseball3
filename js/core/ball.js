@@ -2,7 +2,7 @@
 //
 //   B3.ball.inPlay(g, contact, steal)  a play for B3.game (shape in game.js "Balls in play") plus
 //                                      script, or { foul: true, script } for a foul nobody caught.
-//                                      contact is { ev, la, sp } from B3.pitch; steal lists the runners
+//                                      contact is { ev, la, sp, slice } from B3.pitch; steal lists the runners
 //                                      who were going on the pitch ([{ from, runner }] or null).
 //   B3.ball.steal(g, from, pitch)      true if the runner stealing from base `from` (1 or 2) is safe
 //   B3.ball.stealOdds(g, from, err)    his chance before the pitch (err: his misjudgment, s), for the CPU (step 1.4)
@@ -84,7 +84,8 @@
     let fair = Math.abs(c.sp) <= 45; // and it must come down in front of home plate (step 1.4: a pop-up
                                      // straight up drifts back on its backspin and can land behind it)
     const fence = B3.data.fenceAt(c.sp);
-    const lift = c.la > 0 ? B.lift * Math.min(1, c.la / B.liftFull) : 0; // backspin grows with launch angle
+    // Backspin grows with launch angle; a sliced ball's tilted spin lifts less (step 1.5).
+    const lift = c.la > 0 ? B.lift * Math.min(1, c.la / B.liftFull) * Math.max(0, 1 - B.sliceLift * (c.slice || 0)) : 0;
     let vr = v * Math.cos(la), vh = v * Math.sin(la), r = 0, h = B.startHeight, t = 0;
     let land = null, hr = null, wall = null, stop = null;
     const pts = [[0, 0, 0, h, 0]];
