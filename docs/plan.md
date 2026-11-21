@@ -1,9 +1,9 @@
-**Docs version: 23** (2026-11-21): Session 7: the owner's choices on order, Speed's range, the overall's scale, the schedule mix, the reserve squad, starting balance, names and measuring ratings against stats (DESIGN.md sections 5 and 10); M1 gets step 1.5.
+**Docs version: 24** (2026-11-21): Session 7: base-running progress (real 2024 rates; outfielders play in, throw effort; provisional, not calibrated); Stopped at updated.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 7, on branch `ccr-85acc383-8ehj83` (from `ccr-5b4b0818-qu6w9c`; not merged). The owner answered every decision in `state.md` section 4 (answers in its section 6). Next: M1 step 1.5 (base running, then ratings measured against stats, then one calibration), then step 2.1.
+**Stopped at:** Session 7, on branch `ccr-85acc383-8ehj83` (not merged). All of `state.md` section 4 is answered (its section 6). Step 1.5 under way: base running checked against real 2024 rates (`state.md` section 7); second to home and first to home are close, first to third is still about 10 points low, runs are 4.87 (band 4.3–4.6). Next: the rating-to-stats work (Claude proposes the stat list and targets from Statcast; batted balls first), then re-check running, then one calibration, then step 2.1. Nothing is calibrated yet.
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 
