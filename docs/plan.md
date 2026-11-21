@@ -1,4 +1,4 @@
-**Docs version: 32** (2026-11-21): Session 10: the owner's Raw Power choice (a faster bat costs accuracy) built and measured; DESIGN.md section 10 lists it.
+**Docs version: 33** (2026-11-21): Session 10: the owner's Raw Power choice (a faster bat costs accuracy) built and measured; the owner's ladder rule (the league's spread wins over a single rating's ladder); both in DESIGN.md section 10.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
