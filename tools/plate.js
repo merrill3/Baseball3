@@ -19,6 +19,7 @@ const path = require('path');
 const { fork } = require('child_process');
 
 const OFF = { SL: 1, CU: 1, CH: 1, FS: 1 };
+const COUNTS = ['0-0', '0-1', '0-2', '1-0', '1-1', '1-2', '2-0', '2-1', '2-2', '3-0', '3-1', '3-2'];
 const REAL = {
   // [fastball in zone, off-speed in zone, fastball out, off-speed out]
   swing: [67.3, 68.6, 24.8, 32.3], whiff: [16.2, 19.3, 32.1, 52.8], foul: [42.9, 36.8, 42.3, 25.3],
@@ -33,6 +34,14 @@ const REAL = {
   // (%); per two-strike pitch 9,762 called third strikes and 31,388 swinging (%); 31,390 whiffs of 128,384 swings
   // In the zone (hfZ=1..9) and out (11..14): 91,037 and 123,021 pitches; swings 80,626 and 47,701; whiffs 12,325 and 19,049; called
   // strikes 8,085 of 10,411 takes and 1,672 of 75,320 (%)
+  // By count: zone % (Session 16: 2024-2025, every pitch) | of the pitches out of the zone (padded by the ball's radius, the
+  // batter's own top and bottom), % 0.7-1 ft and 1+ ft off (Session 18: 8 Wednesdays of 2024, April 17 to September 11, 35,393
+  // Statcast pitches; MLB's put-away pitches go farther off the plate with more strikes and fewer balls)
+  byCount: {
+    '0-0': [54.4, 12.2, 11.0], '0-1': [45.5, 14.3, 14.2], '0-2': [32.4, 16.8, 21.6], '1-0': [55.7, 11.2, 8.5], '1-1': [50.5, 12.9, 11.7],
+    '1-2': [38.2, 15.4, 19.0], '2-0': [59.5, 13.0, 5.5], '2-1': [56.8, 13.5, 9.2], '2-2': [47.1, 13.1, 13.5], '3-0': [63.2, 10.1, 6.7],
+    '3-1': [62.2, 11.0, 7.2], '3-2': [58.9, 9.5, 10.1]
+  },
   two: { reach: 53.4, pitches: 30.2, kLook: 4.56, kSwing: 14.66, whiff: 24.5, zone: [42.5, 57.5], swing: [88.6, 38.8], whiffZ: [15.3, 39.9], called: [77.7, 2.2] }
 };
 
@@ -95,6 +104,9 @@ function run(B3, job) {
       if (e.e !== 'pitch') continue;
       last = e.r;
       if (+e.c.split('-')[1] >= 2) two = true;
+      // Where the pitches are by count (Session 18): in the zone, or out and 0.7-1 or 1+ ft off it
+      const ed = B3.data.zoneEdge(e.x, e.z);
+      inc('c' + e.c + '.n'); if (ed < 0) inc('c' + e.c + '.z'); else { inc('c' + e.c + '.o'); if (ed >= 1) inc('c' + e.c + '.far'); else if (ed >= 0.7) inc('c' + e.c + '.mid'); }
       const grp = OFF[e.t] ? 'o' : 'f', inZ = B3.data.inZone(e.x, e.z), cnt = +e.c.split('-')[1] >= 2 ? '2' : 'e';
       const sw = e.r === 'S' || e.r === 'F' || e.r === 'X';
       for (const k of [grp + (inZ ? 'z' : 'o'), grp + cnt, 'a' + cnt, 'a' + cnt + (inZ ? 'z' : 'o'), grp, 'a']) {
@@ -139,6 +151,9 @@ function report(o, res) {
       ']; swing % ' + f(g('a2z.sw'), g('a2z.n')).trim() + ' | ' + f(g('a2o.sw'), g('a2o.n')).trim() + ' [' + REAL.two.swing.join(' | ') + ']; whiff % ' + f(g('a2z.wh'), g('a2z.sw')).trim() +
       ' | ' + f(g('a2o.wh'), g('a2o.sw')).trim() + ' [' + REAL.two.whiffZ.join(' | ') + ']; takes called strikes ' + f(g('a2z.c'), g('a2z.n') - g('a2z.sw')).trim() + ' | ' +
       f(g('a2o.c'), g('a2o.n') - g('a2o.sw')).trim() + ' [' + REAL.two.called.join(' | ') + ']');
+    console.log('  by count: zone % | of the pitches out of it, % 0.7-1 ft and 1+ ft off   [MLB]');
+    console.log('   ' + COUNTS.map((c) => c + ' ' + f(g('c' + c + '.z'), g('c' + c + '.n')).trim() + ' | ' + f(g('c' + c + '.mid'), g('c' + c + '.o')).trim() + ' | ' +
+      f(g('c' + c + '.far'), g('c' + c + '.o')).trim() + ' [' + REAL.byCount[c].join(' | ') + ']').join('   ').replace(/(.{150,}?)   /g, '$1\n   '));
     console.log('  by count            before 2 strikes | 2 strikes');
     const pair = (lab, x, y, r) => console.log('  ' + lab.padEnd(18) + f(x[0], x[1]) + '        ' + ' |' + f(y[0], y[1]) + '   [' + r.join(' / ') + ']');
     pair('off-speed share', [g('oe.n'), g('ae.n')], [g('o2.n'), g('a2.n')], REAL.offShare);

@@ -82,7 +82,8 @@
 
     // The type: by its usual share and its grade; fastballs when behind, the put-away pitch with two
     // strikes. The target: in the zone by a chance set by the count and Aim (a nibbler throws fewer strikes when ahead or
-    // even and works the corners, an attacker more and toward the middle), else off the plate (low for pitches that sink or break).
+    // even and works the corners, an attacker more and toward the middle), else off the plate (low for pitches that sink or break;
+    // with two strikes sometimes buried well off it).
     pitch: function (d, g) {
       const P = C().pitch, r = g.rng, Z = B3.data.ZONE;
       const pit = g.teams[d.side].inp[d.pitcher].pit;
@@ -111,7 +112,9 @@
         const dz = r.range(inset[0], inset[1]) + gr;
         return { type: type, x: x, z: low ? Z.bottom + dz : Z.top - dz };
       }
-      const off = r.range(P.chase[0], P.chase[1]) * co;
+      // With two strikes he sometimes buries the put-away pitch well off the plate (Session 18, bury and buryOff).
+      const buried = d.strikes === 2 && r.chance(P.bury[d.balls]);
+      const off = buried ? r.range(P.buryOff[0], P.buryOff[1]) : r.range(P.chase[0], P.chase[1]) * co;
       if (low) return { type: type, x: away * r.range(-0.3, Z.halfWidth), z: Z.bottom - off };
       if (r.chance(0.5)) return { type: type, x: r.range(-0.5, 0.5), z: Z.top + off };
       return { type: type, x: away * (Z.halfWidth + off), z: r.range(Z.bottom + 0.2, Z.top - 0.2) };

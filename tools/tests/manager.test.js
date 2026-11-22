@@ -45,13 +45,14 @@ function picks(env, balls, strikes, n) {
   const { B3, g } = env;
   const d = { kind: 'pitch', side: 1, pitcher: 'HOM-SP', batter: 'AWY-CF', pitches: g.teams[1].players['HOM-SP'].pitches.slice(), balls: balls, strikes: strikes };
   const types = {};
-  let zone = 0, edge = 0, off = 0;
+  let zone = 0, edge = 0, off = 0, far = 0;
   for (let i = 0; i < (n || N); i++) {
     const a = B3.manager.cpu.pitch(d, g);
     types[a.type] = (types[a.type] || 0) + 1 / (n || N);
-    if (B3.data.inZone(a.x, a.z)) { zone++; edge += -B3.data.zoneEdge(a.x, a.z); } else off += B3.data.zoneEdge(a.x, a.z);
+    if (B3.data.inZone(a.x, a.z)) { zone++; edge += -B3.data.zoneEdge(a.x, a.z); } else { off += B3.data.zoneEdge(a.x, a.z); if (B3.data.zoneEdge(a.x, a.z) >= 1) far++; }
   }
-  return { types, zone: zone / (n || N), inset: edge / zone, off: off / ((n || N) - zone) };
+  // far: the share of targets off the plate that are a foot or more off it (Session 18: buried put-aways)
+  return { types, zone: zone / (n || N), inset: edge / zone, off: off / ((n || N) - zone), far: far / ((n || N) - zone) };
 }
 
 
@@ -70,6 +71,30 @@ module.exports = function (t) {
     near(swings(env, mid, 1, 1), 0.855, 0.05, '1-1');
     near(swings(env, mid, 2, 1), 0.895, 0.05, '2-1');
     assert.ok(swings(env, mid, 0, 0) < swings(env, mid, 1, 1) - 0.1, 'more first-pitch takes');
+  });
+
+  t.test('two strikes (Session 18): he judges where the pitch crosses more roughly and sometimes freezes on a strike', () => {
+    const env = setup({ pit: { command: 99 } }), { B3, g } = env;
+    const S = B3.tune.CPU.swing, sd = g.teams[0].inp['AWY-CF'].bat.judgeSd;
+    const spread = (strikes) => {
+      const xs = [];
+      g.strikes = strikes;
+      for (let i = 0; i < N; i++) xs.push(B3.pitch.look(g, { type: 'FF', x: 0, z: 2.55, throws: 'R', grade: 1 }).edge);
+      g.strikes = 0;
+      const m = xs.reduce((a, b) => a + b, 0) / N;
+      return Math.sqrt(xs.reduce((a, b) => a + (b - m) * (b - m), 0) / N);
+    };
+    assert.ok(S.twoSd > 0, 'two-strike noise');
+    near(spread(1), sd, 0.03 * sd, 'one strike: his Discipline\'s noise');
+    near(spread(2), Math.hypot(sd, S.twoSd), 0.03 * sd, 'two strikes: rougher');
+    // Frozen takes: with two strikes he still takes a strike down the middle now and then (MLB 2024 takes 4.9% of two-strike
+    // pitches 0.4 ft or more inside the zone).
+    const mid = { type: 'FF', x: 0, z: 2.55 };
+    const withTakes = swings(env, mid, 0, 2, 20000);
+    S.take[0][2] = 0;
+    const without = swings(env, mid, 0, 2, 20000);
+    near(without - withTakes, 0.02 * without, 0.01, 'frozen takes at 0-2');
+    assert.ok(withTakes > 0.9, 'he still swings at nearly every two-strike pitch down the middle');
   });
 
   t.test('Recognition and Deception: unread break makes a pitch off the plate look like a strike', () => {
@@ -148,6 +173,14 @@ module.exports = function (t) {
     const nib = at('Nibbler', 3, 1), bal = at(null, 3, 1), att = at('Attacker', 3, 1);
     near(nib.zone, bal.zone, 0.025, '3-1 nibbler'); near(att.zone, bal.zone, 0.025, '3-1 attacker');
     near(nib.inset, bal.inset, 0.02, '3-1 inset'); near(att.inset, bal.inset, 0.02, '3-1 inset');
+  });
+
+  t.test('put-aways (Session 18): with two strikes the CPU buries some pitches a foot or more off the plate, more with fewer balls', () => {
+    const P = setup().B3.tune.CPU.pitch;
+    const at = (b, s) => picks(setup(), b, s, 8000).far;
+    near(at(0, 2), P.bury[0], 0.02, '0-2'); near(at(2, 2), P.bury[2], 0.015, '2-2');
+    assert.ok(P.bury[0] > P.bury[1] && P.bury[1] > P.bury[2] && P.bury[2] > P.bury[3], 'fewer with more balls (MLB 2024)');
+    assert.strictEqual(at(1, 1), 0, 'none before two strikes');
   });
 
   t.test('Command (Session 14): a sharp pitcher aims nearer the edges, in the zone and off it; a wild one deeper in the zone, but no farther off the plate', () => {

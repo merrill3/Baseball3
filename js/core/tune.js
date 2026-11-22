@@ -483,7 +483,9 @@
       // Session 16: fitted so average pitchers' zone % by count is MLB's (2024-2025 Statcast, every pitch: 0-0 54.4, 0-1 45.5,
       // 0-2 32.4, 1-0 55.7, 1-1 50.5, 1-2 38.2, 2-0 59.5, 2-1 56.8, 2-2 47.1, 3-0 63.2, 3-1 62.2, 3-2 58.9; the engine had the
       // first pitch 50.3 and 3-0 72.0). Was [[0.53, 0.42, 0.21], [0.62, 0.52, 0.32], [0.73, 0.67, 0.47], [0.82, 0.8, 0.72]].
-      zone: [[0.6, 0.437, 0.219], [0.634, 0.529, 0.317], [0.68, 0.661, 0.484], [0.73, 0.69, 0.673]],
+      // Session 18: two strikes +0.047 / +0.038 / +0.02 / +0.015 (was 0.219 / 0.317 / 0.484 / 0.673), so zone % by count stays
+      // MLB's with the buried put-aways (bury, below: they no longer stray into the zone as nearer targets did).
+      zone: [[0.6, 0.437, 0.266], [0.634, 0.529, 0.355], [0.68, 0.661, 0.504], [0.73, 0.69, 0.688]],
       // Targets in the zone added by Aim, by balls and strikes, per step (Attacker +1, Nibbler -1; none with three balls).
       // Session 16 (was one number per style, all 0): fitted so Attacker and Nibbler sit as far from Balanced, count by count, as
       // MLB's top and bottom thirds of pitchers by the zone % their walks don't explain (2024-2025, 566 pitcher-seasons with 250+
@@ -505,6 +507,12 @@
       inset: [[0.31, 0.8], [0.34, 0.84], [0.37, 0.88]],
       groove: 0.04,        // feet of extra inset (toward the middle) on targets in the zone with three balls
       chase: [0.06, 0.55], // targets outside the zone: feet off the edge (Session 14: was 0.03-0.5; MLB's attack zones)
+      // With two strikes, the chance (by balls) that a target outside the zone is a put-away buried well off the plate, buryOff
+      // feet off the edge (any pitcher alike). Session 18: MLB 2024's share of out-of-zone pitches 1 ft or more off grows with
+      // strikes, 0-2 21.6%, 1-2 19.0, 2-2 13.5, 3-2 10.1 (8 Wednesdays, 35,393 Statcast pitches); the engine's was about 7-10% in
+      // every count, so it threw too many two-strike pitches near the edges (too many called strikes, too few chased whiffs).
+      bury: [0.15, 0.12, 0.065, 0.05],
+      buryOff: [1.1, 1.7],
       commandAim: [0.5, 0.4, 1.5], // targets in the zone (insets) x (his scatter / the average's) to this
                            // power, between these limits: sharper command aims nearer the edges (step 1.4)
       commandOff: [0.5, 0.4, 1], // the same for targets off the plate (feet off the edge), but a wild pitcher doesn't aim
