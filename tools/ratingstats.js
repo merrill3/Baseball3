@@ -213,6 +213,8 @@ const POP_SD = 12.2, POP_R = process.env.POPR !== undefined ? +process.env.POPR 
 // POP_PC: the correlation between Raw Power and Contact.
 const POP_PC = process.env.POPPC !== undefined ? +process.env.POPPC : -0.3;
 const POP_DC = process.env.POPDC !== undefined ? +process.env.POPDC : 0;
+const POP_SC = process.env.POPSC !== undefined ? +process.env.POPSC : 0;
+const POP_AIM = process.env.POPAIM !== undefined ? +process.env.POPAIM : 0;
 // Pitch shapes (Session 19): the spread of a pitch's shape and the share of it his own tilt carries (POPSHAPE and POPSHAPER for
 // experiments).
 const POP_SHAPE = process.env.POPSHAPE !== undefined ? +process.env.POPSHAPE : 0.35;
@@ -223,6 +225,12 @@ function popRatings(rng, keys) {
   if (POP_PC && z.rawPower !== undefined && z.contact !== undefined) z.rawPower = POP_PC * z.contact + Math.sqrt(1 - POP_PC * POP_PC) * z.rawPower;
   // POPDC (experiments only, Session 15): a link between Discipline and Contact.
   if (POP_DC && z.discipline !== undefined && z.contact !== undefined) z.discipline = POP_DC * z.contact + Math.sqrt(1 - POP_DC * POP_DC) * z.discipline;
+  // POPSC (experiments only, Session 19): a link between a pitcher's stuff (his Velocity and grades together) and his Command.
+  if (POP_SC && z.command !== undefined) {
+    const st = keys.filter((k) => k === 'velocity' || k.startsWith('g:'));
+    const zs = st.reduce((t, k) => t + z[k], 0) / Math.sqrt(st.length);
+    z.command = POP_SC * zs + Math.sqrt(1 - POP_SC * POP_SC) * z.command;
+  }
   for (const k of keys) out[k] = Math.round(Math.max(20, Math.min(99, 60 + POP_SD * z[k])));
   return out;
 }
@@ -270,6 +278,19 @@ function measurePop(B3, spec) {
       for (const t of p.pitches) { p.arsenal[t].grade = r['g:' + t]; delete r['g:' + t]; }
       Object.assign(p.ratings, r);
       draws[id] = r;
+    }
+  }
+  // POPAIM (experiments only, Session 19): pitchers whose stuff gets chases (Deception and grades) lean Nibbler; Aim then comes
+  // from that lean plus noise, cut at the 25th and 75th percentiles (still 1 : 2 : 1).
+  if (POP_AIM && spec.kind === 'pitcher') {
+    const arng = B3.rng.create('popaim:' + spec.seed + ':' + spec.team);
+    for (const id in teams.away.players) {
+      const p = teams.away.players[id];
+      if (!p.pitches) continue;
+      const zs = [(p.ratings.deception - 60) / POP_SD].concat(p.pitches.map((t) => (p.arsenal[t].grade - 60) / POP_SD));
+      const st = zs.reduce((a, b) => a + b, 0) / Math.sqrt(zs.length);
+      const za = -POP_AIM * st + Math.sqrt(1 - POP_AIM * POP_AIM) * arng.normal(0, 1);
+      p.tendencies.aim = za < -0.674 ? 'Nibbler' : za > 0.674 ? 'Attacker' : 'Balanced';
     }
   }
   // Each player's games are cut into "player-seasons" of CHUNK plate appearances (batters faced), so the
@@ -521,6 +542,7 @@ function popReport(res, real) {
     }
     if (kind === 'hitter') rep.curves = curveReport(seasons);
     if (kind === 'pitcher') rep.aim = aimReport(seasons);
+    if (kind === 'pitcher') rep.starters = startersReport(seasons, q);
     rep[kind] = { n: seasons.length, rows: rows, corr: cs };
   }
   return rep;
@@ -559,6 +581,29 @@ function curveReport(seasons) {
     for (const g in by) for (const i of [0, 2]) row(g + (i ? ' high' : ' low') + ' third', out[g][i][t], REAL_CURVE[g][i][t]);
   }
   return out;
+}
+
+// MLB starters (Session 19): the population's pitcher-seasons are starters' (about 97%), while real.pct pools every pitcher
+// with 250+ batters faced (about 40% of them relievers, whose ERA is lower). Savant's custom leaderboard 2024-2026, 250+
+// batters faced and 10+ starts (528 seasons); percentiles 5 / 25 / 50 / 75 / 95.
+const REAL_STARTERS = {
+  note: 'Savant 2024-2026, 250+ batters faced and 10+ starts, 528 seasons',
+  rows: [['K%', 'k', 1, [15.3, 18.6, 21.5, 24.9, 30.0]], ['BB%', 'bb', 1, [4.8, 6.4, 7.7, 9.3, 11.4]], ['ERA', 'era', 2, [2.66, 3.46, 4.08, 4.87, 6.08]],
+    ['AVG against', 'avg', 3, [0.195, 0.225, 0.246, 0.263, 0.295]], ['SLG against', 'slg', 3, [0.318, 0.367, 0.404, 0.440, 0.510]],
+    ['exit speed against', 'ev', 1, [86.9, 88.4, 89.3, 90.1, 91.2]], ['hard-hit % against', 'hard', 1, [33.2, 37.2, 40.0, 42.6, 46.5]],
+    ['ground-ball %', 'gb', 1, [32.9, 37.8, 41.5, 45.3, 53.4]], ['whiff %', 'whiff', 1, [18.1, 21.6, 24.0, 27.3, 31.2]],
+    ['chase % against', 'chase', 1, [24.3, 27.1, 29.0, 31.1, 34.3]], ['zone %', 'zone', 1, [44.3, 47.3, 49.5, 51.4, 54.6]]]
+};
+function startersReport(seasons, q) {
+  const sp = seasons.filter((s) => Number.isFinite(s.pps)); // 10+ starts in the season
+  console.log('  starters only: ' + sp.length + ' engine seasons with 10+ starts, against MLB starters (' + REAL_STARTERS.note + ')');
+  const rows = [];
+  for (const [lab, key, d, real] of REAL_STARTERS.rows) {
+    const e = [0.05, 0.25, 0.5, 0.75, 0.95].map((p) => q(sp.map((s) => s[key]), p));
+    rows.push({ label: lab, key: key, engine: e, target: real });
+    console.log('  ' + lab.padEnd(22) + e.map((x) => fmt(x, d).padStart(7)).join('') + '  |' + real.map((x) => fmt(x, d).padStart(7)).join(''));
+  }
+  return { n: sp.length, rows: rows };
 }
 
 // The Aim level by count (Session 16): MLB 2024-2025 (Statcast searches grouped by pitcher, by count and in the zone; 566
