@@ -91,7 +91,7 @@
       const cm = Math.min(P.commandAim[2], Math.max(P.commandAim[1], Math.pow(pit.commandSd / B3.tune.PIT.commandSd, P.commandAim[0])));
       const away = B3.pitch.who(g).bats === 'L' ? -1 : 1; // the side of the plate away from the batter
       const low = r.chance(P.low[type]);
-      if (r.chance(P.zone[d.balls][d.strikes] + P.aimZone[aim + 1])) {
+      if (r.chance(P.zone[d.balls][d.strikes] + P.aimZone[aim + 1] + (P.zoneType[type] || 0))) {
         // His targets follow his Command (step 1.4): sharper command aims nearer the edges, inside and out.
         const inset = P.inset[aim + 1].map((x) => x * cm), gr = d.balls === 3 ? P.groove : 0;
         const side = r.chance(0.55) ? away : -away;

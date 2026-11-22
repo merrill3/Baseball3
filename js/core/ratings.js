@@ -166,12 +166,13 @@
     return { bat: bat, pit: pit, fld: fld, run: run };
   }
 
-  // The put-away pitch: his best-graded type. On a tie, the type that misses the most bats (B3.tune.TYPE's bite).
+  // The put-away pitch: his best-graded type. On a tie, the type that misses the most bats in MLB (B3.tune.TYPE's miss;
+  // step 1.5 task 4: it was the type's bite, which tuning moves).
   function putAway(pitches, grades) {
     const TYPE = B3.tune.TYPE;
     let best = null;
     for (const type of pitches) {
-      if (best === null || grades[type] > grades[best] || (grades[type] === grades[best] && TYPE[type].bite > TYPE[best].bite)) best = type;
+      if (best === null || grades[type] > grades[best] || (grades[type] === grades[best] && TYPE[type].miss > TYPE[best].miss)) best = type;
     }
     return best;
   }

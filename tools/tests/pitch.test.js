@@ -99,8 +99,10 @@ module.exports = function (t) {
     assert.ok(rate(good, (x) => x.r.r === 'X') > rate(poor, (x) => x.r.r === 'X'));
     // The bat's height against the ball sets the launch angle.
     const rows = inPlay(trial(setup(), MID, 0));
+    // (Session 12: a fastball's fair core is narrower, SWING.foulPow, so its fair mishits are smaller.)
     const over = rows.filter((x) => x.r.off > 0.5), under = rows.filter((x) => x.r.off < -0.5);
-    assert.ok(avg(over.map((x) => x.r.contact.la)) < 0 && avg(under.map((x) => x.r.contact.la)) > 25);
+    const laOver = avg(over.map((x) => x.r.contact.la)), laUnder = avg(under.map((x) => x.r.contact.la));
+    assert.ok(laOver < 10 && laUnder > 25 && laUnder > laOver + 30, 'launch angle over ' + laOver + ', under ' + laUnder);
     // Pitches outside the zone are harder to hit well.
     const chase = trial(setup(), { type: 'FF', x: 0, z: 0.9 }, 0);
     assert.ok(whiff(chase) > whiff(trial(setup(), MID, 0)) + 0.15, 'chasing a low ball misses more');
@@ -158,9 +160,11 @@ module.exports = function (t) {
 
   t.test('Recognition and Deception mirror each other; reading pitches means fewer whiffs on breaking balls', () => {
     const CU = { type: 'CU', x: 0, z: 2.4 };
-    const e = (o) => { const env = setup(o); return env.B3.pitch.expect(env.g, env.B3.pitch.throw(env.g, CU)); };
+    // A thrown pitch carries one read (step 1.5 task 4); without one (deleted here) it counts as his average share.
+    const e = (o, read) => { const env = setup(o); const p = env.B3.pitch.throw(env.g, CU); if (read === undefined) delete p.read; else p.read = read; return env.B3.pitch.expect(env.g, p); };
     near(e({ bat: { recognition: 0.8 }, pit: { deception: 2.5 } }).mean, e({ bat: { recognition: 0.5 } }).mean, 1e-9, 'deception multiplies what he doesn\'t read');
     assert.ok(e({ bat: { recognition: 0.5 } }).mean > e({ bat: { recognition: 0.95 } }).mean + 0.5, 'an unread curve leaves the bat over the ball');
+    assert.ok(e({}, false).mean > 2 && e({}, true).mean === 0, 'the whole surprise on an unread pitch, none on a read one');
     const whiff = (rec) => rate(trial(setup({ bat: { recognition: rec } }), CU, 'cpu'), (x) => x.r.r === 'S');
     assert.ok(whiff(0.4) > whiff(0.95) + 0.05, 'whiffs on curves fall with Recognition');
     // An unread change-up makes a CPU hitter early.

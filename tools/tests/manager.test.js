@@ -76,10 +76,20 @@ module.exports = function (t) {
     const ff = { type: 'FF', x: 0.2, z: 1.2 };
     const fchase = (r) => swings(setup({ bat: { recognition: r } }), ff, 1, 2);
     assert.ok(Math.abs(fchase(30) - fchase(90)) < 0.05, 'fastball chase ' + fchase(30) + ' / ' + fchase(90));
-    // look() sees the curve higher than it is, and less so with better Recognition.
+    // look() sees an unread curve higher than it is (step 1.5 task 4: one read per pitch), and a read one where it is.
     const e = setup({ bat: { recognition: 30 } }), e2 = setup({ bat: { recognition: 90 } });
     const p = e.B3.pitch.throw(e.g, low);
-    assert.ok(e.B3.pitch.look(e.g, p).z > e2.B3.pitch.look(e2.g, p).z + 0.1);
+    const seen = (read) => { p.read = read; return e.B3.pitch.look(e.g, p).z; };
+    assert.ok(seen(false) > p.z + 0.5 && Math.abs(seen(true) - p.z) < 1e-9, 'an unread curve looks higher');
+    // Better Recognition picks up more pitches; a hand-made pitch without a read counts as his average.
+    const reads = (env) => { let n = 0; for (let i = 0; i < N; i++) if (env.B3.pitch.throw(env.g, low).read) n++; return n / N; };
+    assert.ok(reads(e2) > reads(e) + 0.3, 'reads ' + reads(e) + ' / ' + reads(e2));
+    delete p.read;
+    assert.ok(e.B3.pitch.look(e.g, p).z > e2.B3.pitch.look(e2.g, p).z + 0.1, 'on average');
+    // A misread never makes a pitch look farther from the zone (lookCloser): a curve up in the zone still looks like a strike.
+    const high = e.B3.pitch.throw(e.g, { type: 'CU', x: 0.2, z: 3.3 });
+    high.read = false;
+    assert.ok(Math.abs(e.B3.pitch.look(e.g, high).z - high.z) < 1e-9, 'not pushed out of the zone');
   });
 
   t.test('Discipline: fewer chases, and a sharper line between strikes and balls', () => {
@@ -112,9 +122,11 @@ module.exports = function (t) {
     assert.ok(slGood.types.SL > base.types.SL + 0.05, 'a better slider gets thrown more');
     const chGood = setup({ arsenal: { CH: { grade: 80, shape: 0 } } });
     assert.strictEqual(chGood.g.teams[1].inp['HOM-SP'].pit.putAway, 'CH');
-    assert.ok(picks(chGood, 0, 2).types.CH > picks(chGood, 0, 0).types.CH + 0.15, 'the put-away pitch with two strikes');
+    // (Session 12: a smaller boost, as MLB's off-speed share rises from 41% to 51% with two strikes.)
+    assert.ok(picks(chGood, 0, 2).types.CH > picks(chGood, 0, 0).types.CH + 0.06, 'the put-away pitch with two strikes');
     const behind = picks(setup(), 3, 1), even = picks(setup(), 1, 1);
-    assert.ok((behind.types.FF || 0) > (even.types.FF || 0) + 0.1, 'fastballs when behind');
+    const fb = (x) => (x.types.FF || 0) + (x.types.SI || 0) + (x.types.FC || 0); // Session 12: the test starter has a sinker too
+    assert.ok(fb(behind) > fb(even) + 0.1, 'fastballs when behind ' + fb(even) + ' -> ' + fb(behind));
     assert.ok(behind.zone > even.zone + 0.1 && picks(setup(), 0, 2).zone < even.zone - 0.1, 'the count moves the zone rate');
   });
 

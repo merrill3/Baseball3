@@ -66,11 +66,15 @@
     const speed = Math.round((fastball(w.p, f) * type.v + r.normal(0, P.speedSd)) * 10) / 10;
     const grade = w.p.pit.grades[a.type] === undefined ? 1 : w.p.pit.grades[a.type];
     const mirror = w.throws === 'L' ? -1 : 1;
+    // Does the hitter pick this pitch up? (step 1.5 task 4: one read per pitch, his read share being the chance.) The same
+    // read sets his swing choice (look), his timing (cpuTiming) and where his bat goes (expect), so a breaking ball he chases
+    // because he took it for a fastball is the one he misses.
+    const read = r.chance(readOf(w).rec);
     return {
       type: a.type, speed: speed, x: x, z: z, zone: B3.data.inZone(x, z),
       ms: Math.round(flightMs(speed)),
       hx: mirror * type.hx * grade, vz: type.vz * grade, // movement as thrown, inches
-      grade: grade, shape: w.p.pit.shapes[a.type] || 0, throws: w.throws, fatigue: f
+      grade: grade, shape: w.p.pit.shapes[a.type] || 0, throws: w.throws, fatigue: f, read: read
     };
   }
 
@@ -94,22 +98,27 @@
     };
   }
 
+  // How much of this pitch he misses reading: 1 if he didn't pick it up (he takes it for a fastball), 0 if he did. A pitch
+  // without a read (a test's hand-made pitch) counts as his average: the share he doesn't read.
+  function unread(w, pitch) {
+    return pitch.read === undefined ? 1 - readOf(w).rec : pitch.read ? 0 : 1;
+  }
+
   // The *where* error's mean and spread for this pitch, in inches (above 0: the bat passes over the ball).
   function expect(g, pitch) {
     const w = who(g), S = T().SWING, kind = T().TYPE[pitch.type];
     const read = readOf(w);
-    // He expects a read share of this type's normal movement and the rest of a fastball's. The pitch's
-    // real movement against that is the surprise; only its vertical part moves the bat's height.
+    // A pitch he doesn't read he expects to move like a fastball. The pitch's real movement against that is the
+    // surprise; only its vertical part moves the bat's height.
     // The surprise is the type's own movement (step 1.4: not the grade's extra, which would only move the
     // launch angle; the grade acts through the bite below and through how the pitch looks, B3.pitch.look).
     const type = B3.data.PITCH[pitch.type], ff = B3.data.PITCH.FF;
-    const expected = read.rec * type.vz + (1 - read.rec) * ff.vz;
-    const surprise = expected - type.vz; // above 0: the ball ends lower than he thought, so the bat is over it
+    const surprise = unread(w, pitch) * (ff.vz - type.vz); // above 0: the ball ends lower than he thought, so the bat is over it
     // A below-average grade fools him less (step 1.4: a flat slider hangs).
     const mean = kind.surprise * surprise * Math.min(1, pitch.grade);
     // Spread: Contact, the type's bite (grade makes it bigger), and distance from the middle of the zone.
     const edge = B3.data.zoneEdge(pitch.x, pitch.z);
-    const loc = S.edgeSd * Math.max(0, edge + S.edgeFrom) + S.chaseSd * Math.max(0, edge);
+    const loc = S.edgeSd * Math.max(0, edge + S.edgeFrom) + S.chaseSd * (kind.chase === undefined ? 1 : kind.chase) * Math.max(0, edge);
     const bite = kind.bite * pitch.grade;
     // The shape's counterweight (step 1.4, owner's choice: a value-neutral tilt): a ground-ball shape is
     // easier to square up, a fly-ball shape harder (SWING.shapeSd per unit of shape).
@@ -145,9 +154,12 @@
     const v = tm / S.missMs;
     const radius = S.radius * Math.max(0, 1 - S.timeRadius * v * v);
     if (Math.abs(tm) > S.missMs || Math.abs(off) > radius) return out; // whiff
-    if (Math.abs(off) > radius * S.foulBack) { out.r = 'F'; return out; } // glancing: fouled back
+    // Glancing contact is fouled back. The faster the pitch, the more of it goes back (step 1.5 task 4: on a glancing hit the
+    // ball keeps much of its own speed toward the catcher), so the fair core narrows as (foulRef / speed)^foulPow.
+    const fair = radius * S.foulBack * Math.pow(S.foulRef / pitch.speed, S.foulPow);
+    if (Math.abs(off) > fair) { out.r = 'F'; return out; }
     // Exit speed: bat speed and pitch speed (Savant's most a swing can give), less for an off-center hit and for bad timing.
-    const u = off / (radius * S.foulBack);
+    const u = off / fair;
     // A faster bat also meets the ball a little off the barrel's sweet spot more often (step 1.5, owner's choice, Session 10:
     // a faster bat costs accuracy along the bat too): barrelCost of the exit speed per mph of his average bat speed.
     const along = Math.exp(-S.barrelCost * (w.b.bat.batSpeed - T().BAT.batSpeed));
@@ -185,9 +197,8 @@
   // doesn't read make him early; faster pitches make him late and widen his spread (Velocity against Timing).
   function cpuTiming(g, pitch) {
     const w = who(g), M = T().TIMING;
-    const read = readOf(w);
     const ff = fastball(w.p, pitch.fatigue);
-    const expected = read.rec * pitch.speed + (1 - read.rec) * Math.max(pitch.speed, ff);
+    const expected = pitch.speed + unread(w, pitch) * (Math.max(pitch.speed, ff) - pitch.speed);
     // ms early: he swings for a faster pitch. Measured against a fastball at refMph (step 1.4), so the speed
     // change counts as a share: a soft-tossing pitcher's change-up doesn't fool more than a hard thrower's.
     const early = M.readShare * (flightMs(pitch.speed) - flightMs(expected)) * ff / M.refMph;
@@ -209,14 +220,23 @@
   // (below 0: it looks like a strike).
   function look(g, pitch) {
     const w = who(g), C = T().CPU.swing;
-    const rec = readOf(w).rec;
+    const u = unread(w, pitch);
     const type = B3.data.PITCH[pitch.type], ff = B3.data.PITCH.FF;
     const mirror = pitch.throws === 'L' ? -1 : 1;
-    const hx = mirror * (rec * type.hx + (1 - rec) * ff.hx), vz = rec * type.vz + (1 - rec) * ff.vz;
+    const hx = mirror * (type.hx + u * (ff.hx - type.hx)), vz = type.vz + u * (ff.vz - type.vz);
     // Only movement beyond the type's average fools him (step 1.4): a below-average pitch looks like what it is.
     // A below-average one fools him less (the error shrinks with the grade).
     const g1 = pitch.grade || 1, gm = Math.max(1, g1), k = C.lookShare * Math.min(1, g1) / 12;
-    const x = pitch.x + k * (hx - mirror * type.hx * gm), z = pitch.z + k * (vz - type.vz * gm);
+    let x = pitch.x + k * (hx - mirror * type.hx * gm), z = pitch.z + k * (vz - type.vz * gm);
+    // A misread draws his eye toward the zone, never away from it (step 1.5 task 4, lookCloser): a pitch he takes for a
+    // fastball looks like a strike, so being fooled shows as chasing (MLB 2024: hitters swing at off-speed strikes as
+    // often as at fastball strikes, 68.6% and 67.3%, and chase off-speed balls more, 32.3% against 24.8%).
+    // Each axis on its own: across the plate and up or down.
+    if (C.lookCloser) {
+      const Z = B3.data.ZONE, up = (h) => Math.max(Z.bottom - h, h - Z.top);
+      if (Math.abs(x) > Math.abs(pitch.x)) x = pitch.x;
+      if (up(z) > up(pitch.z)) z = pitch.z;
+    }
     return { x: x, z: z, edge: B3.data.zoneEdge(x, z) - w.b.bat.judgeLean + g.rng.normal(0, w.b.bat.judgeSd) };
   }
 

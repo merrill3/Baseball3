@@ -29,8 +29,10 @@
     launchSd: 12,      // Launch: extra launch-angle noise in degrees (the swing's own plane; step 1.5, was 15)
     sprayNoise: 29,    // Launch: spray-direction noise in degrees (spray control), on a mishit at the glancing edge
                        // (SWING.sprayBase; step 1.5, was 20 on every ball)
-    recognition: 0.75, // Recognition: share of a pitch's movement and speed change he reads (0 to 1)
-    judgeSd: 0.45,     // Discipline: feet of noise in judging where a pitch will cross, for swing or take
+    recognition: 0.8,  // Recognition: the chance he picks up a pitch (its movement and speed change), 0 to 1; one read per
+                       // pitch (step 1.5 task 4, Session 12: was a share of every pitch, 0.75)
+    judgeSd: 0.4,      // Discipline: feet of noise in judging where a pitch will cross, for swing or take (Session 12, was
+                       // 0.45: MLB hitters chase fastballs off the plate 24.8% of the time)
     judgeLean: 0.1,    // Discipline: feet he leans toward seeing a ball as a strike (the CPU's swing choice)
     aggressiveness: 0, // tendency (-1 Patient, 0 Balanced, 1 Aggressive): the CPU's swing choice
     swingPath: 0       // tendency (-1 Ground-ball, 0 Level, 1 Lift; owner's choice, Session 11): his swing's tilt
@@ -107,7 +109,7 @@
       launchSd: ['launch', 'mul', 0.87],
       sprayNoise: ['launch', 'mul', 0.87],
       batSpeed: ['rawPower', 'add', 1], // a step is one mph (step 1.5: the table below is the real ladder)
-      recognition: ['recognition', 'up', 0.75],
+      recognition: ['recognition', 'up', 0.6], // Session 12: was 0.75, so the population's off-speed whiff spreads as MLB's
       judgeSd: ['discipline', 'mul', 0.85],
       judgeLean: ['discipline', 'mul', 0.7]
     },
@@ -192,20 +194,30 @@
   //   surprise  share of the unread movement (inches) that becomes *where* error
   //   lift      degrees added to the launch angle: the type's usual tilt (sinkers and splitters on the
   //             ground, four-seamers in the air)
+  //   miss      MLB's whiff % per swing for the type (Savant 2024 pitch-arsenal leaderboard; sliders with sweepers):
+  //             only for breaking a tie for the put-away pitch (B3.ratings.putAway)
   const TYPE = {
-    FF: { bite: 0.5, surprise: 0.12, lift: 6 },
-    SI: { bite: 0.0, surprise: 0.12, lift: -6 },
-    FC: { bite: 0.9, surprise: 0.12, lift: 1 },
-    SL: { bite: 1.6, surprise: 0.12, lift: 0 },
-    CU: { bite: 1.3, surprise: 0.12, lift: -1 },
-    CH: { bite: 1.5, surprise: 0.12, lift: -4 },
-    FS: { bite: 1.5, surprise: 0.12, lift: -8 }
+    //   chase     multiplier on SWING.chaseSd (the extra spread per foot outside the zone; step 1.5 task 4): an off-speed
+    //             pitch off the plate is still breaking away from the bat (MLB 2024 whiff % of swings: fastballs 16.2 in
+    //             the zone and 32.1 outside it, off-speed pitches 19.3 and 52.8)
+    // Session 12 (step 1.5 task 4, with one read per pitch): fastballs' bite +0.15, off-speed pitches' bite x 0.4 and
+    // surprise 0.15 (an unread pitch now carries the whole surprise, a read one none), so the whiffs by type and zone
+    // follow MLB's.
+    FF: { bite: 0.65, surprise: 0.12, lift: 6, miss: 21.9, chase: 0.7 },
+    SI: { bite: 0.15, surprise: 0.12, lift: -6, miss: 13.5, chase: 0.7 },
+    FC: { bite: 1.05, surprise: 0.12, lift: 1, miss: 23.7, chase: 0.7 },
+    SL: { bite: 0.64, surprise: 0.15, lift: 0, miss: 33.8, chase: 2.3 },
+    CU: { bite: 0.52, surprise: 0.15, lift: -1, miss: 33.0, chase: 2.3 },
+    CH: { bite: 0.6, surprise: 0.15, lift: -4, miss: 31.9, chase: 2.3 },
+    FS: { bite: 0.6, surprise: 0.15, lift: -8, miss: 35.1, chase: 2.3 }
   };
 
   const SWING = {
     radius: 2.75,      // bat radius plus ball radius, inches: a bigger *where* error misses
-    foulBack: 0.45,    // share of radius past which contact is a glancing foul (tipped back; step 1.5, was 0.52: about
-                       // half of all bat contact is foul, as in MLB)
+    foulBack: 0.42,    // share of radius past which contact is a glancing foul (tipped back; step 1.5, was 0.52: about
+                       // half of all bat contact is foul, as in MLB; Session 12, 0.45), for a pitch at foulRef mph ...
+    foulRef: 88,       // ... and it narrows as (foulRef / pitch speed)^foulPow (step 1.5 task 4: a faster pitch is fouled
+    foulPow: 2.5,      // back more often; MLB 2024: 43% of swings at fastballs are fouls, 32% at off-speed pitches)
     missMs: 80,        // a *when* error past this many ms misses the ball
     timeRadius: 0.7,   // share of the bat's reach (radius) lost at missMs; scales with the square of the *when*
                        // error (step 1.3: so velocity and Timing move whiffs, not only exit speed)
@@ -243,12 +255,14 @@
     lateLoss: 0.75,       // a late swing loses this share more than an early one (step 1.5: the bat isn't up to speed yet;
                        // Statcast's opposite-field balls come off slower than pulled ones)
     evSd: 1,           // exit-speed noise, mph (step 1.5, was 2.5: a swing's own bat speed carries most of the spread)
-    attack: 19.5,      // launch angle of a dead-center hit at the middle of the zone, degrees (step 1.5, was 13.5)
+    attack: 17.5,      // launch angle of a dead-center hit at the middle of the zone, degrees (step 1.5, was 13.5; Session 12,
+                       // 19.5: with one read per pitch fewer swings roll over an unread pitch)
     launchCurve: 1.5, // per square inch: the *where* error's launch angle grows as off x (1 + launchCurve x off^2), so
                        // a ball hit far under the center pops up and one far over it is chopped (step 1.5)
     heightLA: 13.5,      // degrees of launch angle per foot the pitch is above the middle of the zone (2.55 ft; step 1.5,
                        // was 7)
-    pullAt0: -7.5,     // spray of a perfectly timed swing, degrees toward the pull side (minus is pull; step 1.5, was -6)
+    pullAt0: -16,      // spray of a perfectly timed swing, degrees toward the pull side (minus is pull; step 1.5, was -6;
+                       // Session 12, -7.5: fewer swings are early on an unread pitch, and more pitches are fastballs)
     sprayPerMs: 1.0,   // degrees of spray per ms of *when* error (early pulls, late goes the other way)
     insidePull: 12,    // degrees toward the pull side per foot the pitch is inside
     sprayBase: 0.35,    // share of the batter's spray noise on a dead-center hit, growing to all of it at the glancing edge
@@ -256,7 +270,8 @@
     sprayLA: 1.4,      // degrees toward the opposite field per degree of launch angle he gets from hitting under the
                        // ball's center (step 1.5: a ball hit under slices the other way; Statcast 2024: 27% of fly balls
                        // are pulled and 57% of pop-ups go the other way, against 49% of ground balls pulled)
-    twoStrike: [0.64, 2], // with two strikes a hitter shortens up (step 1.4): [share of his *where* spread, mph of bat
+    twoStrike: [0.75, 2], // with two strikes a hitter shortens up (step 1.4; Session 12, was 0.64: MLB 2024 whiffs 25.9% of
+                       // swings before two strikes and 24.5% with two): [share of his *where* spread, mph of bat
                        // speed he gives up (step 1.5; it was 4% of exit speed)]
     shapeSd: [0.112, 0.09], // the shape's counterweight (step 1.4, owner's choice: value-neutral): share of the
                        // *where* spread taken off per unit of ground-ball shape (easier to square up), and
@@ -388,24 +403,31 @@
       // A CPU hitter swings when the pitch looks to cross inside this line: feet from the edge of the zone
       // (below 0 inside), by balls (rows 0-3) and strikes (columns 0-2). He takes the corners early in the
       // count and protects the plate with two strikes; on 3-0 he waits for one down the middle.
-      line: [[-0.12, -0.04, 0.24], [-0.12, -0.05, 0.24], [-0.13, -0.07, 0.22], [-0.5, -0.1, 0.19]],
+      // Session 12: two strikes 0.09 ft tighter (MLB 2024 swings at 59.9% of two-strike pitches).
+      line: [[-0.12, -0.04, 0.15], [-0.12, -0.05, 0.15], [-0.13, -0.07, 0.13], [-0.5, -0.1, 0.1]],
       agg: [0.1, 0.08, 0.03], // feet the line moves out per step of Aggressiveness, by strikes, for an average
                            // lean (judgeLean); in proportion to his own lean
       // Chance he takes all the way, whatever the pitch looks like, by balls and strikes.
-      take: [[0.3, 0.12, 0], [0.18, 0.1, 0], [0.3, 0.12, 0], [0.9, 0.15, 0]],
+      take: [[0.24, 0.096, 0], [0.144, 0.08, 0], [0.24, 0.096, 0], [0.9, 0.12, 0]], // Session 12: x 0.8, except 3-0
       aggTake: 0.6,        // share of those takes an Aggressive hitter skips (a Patient one adds): he judges
                            // more pitches himself, which pays off with good Discipline (owner's choice)
-      lookShare: 1         // share of the movement he doesn't read that misleads where he thinks it crosses
+      lookShare: 1,        // share of the movement he doesn't read that misleads where he thinks it crosses
+      lookCloser: true     // a misread draws his eye toward the zone, never away from it, on each axis (step 1.5 task 4)
     },
     pitch: {
       // How often each type is thrown when the pitcher has it, before grades and the count.
-      use: { FF: 1.7, SI: 1.4, FC: 1.0, SL: 1.1, CU: 0.8, CH: 0.9, FS: 0.8 },
+      // Session 12: so the test staffs throw MLB 2024's mix (fastballs 56%: FF 35.6, SI 16.6, FC 8.0; SL 21.2, CU 6.3,
+      // CH 9.0, FS 3.2; Savant's pitch-arsenal leaderboard, sweepers and slurves with sliders).
+      use: { FF: 2.5, SI: 1.45, FC: 2.5, SL: 1.6, CU: 0.65, CH: 0.75, FS: 2.5 },
       gradeUse: 0.3,       // better pitches get thrown more: weight x e^(gradeUse x u), u = tens of grade points
       behind: 1.8,         // fastballs (FF, SI, FC) x this when 2 balls ahead of the strikes (2-0, 3-0, 3-1)
-      putAway: 2.5,        // the put-away pitch x this with two strikes
+      putAway: 1.6,        // the put-away pitch x this with two strikes (Session 12, was 2.5: MLB 2024 throws 40.9% off-speed
+                           // pitches before two strikes and 50.7% with two)
       // Chance the target is in the zone, by balls (rows) and strikes (columns).
       zone: [[0.53, 0.42, 0.21], [0.62, 0.52, 0.32], [0.73, 0.67, 0.47], [0.82, 0.8, 0.72]],
       aimZone: [0, 0, 0], // targets in the zone added by Aim (Nibbler, Balanced, Attacker)
+      // Targets in the zone added by pitch type (step 1.5 task 4: MLB 2024 zone % 55.0 for fastballs, 42.5 for off-speed).
+      zoneType: { FF: 0.08, SI: 0.08, FC: 0.08, SL: -0.135, CU: -0.135, CH: -0.135, FS: -0.135 },
       // Targets in the zone: feet inside the nearest side and top or bottom, by Aim (Nibbler, Balanced,
       // Attacker). A nibbler works the corners; an attacker comes in toward the middle.
       inset: [[0.24, 0.72], [0.3, 0.8], [0.36, 0.88]],

@@ -14,10 +14,10 @@
 
 const ORDER = [['CF', 'L'], ['SS', 'R'], ['1B', 'L'], ['DH', 'R'], ['3B', 'R'], ['RF', 'S'], ['LF', 'R'], ['C', 'R'], ['2B', 'L']];
 const STAFF = [
-  ['SP', 'SP', 'R', ['FF', 'SL', 'CH', 'CU']],
+  ['SP', 'SP', 'R', ['FF', 'SI', 'SL', 'CH', 'CU']],
   ['CL', 'CL', 'R', ['FF', 'SL', 'FS']],
   ['SU1', 'SU', 'L', ['FF', 'SL', 'CH']],
-  ['SU2', 'SU', 'R', ['SI', 'CH', 'SL']],
+  ['SU2', 'SU', 'R', ['SI', 'SL', 'FS']],
   ['MR1', 'MR', 'L', ['FF', 'CU', 'CH']],
   ['MR2', 'MR', 'R', ['SI', 'SL', 'FC']],
   ['MR3', 'MR', 'R', ['FF', 'FC', 'CU', 'CH']],
