@@ -285,7 +285,9 @@
       if (Math.abs(x) > Math.abs(pitch.x)) x = pitch.x;
       if (up(z) > up(pitch.z)) z = pitch.z;
     }
-    return { x: x, z: z, edge: B3.data.zoneEdge(x, z) - w.b.bat.judgeLean + g.rng.normal(0, w.b.bat.judgeSd) };
+    // With two strikes he commits sooner, so he judges more roughly (Session 18, CPU.swing.twoSd).
+    const sd = g.strikes >= 2 ? Math.hypot(w.b.bat.judgeSd, C.twoSd) : w.b.bat.judgeSd;
+    return { x: x, z: z, edge: B3.data.zoneEdge(x, z) - w.b.bat.judgeLean + g.rng.normal(0, sd) };
   }
 
   B3.pitch = {

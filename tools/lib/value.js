@@ -24,6 +24,9 @@ const { averagePair } = require('./testteams');
 
 function key(outs, bases) { return outs * 8 + (bases[0] ? 1 : 0) + (bases[1] ? 2 : 0) + (bases[2] ? 4 : 0); }
 function copyBase(b) { return b ? { id: b.id, resp: b.resp, earned: b.earned } : null; }
+// A pitcher's in-game record (game.js live): fresh, or copied with its own times-faced map (seen, familiarity).
+function freshLive() { return { pitches: 0, outs: 0, runs: 0, bf: 0, seen: {} }; }
+function copyLive(l) { return Object.assign({}, l, { seen: Object.assign({}, l.seen) }); }
 
 // Average teams with set(player, kind, pos) applied: kind is 'hitter' or 'pitcher', pos the
 // player's lineup position (pitchers: 'P').
@@ -55,7 +58,8 @@ function sample(B3, games, seed, set) {
         if (gg.balls === 0 && gg.strikes === 0) {
           const f = gg.teams[d.side];
           const pid = a && a.pitcher ? a.pitcher : f.pitcher;
-          const live = a && a.pitcher ? { pitches: 0, outs: 0, runs: 0, bf: 0 } : Object.assign({}, f.live[pid]);
+          // Session 18: with the times-faced map (familiarity, Session 17) copied, so later batters don't change the snapshot
+          const live = a && a.pitcher ? freshLive() : copyLive(f.live[pid]);
           const s = { h: gg.half, i: gg.inning, outs: gg.outs, bases: gg.bases.map(copyBase), spot: gg.teams[gg.half].spot,
             pitcher: pid, live: live, ran: gg.halfRuns, k: key(gg.outs, gg.bases) };
           mine.push(s);
@@ -102,8 +106,8 @@ function measure(B3, s, set, opts) {
     bt.spot = sn.spot;
     f.pitcher = sn.pitcher;
     f.live = {};
-    f.live[sn.pitcher] = Object.assign({}, sn.live);
-    for (const b of g.bases) if (b && !f.live[b.resp]) f.live[b.resp] = { pitches: 0, outs: 0, runs: 0, bf: 0 };
+    f.live[sn.pitcher] = copyLive(sn.live);
+    for (const b of g.bases) if (b && !f.live[b.resp]) f.live[b.resp] = freshLive();
     g.pending = { kind: 'change', side: 1 - sn.h, pitcher: sn.pitcher, bullpen: [] };
     let k = 0, seen = 0, pa = null;
     for (;;) {

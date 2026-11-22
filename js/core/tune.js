@@ -447,7 +447,8 @@
       // Session 12: two strikes 0.09 ft tighter (MLB 2024 swings at 59.9% of two-strike pitches).
       // Session 15: before two strikes 0.05 ft looser, with more blind takes (below): MLB 2024's swing curve by feet from
       // the zone (tools/ratingstats.js, the population check's swing curves by thirds of hitters).
-      line: [[-0.07, 0.01, 0.15], [-0.07, 0.04, 0.15], [-0.08, -0.02, 0.13], [-0.3, -0.05, 0.1]],
+      // Session 18: two strikes 0.04 ft looser (was 0.15 / 0.15 / 0.13 / 0.1), with twoSd and the two-strike takes (below).
+      line: [[-0.07, 0.01, 0.19], [-0.07, 0.04, 0.19], [-0.08, -0.02, 0.17], [-0.3, -0.05, 0.14]],
       agg: [0.05, 0.04, 0.015], // feet the line moves out per step of Aggressiveness, by strikes, for an average
                            // lean (judgeLean); in proportion to his own lean (Session 15: x 0.5, so the tendency stays about
                            // value-neutral with the fitted takes: each chase costs more than a first-pitch take)
@@ -455,10 +456,17 @@
       // Session 15: fitted count by count to MLB 2024's swings at pitches 0.4 ft or more inside the zone (0-0 52.0%, 0-1 84.6,
       // 1-0 71.2, 1-1 85.5, 2-0 66.0, 2-1 89.5, 3-0 17.7, 3-1 83.9; 109,184 Statcast pitches): real hitters take mostly the first
       // pitch and 3-0 (was [[0.24, 0.096, 0], [0.144, 0.08, 0], [0.24, 0.096, 0], [0.9, 0.12, 0]]).
-      take: [[0.44, 0.1, 0], [0.22, 0.1, 0], [0.25, 0.03, 0], [0.8, 0.1, 0]],
+      // Session 18: with two strikes 0.02 (was 0): frozen by a pitch he wasn't looking for (MLB 2024 takes 4.9% of two-strike
+      // pitches 0.4 ft or more inside the zone; the engine took 2.8%, all from Discipline's noise).
+      take: [[0.44, 0.1, 0.02], [0.22, 0.1, 0.02], [0.25, 0.03, 0.02], [0.8, 0.1, 0.02]],
       aggTake: 0.45,       // share of those takes an Aggressive hitter skips (a Patient one adds): he judges
                            // more pitches himself, which pays off with good Discipline (owner's choice). Session 15:
                            // was 0.6 (Aggressive moved zone swing 2x as much as chase; MLB's overall swing moves both alike)
+      // With two strikes he commits sooner to protect the plate, so he judges where the pitch will cross more roughly: feet of
+      // noise added (in quadrature) to his Discipline's judgeSd, the same for everyone (Session 18: MLB 2024's two-strike swing
+      // curve is flatter than its curve before two strikes; the engine's had the same steepness, so it swung 2-3 points too
+      // often in the zone and chased 3-5 points too little).
+      twoSd: 0.15,
       lookShare: 1,        // share of the movement he doesn't read that misleads where he thinks it crosses
       lookCloser: true     // a misread draws his eye toward the zone, never away from it, on each axis (step 1.5 task 4)
     },

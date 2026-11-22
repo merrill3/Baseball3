@@ -464,6 +464,9 @@ const REAL_CURVE = {
     sharp: [[20.5, 7.5, 32.5, 64.7, 85.5, 60.9], [22.4, 8.7, 28.5, 66.9, 83.3, 55.9], [22.6, 9.4, 26.3, 70.5, 81.8, 53.3]]
   },
   all: { e: [68.3, 60.4, 50.6, 37.5, 27.4, 16.5, 8.3, 4.1], t: [95.1, 88.5, 81.4, 67.2, 53.7, 35, 20.1, 7.3] },
+  // Session 18: the share of pitches in each bin, from 8 other Wednesdays of 2024 (April 17 to September 11, 35,393 pitches,
+  // the same method; their swing curves within about 1 point of the 24 days')
+  share: { e: [21.4, 15.9, 15.8, 14.1, 10.8, 10.9, 6.0, 5.2], t: [17.3, 13.3, 14.1, 13.0, 11.4, 13.3, 8.0, 9.5] },
   chase: [{ e: [65.8, 55, 43.9, 31.3, 20.7, 11.4, 3.8, 1.6], t: [94.8, 86.6, 80.4, 62.2, 48.9, 27.1, 13.8, 5] }, { e: [67.6, 61.4, 51.5, 36.3, 27.2, 15.9, 8.1, 4.6], t: [95.1, 88, 80.8, 67.9, 51.4, 33.3, 16.9, 6.7] }, { e: [71.7, 64.6, 57.6, 46.4, 34.9, 22, 12.1, 5.6], t: [96.1, 93.7, 85.5, 73.7, 62.5, 45.3, 28.8, 9.3] }],
   overall: [{ e: [62.3, 53.3, 43.3, 30.6, 20.6, 11.7, 4.5, 1.8], t: [94.5, 86.1, 80.8, 62.4, 49.9, 29.1, 14.6, 5.9] }, { e: [68.6, 60.3, 50.2, 37.2, 26.6, 15.9, 8.2, 4.1], t: [95.4, 89.7, 81.1, 69.3, 53.3, 34.6, 20.2, 7.3] }, { e: [74.6, 67.8, 59.7, 46.2, 35.6, 21.6, 11.3, 6.1], t: [96.1, 92.6, 84.6, 71.8, 59.1, 41.7, 25.1, 8] }],
   sharp: [{ e: [62.6, 56.2, 50.6, 39.5, 29.8, 18.1, 10.8, 4.4], t: [96.1, 90.2, 82.8, 71.6, 60.4, 44.5, 26.2, 10] }, { e: [67.6, 59.5, 48, 37.8, 26, 15.7, 7.3, 4.3], t: [94.7, 89.7, 82.1, 67.4, 54, 33.4, 18.6, 6.1] }, { e: [74, 65, 53.9, 36, 26.8, 15.1, 6, 3.2], t: [95.1, 88, 81.4, 64.6, 48.3, 28.1, 14.9, 5.3] }]
@@ -515,7 +518,9 @@ function curveReport(seasons) {
     const c = {};
     for (const s of list) for (const k in s.curve) c[k] = (c[k] || 0) + s.curve[k];
     const pc = (t) => CURVE_BINS.map((_, i) => (c['n' + t + i] ? 100 * (c['s' + t + i] || 0) / c['n' + t + i] : NaN));
-    return { e: pc('e'), t: pc('t') };
+    // Session 18: the share of pitches in each bin (where the pitches are, before two strikes and with two)
+    const sh = (t) => { const n = CURVE_BINS.reduce((q, _, i) => q + (c['n' + t + i] || 0), 0); return CURVE_BINS.map((_, i) => 100 * (c['n' + t + i] || 0) / n); };
+    return { e: pc('e'), t: pc('t'), ne: sh('e'), nt: sh('t') };
   };
   const out = { all: curve(seasons), thirds: {} };
   const avg = (list, k) => list.reduce((t, s) => t + s[k], 0) / list.length;
@@ -533,6 +538,7 @@ function curveReport(seasons) {
   for (const t of ['e', 't']) {
     const w = t === 'e' ? 'before 2 strikes' : 'two strikes';
     row('all, ' + w, out.all[t], REAL_CURVE.all[t]);
+    row('  share of pitches', out.all['n' + t], REAL_CURVE.share[t]);
     for (const g in by) for (const i of [0, 2]) row(g + (i ? ' high' : ' low') + ' third', out[g][i][t], REAL_CURVE[g][i][t]);
   }
   return out;
