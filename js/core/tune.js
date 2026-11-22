@@ -27,8 +27,8 @@
     launchK: 15,       // Launch: degrees of launch angle per inch of *where* error near the bat's center (lower is a
                        // tighter band); it bends steeper toward the bat's edge (SWING.launchCurve; step 1.5, was 22)
     launchSd: 12,      // Launch: extra launch-angle noise in degrees (the swing's own plane; step 1.5, was 15)
-    sprayNoise: 29,    // Launch: spray-direction noise in degrees (spray control), on a mishit at the glancing edge
-                       // (SWING.sprayBase; step 1.5, was 20 on every ball)
+    sprayNoise: 27,    // Launch: spray-direction noise in degrees (spray control), on a mishit at the glancing edge
+                       // (SWING.sprayBase; step 1.5, was 20 on every ball; Session 22, was 29: the spray fit, SWING.pullAt0)
     recognition: 0.8,  // Recognition: the chance he picks up a pitch (its movement and speed change), 0 to 1; one read per
                        // pitch (step 1.5 task 4, Session 12: was a share of every pitch, 0.75)
     breakRead: 1,      // Recognition: multiplier on the late break (TYPE bite) of an off-speed pitch he swings at (below 1:
@@ -279,8 +279,10 @@
 
   const SWING = {
     radius: 2.75,      // bat radius plus ball radius, inches: a bigger *where* error misses
-    foulBack: 0.42,    // share of radius past which contact is a glancing foul (tipped back; step 1.5, was 0.52: about
-                       // half of all bat contact is foul, as in MLB; Session 12, 0.45), for a pitch at foulRef mph ...
+    foulBack: 0.445,   // share of radius past which contact is a glancing foul (tipped back; step 1.5, was 0.52: about
+                       // half of all bat contact is foul, as in MLB; Session 12, 0.45; Session 22, was 0.42: with the wider
+                       // spray more fouls come from balls hit outside the lines, so fewer are tipped back), for a pitch at
+                       // foulRef mph ...
     foulRef: 88,       // ... and it narrows as (foulRef / pitch speed)^foulPow (step 1.5 task 4: a faster pitch is fouled
     foulPow: 2.5,      // back more often; MLB 2024: 43% of swings at fastballs are fouls, 32% at off-speed pitches)
     foulSpeedShare: 0, // share of this pitch's own speed in that (Session 13; the rest is the type's typical speed, PIT.velo x
@@ -321,14 +323,15 @@
     batCap: 1.3,       // his hardest swing: batSd x this above his average (step 1.5: Raw Power is a ceiling; Statcast's
                        // hardest-hit balls stop near 110 mph for an average bat)
     plateShare: 0.9,   // pitch speed at the plate as a share of release speed
-    offLoss: 0.45,     // exit speed lost at the glancing edge (scales with the *where* error to offPow; step 1.5, was 0.42
-                       // with a square)
+    offLoss: 0.47,     // exit speed lost at the glancing edge (scales with the *where* error to offPow; step 1.5, was 0.42
+                       // with a square; Session 22, was 0.45: with foulBack's wider fair core)
     offPow: 2.5,       // the power: a near-center hit loses little, a mishit near the edge a lot (step 1.5)
     offUnder: 0.89,    // share of that loss when the bat passes under the ball (step 1.5: Statcast's fly balls come off
                        // harder than its ground balls)
     timeLoss: 0.28,    // exit speed lost at missMs (scales with the square of the *when* error; step 1.5, was 0.45)
-    lateLoss: 0.75,       // a late swing loses this share more than an early one (step 1.5: the bat isn't up to speed yet;
-                       // Statcast's opposite-field balls come off slower than pulled ones)
+    lateLoss: 0.47,    // a late swing loses this share more than an early one (step 1.5: the bat isn't up to speed yet;
+                       // Statcast's opposite-field balls come off slower than pulled ones; Session 22, was 0.75: the engine's
+                       // opposite-field fly balls came off 9.7 mph slower than its pulled ones, MLB's 6.6, now about 8)
     evSd: 2.5,         // exit-speed noise, mph (step 1.5, was 2.5: a swing's own bat speed carries most of the spread; Session 21: 2.5
                        // again, with chaseOff the exit speeds' 10th-90th percentiles 68 / 82 / 93 / 99 / 103.5 [69 / 80.5 / 91.5 / 99 / 104.5])
     attack: 17.5,      // launch angle of a dead-center hit at the middle of the zone, degrees (step 1.5, was 13.5; Session 12,
@@ -337,20 +340,27 @@
                        // a ball hit far under the center pops up and one far over it is chopped (step 1.5)
     heightLA: 13.5,      // degrees of launch angle per foot the pitch is above the middle of the zone (2.55 ft; step 1.5,
                        // was 7)
-    pullAt0: -16,      // spray of a perfectly timed swing, degrees toward the pull side (minus is pull; step 1.5, was -6;
-                       // Session 12, -7.5: fewer swings are early on an unread pitch, and more pitches are fastballs)
-    sprayPerMs: 1.0,   // degrees of spray per ms of *when* error (early pulls, late goes the other way)
-    insidePull: 12,    // degrees toward the pull side per foot the pitch is inside
-    sprayBase: 0.35,    // share of the batter's spray noise on a dead-center hit, growing to all of it at the glancing edge
-                       // (step 1.5: a squared-up ball goes where the bat points; a mishit squirts)
-    sprayLA: 1.4,      // degrees toward the opposite field per degree of launch angle he gets from hitting under the
+    // The spray (Session 22, step 1.5 task 6, Claude's defaults: a Nelder-Mead fit with foulBack and offLoss on 12 Wednesdays of
+    // 2024, 9,374 balls in play and 54,043 pitches: the spray's bins by type, fouls and foul outs, exit speed's percentiles and by
+    // direction; DESIGN.md section 10, "The spray"). The tilted bat carries most of it: a ball hit under the center rises and
+    // drifts the other way, one hit over it is driven down and pulled.
+    pullAt0: -15,      // spray of a perfectly timed swing, degrees toward the pull side (minus is pull; step 1.5, was -6;
+                       // Session 12, -7.5: fewer swings are early on an unread pitch, and more pitches are fastballs; Session 22, -16)
+    sprayPerMs: 1.05,  // degrees of spray per ms of *when* error (early pulls, late goes the other way; Session 22, was 1.0)
+    insidePull: 18.5,  // degrees toward the pull side per foot the pitch is inside (Session 22, was 12: the measured slope,
+                       // diluted by the noise, now near MLB's 11-12 for air balls)
+    sprayBase: 0.6,    // share of the batter's spray noise on a dead-center hit, growing to all of it at the glancing edge
+                       // (step 1.5: a squared-up ball goes where the bat points; a mishit squirts; Session 22, was 0.35: hard-hit
+                       // balls went too often to the pull side, MLB's go everywhere)
+    sprayLA: 2.05,     // degrees toward the opposite field per degree of launch angle he gets from hitting under the
                        // ball's center (step 1.5: a ball hit under slices the other way; Statcast 2024: 27% of fly balls
-                       // are pulled and 57% of pop-ups go the other way, against 49% of ground balls pulled)
-    // Session 21: three spray hooks for step 1.5 task 6's spray work, at no effect here (wider spray tried so far sent mishits foul)
-    sprayTop: 0,       // degrees toward the pull side per degree of launch angle he loses hitting over the ball (Session 21)
-    sprayCap: 99,      // degrees of lift (either way) past which sprayLA and sprayTop add no more (Session 21)
+                       // are pulled and 57% of pop-ups go the other way, against 49% of ground balls pulled; Session 22, was 1.4)
+    sprayTop: 0.15,    // degrees toward the pull side per degree of launch angle he loses hitting over the ball (Session 21 hook;
+                       // Session 22, was 0)
+    sprayCap: 34,      // degrees of lift (either way) past which sprayLA and sprayTop add no more (Session 21 hook; Session 22, was
+                       // 99: a pop-up drifts the other way no further than a high fly ball, so fewer slice foul)
     sprayAng: 0,       // degrees toward the opposite field per degree of launch angle above sprayMid (toward the pull side below it,
-    sprayMid: 15,      // within 30 degrees either way; Session 21)
+    sprayMid: 15,      // within 30 degrees either way; Session 21 hook, at no effect: the Session 22 fit found 0.04)
     twoStrike: [0.75, 2], // with two strikes a hitter shortens up (step 1.4; Session 12, was 0.64: MLB 2024 whiffs 25.9% of
                        // swings before two strikes and 24.5% with two): [share of his *where* spread, mph of bat
                        // speed he gives up (step 1.5; it was 4% of exit speed)]

@@ -241,7 +241,8 @@
     const la = S.attack + S.pathLA * path + T().TYPE[pitch.type].lift - (pitch.shape || 0) + lift + S.heightLA * (pitch.z - 2.55) + r.normal(0, w.b.bat.launchSd);
     // Spray: worked out for the pull side (minus), then turned for the batter's side.
     const inside = w.bats === 'R' ? -pitch.x : pitch.x; // feet toward the batter
-    // A ball hit under the center drifts the other way (step 1.5); one topped over it is pulled (Session 21: sprayTop).
+    // A ball hit under the center drifts the other way (step 1.5); one topped over it is pulled (Session 21: sprayTop), as off a
+    // tilted bat, up to sprayCap degrees of lift either way (Session 22: the spray fit, B3.tune.SWING).
     // A squared-up ball goes where the bat points (timing); a mishit squirts more (step 1.5: sprayBase).
     const noise = w.b.bat.sprayNoise * (S.sprayBase + (1 - S.sprayBase) * Math.min(1, Math.abs(u)));
     const pull = S.pullAt0 - S.pathPull * path + S.sprayPerMs * tm - S.insidePull * inside + S.sprayLA * clamp(lift, 0, S.sprayCap) + S.sprayTop * clamp(lift, -S.sprayCap, 0) +
