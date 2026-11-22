@@ -213,8 +213,14 @@ const POP_SD = 12.2, POP_R = process.env.POPR !== undefined ? +process.env.POPR 
 // POP_PC: the correlation between Raw Power and Contact.
 const POP_PC = process.env.POPPC !== undefined ? +process.env.POPPC : -0.3;
 const POP_DC = process.env.POPDC !== undefined ? +process.env.POPDC : 0;
-const POP_SC = process.env.POPSC !== undefined ? +process.env.POPSC : 0;
-const POP_AIM = process.env.POPAIM !== undefined ? +process.env.POPAIM : 0;
+// How pitchers' traits go together (Session 19, the owner's choice: linked as MLB's are, "but not too much that star players
+// don't exist"; the sizes are Claude's defaults, the largest that keep MLB starters' share of aces, K% 27+ with BB% 6.5 or
+// less, 5.1% [5.9]): stuff leans against Command (POP_SC, the link between Command and his Velocity and grades taken together;
+// about -0.08 with each one), and pitchers whose stuff gets chases lean Nibbler (POP_AIM). MLB starters 2024-2026: whiff % with
+// walks +0.16, zone % with chase % -0.21 (selection: poor stuff with poor command doesn't stick; strategy: chase-getters nibble).
+// POPSC and POPAIM override them for experiments.
+const POP_SC = process.env.POPSC !== undefined ? +process.env.POPSC : -0.2;
+const POP_AIM = process.env.POPAIM !== undefined ? +process.env.POPAIM : 0.4;
 // Pitch shapes (Session 19): the spread of a pitch's shape and the share of it his own tilt carries (POPSHAPE and POPSHAPER for
 // experiments).
 const POP_SHAPE = process.env.POPSHAPE !== undefined ? +process.env.POPSHAPE : 0.35;
@@ -225,7 +231,7 @@ function popRatings(rng, keys) {
   if (POP_PC && z.rawPower !== undefined && z.contact !== undefined) z.rawPower = POP_PC * z.contact + Math.sqrt(1 - POP_PC * POP_PC) * z.rawPower;
   // POPDC (experiments only, Session 15): a link between Discipline and Contact.
   if (POP_DC && z.discipline !== undefined && z.contact !== undefined) z.discipline = POP_DC * z.contact + Math.sqrt(1 - POP_DC * POP_DC) * z.discipline;
-  // POPSC (experiments only, Session 19): a link between a pitcher's stuff (his Velocity and grades together) and his Command.
+  // Session 19 (POP_SC): his Command leans against his stuff (his Velocity and grades together).
   if (POP_SC && z.command !== undefined) {
     const st = keys.filter((k) => k === 'velocity' || k.startsWith('g:'));
     const zs = st.reduce((t, k) => t + z[k], 0) / Math.sqrt(st.length);
@@ -280,8 +286,8 @@ function measurePop(B3, spec) {
       draws[id] = r;
     }
   }
-  // POPAIM (experiments only, Session 19): pitchers whose stuff gets chases (Deception and grades) lean Nibbler; Aim then comes
-  // from that lean plus noise, cut at the 25th and 75th percentiles (still 1 : 2 : 1).
+  // Session 19 (POP_AIM): pitchers whose stuff gets chases (Deception and grades together) lean Nibbler; Aim comes from that lean
+  // plus noise, cut at the 25th and 75th percentiles (still 1 : 2 : 1).
   if (POP_AIM && spec.kind === 'pitcher') {
     const arng = B3.rng.create('popaim:' + spec.seed + ':' + spec.team);
     for (const id in teams.away.players) {
@@ -523,7 +529,7 @@ function popReport(res, real) {
       seasons.push(st);
     }
     const rows = [];
-    console.log('\nPopulation check, ' + kind + 's: ' + seasons.length + ' test player-seasons (250+ PA; ratings about 60 +- ' + POP_SD + ', r ' + POP_R + ', Raw Power-Contact ' + POP_PC + '; tendencies 1:2:1) against real 2024-2026');
+    console.log('\nPopulation check, ' + kind + 's: ' + seasons.length + ' test player-seasons (250+ PA; ratings about 60 +- ' + POP_SD + ', r ' + POP_R + ', Raw Power-Contact ' + POP_PC + (kind === 'pitcher' ? ', stuff-Command ' + POP_SC + ', Aim lean ' + POP_AIM + ', shapes ' + POP_SHAPE : '') + '; tendencies 1:2:1) against real 2024-2026');
     console.log('  stat                   engine p5    p25    p50    p75    p95  |   real p5    p25    p50    p75    p95');
     for (const [lab, key, rk, d] of POP_STATS[kind]) {
       const xs = seasons.map((s2) => s2[key]);
