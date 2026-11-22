@@ -43,7 +43,8 @@ const RATINGS = {
   discipline: { kind: 'hitter', own: [['zMinusO', 'bat.zswing_minus_chase', 1], ['chase', 'bat.oz_swing_percent', -1]] },
   velocity: { kind: 'pitcher', own: [['fbSpeed', 'pit.ff_avg_speed', 1]],
     units: [['fbSpeed', 'k', 'dvelo.k_percent'], ['fbSpeed', 'whiff', 'velo.whiff_percent'], ['fbSpeed', 'ev', 'velo.exit_velocity_avg'], ['fbSpeed', 'hard', 'velo.hard_hit_percent']] },
-  command: { kind: 'pitcher', own: [['edge', 'pit.edge_percent', 1], ['meatball', 'pit.meatball_percent', -1]] },
+  // Command's own stats: walk % and edge % (owner's choice, Session 14: meatball % follows zone %, so it moved to Aim).
+  command: { kind: 'pitcher', own: [['bb', 'pit.bb_percent', -1], ['edge', 'pit.edge_percent', 1]] },
   deception: { kind: 'pitcher', own: [['chase', 'pit.oz_swing_percent', 1]] },
   grades: { kind: 'pitcher', own: [['whiffSL', 'type.SL.whiff', 1], ['whiffCH', 'type.CH.whiff', 1], ['whiffCU', 'type.CU.whiff', 1]] },
   speed: { kind: 'hitter', own: [['sprint', 'run.sprint_speed', 1], ['hpTo1b', 'run.hp_to_1b', -1]] },

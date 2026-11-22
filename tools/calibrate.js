@@ -224,8 +224,9 @@ const DEFENSE = [
 // 'both' one away player's runs scored minus runs allowed. slope: runs per 10 points.
 const FIT_LEVELS = [20, 30, 40, 50, 70, 80, 90, 99];
 // Tables set to the real ladder in physical units are not fitted (realism wins over equal value, DESIGN.md section 10):
-// Raw Power's bat speed (step 1.5) and Velocity's fastball speed (Session 13), one mph a step.
-const LADDER = { rawPower: true, velocity: true };
+// Raw Power's bat speed (step 1.5) and Velocity's fastball speed (Session 13), one mph a step. Nor are the tables set so the
+// test population spreads as MLB's players do (owner's choice, Session 14): Contact's (Session 10) and Command's (Session 14).
+const LADDER = { rawPower: true, velocity: true, contact: true, command: true };
 const FIT = [
   ...HIT.map((k) => ({ key: k, read: 'hit', slope: TARGET, conds: (L) => [ratingCond(k, L)] })),
   ...['velocity', 'command', 'deception'].map((k) => ({ key: k, read: 'pit', slope: TARGET, conds: (L) => [ratingCond(k, L)] })),
