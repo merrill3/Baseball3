@@ -53,7 +53,7 @@
     putAway: null,     // the put-away pitch (his best-graded type); null: the CPU picks by pitch type
     aim: 0             // tendency (-1 Nibbler, 0 Balanced, 1 Attacker): the CPU's pitch targets
   };
-  const STAMINA = { SP: 92, LR: 50, other: 28 }; // placeholder Stamina by role, in pitches
+  const STAMINA = { SP: 88, LR: 50, other: 28 }; // placeholder Stamina by role, in pitches (Session 16: SP was 92)
 
   // Fielding. A null takes the position's value from POS below (a fielder's inputs don't move with
   // his position in a game: there are no defensive substitutions in M1).
@@ -172,9 +172,14 @@
       baserunning: [[20, -5.57], [30, -3.415], [40, -2.068], [50, -0.985], [60, 0], [70, 0.952], [80, 1.917], [90, 2.949], [100, 4.152], [110, 6.043]]
     },
     shape: 4,          // degrees off the launch angle at shape +1 (ground-ball tilt); -1 is a fly-ball tilt
-    // Stamina: pitches before fatigue sets in, by rating (straight lines between; past 100 the last
-    // slope). One scale for every role: relievers are low-Stamina pitchers. 60 is the placeholder starter.
-    stamina: [[20, 18], [30, 28], [40, 45], [50, 68], [60, 92], [70, 102], [80, 110], [90, 117], [100, 123]],
+    // Stamina: pitches before fatigue sets in, by rating (points after the curve; straight lines between; past the last row
+    // its slope). One scale for every role: relievers are low-Stamina pitchers. 60 is the placeholder starter.
+    // Session 16 (step 1.5 task 4): from 30 up, fitted so a starter's pitches per start (everyone else at 60) follow the
+    // real starters' ladder (Baseball-Reference 2024-2026, 615 seasons with 10+ starts: 1st percentile 63, 5th 76, 25th 83,
+    // median 87, 75th 90.5, 95th 95, 99th 98, best 100); 20 stays a short reliever (the worst real starter-season was an
+    // opener's, 17). Relievers sit at about 20-30. Was [[20, 18], [30, 28], [40, 45], [50, 68], [60, 92], [70, 102], [80, 110],
+    // [90, 117], [100, 123]] (a starter's 56 pitches a start at 40, 111 at 99).
+    stamina: [[20, 18], [30, 53], [40, 69], [50, 80], [60, 88], [70, 94], [80, 102], [91.25, 107], [108.8, 111]],
     tendency: {
       aggressiveness: { Patient: -1, Balanced: 0, Aggressive: 1 },
       aim: { Nibbler: -1, Balanced: 0, Attacker: 1 },

@@ -28,8 +28,9 @@ const HIT = ['contact', 'timing', 'launch', 'rawPower', 'recognition', 'discipli
 const PIT = ['velocity', 'command', 'deception'];
 // Defense and running (step 1.4): every hitter has them; Framing only catchers.
 const DEF = ['range', 'hands', 'arm', 'speed', 'baserunning'];
-// Stamina ratings that give the placeholder pitches by role (B3.tune.STAMINA: SP 92, LR 50, others 28).
-const STAMINA = { SP: 60, LR: 42.2, other: 30 };
+// Stamina ratings that give the placeholder pitches by role (B3.tune.STAMINA: SP 88, LR 50, others 28; Session 16's scale,
+// where relievers sit at about 20-30).
+const STAMINA = { SP: 60, LR: 20 + 10 * 32 / 35, other: 20 + 10 * 10 / 35 };
 
 // A team in the shape B3.game.create takes. fill(player, kind) adds ratings ('hitter' or 'pitcher').
 function team(code, name, fill) {
@@ -89,7 +90,9 @@ function rated(code, name, rng) {
       p.ratings.velocity = draw(reliever ? 63 : 60, 10);
       p.ratings.command = draw(60, 10);
       p.ratings.deception = draw(60, 10);
-      p.ratings.stamina = p.role === 'SP' ? draw(62, 6) : p.role === 'LR' ? draw(45, 5) : draw(30, 4);
+      // Session 16's Stamina scale (relievers at about 20-30): about the same pitches before fatigue as before (SP 89 +- 5,
+      // LR 49 +- 5, others 28 +- 5).
+      p.ratings.stamina = p.role === 'SP' ? draw(62, 6) : p.role === 'LR' ? draw(29, 1.5) : draw(22.9, 1.5);
       p.arsenal = {};
       for (const type of p.pitches) {
         p.arsenal[type] = { grade: draw(60, 10), shape: Math.round(Math.max(-1, Math.min(1, rng.normal(0, 0.4))) * 10) / 10 };

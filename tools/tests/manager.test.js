@@ -179,6 +179,24 @@ module.exports = function (t) {
     assert.strictEqual(cpu.change(d(), g), null, 'not in the middle of a plate appearance');
   });
 
+  t.test('Stamina in games: a starter\'s pitches per start follow real starters\' (5th, 50th, 95th percentiles 76, 87, 95)', () => {
+    // Session 16: only the away starter's Stamina moves; everyone else is average. 150 games each (about +-1.5 pitches).
+    const B3 = loadCore();
+    const per = (stamina) => {
+      let sum = 0;
+      for (let n = 0; n < 150; n++) {
+        const t = averagePair();
+        t.away.players['AWY-SP'].ratings.stamina = stamina;
+        const g = B3.game.sim(Object.assign(t, { type: 'regular', rng: B3.rng.create('stamina test ' + n) }));
+        sum += g.teams[0].live['AWY-SP'].pitches;
+      }
+      return sum / 150;
+    };
+    const lo = per(40), mid = per(60), hi = per(80);
+    near(lo, 76, 3.5, 'Stamina 40'); near(mid, 87, 3.5, 'Stamina 60'); near(hi, 95, 3.5, 'Stamina 80');
+    assert.ok(lo < mid && mid < hi, 'rises with Stamina');
+  });
+
   t.test('steals: the runner judges his odds (Speed, Baserunning against the catcher) and goes only when they are good', () => {
     // A runner on first (AWY-2B) with the home catcher behind the plate; ratings for both.
     const env = (runner, catcher) => {

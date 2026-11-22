@@ -52,7 +52,9 @@ const RATINGS = {
   grades: { kind: 'pitcher', own: [['whiffSL', 'type.SL.whiff', 1], ['whiffCH', 'type.CH.whiff', 1], ['whiffCU', 'type.CU.whiff', 1]] },
   speed: { kind: 'hitter', own: [['sprint', 'run.sprint_speed', 1], ['hpTo1b', 'run.hp_to_1b', -1]] },
   arm: { kind: 'hitter', own: [['armRF', 'arm.rf', 1], ['armSS', 'arm.ss', 1]] },
-  stamina: { kind: 'pitcher', own: [['staminaPitches', null, 1]] }
+  // Stamina (Session 16): only the starter moves; his pitches and innings per start against real starters' (Baseball-Reference
+  // 2024-2026, 10+ starts), and the pitches before fatigue it sets.
+  stamina: { kind: 'pitcher', only: 'SP', own: [['pps', 'sp.pitches_per_start', 1], ['ipps', 'sp.innings_per_start', 1], ['staminaPitches', null, 1]] }
 };
 
 function args() {
@@ -80,7 +82,7 @@ function newAcc() {
     heart: 0, shadow: 0, chaseZ: 0, waste: 0, meat: 0, shTake: 0, shCalled: 0,
     fbN: 0, fbV: 0, offSw: 0, offWhiff: 0, offOut: 0, offOutSw: 0, fbOut: 0, fbOutSw: 0, sw95: 0, whiff95: 0,
     bySw: {}, byWhiff: {}, paBy: {}, curve: {},
-    bip: 0, evSum: 0, evs: [], laSum: 0, laSq: 0, hard: 0, barrel: 0, sweet: 0, gb: 0, ld: 0, fb: 0, pu: 0,
+    bip: 0, evSum: 0, evs: [], laSum: 0, laSq: 0, hard: 0, barrel: 0, sweet: 0, gb: 0, ld: 0, fb: 0, pu: 0, starts: 0, spPitches: 0, spOuts: 0,
     pull: 0, straight: 0, oppo: 0, squared: 0, blast: 0, fast: 0, batSpeedSum: 0, swings: 0 };
 }
 
@@ -184,6 +186,7 @@ function measure(B3, cond, games, seed) {
       const p = teams.away.players[id];
       const kind = p.pitches ? 'pitcher' : 'hitter';
       if (kind !== cond.kind) continue;
+      if (cond.only && p.role !== cond.only) continue; // Stamina moves only the starter (Session 16)
       if (cond.k === 'grades') for (const t in p.arsenal) p.arsenal[t].grade = cond.L;
       else if (cond.k) p.ratings[cond.k] = cond.L;
       if (cond.also) Object.assign(p.ratings, cond.also); // more ratings (the tendencies' payoff checks, Session 11)
@@ -192,6 +195,7 @@ function measure(B3, cond, games, seed) {
     const g = B3.game.sim(Object.assign(teams, { type: 'regular', rng: B3.rng.create('rs:' + seed + ':' + n) }));
     a.games++;
     a.runs += g.score[side === 0 ? 0 : 1];
+    if (side === 1) { const sp = g.teams[0].live[g.teams[0].used[0]]; a.starts++; a.spPitches += sp.pitches; a.spOuts += sp.outs; }
     addGame(B3, g, side, () => a);
   }
   return a;
@@ -233,6 +237,12 @@ function measurePop(B3, spec) {
     if (spec.kind === 'hitter' && !p.pitches) p.tendencies.swingPath = ['Ground-ball', 'Level', 'Lift'][prng.weighted([1, 2, 1])];
     if (spec.kind === 'pitcher' && p.pitches) p.tendencies = { aim: style(['Nibbler', 'Balanced', 'Attacker']) };
   }
+  // The starter's Stamina (Session 16) from a fourth stream, about 60 +- 12.2 as the other ratings; relievers keep the placeholders.
+  const strng = B3.rng.create('popstam:' + spec.seed + ':' + spec.kind + ':' + spec.team);
+  for (const id in teams.away.players) {
+    const p = teams.away.players[id];
+    if (spec.kind === 'pitcher' && p.role === 'SP') p.ratings.stamina = Math.round(Math.max(20, Math.min(99, 60 + POP_SD * strng.normal(0, 1))));
+  }
   for (const id in teams.away.players) {
     const p = teams.away.players[id];
     if (spec.kind === 'hitter' && !p.pitches) Object.assign(p.ratings, draws[id] = popRatings(rng, HIT));
@@ -255,9 +265,12 @@ function measurePop(B3, spec) {
   for (let n = 0; n < spec.games; n++) {
     const g = B3.game.sim(Object.assign(JSON.parse(JSON.stringify(teams)), { type: 'regular', rng: B3.rng.create('pg:' + spec.seed + ':' + spec.kind + ':' + spec.team + ':' + n) }));
     // Outs and runs first (they go to the chunk the plate appearance belongs to, before addGame counts it).
+    const starter = g.teams[0].used[0];
+    let started = false;
     for (const e of g.log) {
       if (e.h !== side || e.e !== 'pa') continue;
       const a = cur(spec.kind === 'hitter' ? e.b : e.p);
+      if (spec.kind === 'pitcher' && e.p === starter && !started) { a.starts++; started = true; }
       a.outs += e.out;
       if (spec.kind === 'pitcher') for (const sc of e.sc) { const r = cur(sc.p); r.runs++; r.er += sc.er; }
       a.games = 1;
@@ -265,7 +278,10 @@ function measurePop(B3, spec) {
     addGame(B3, g, side, (e) => cur(spec.kind === 'hitter' ? e.b : e.p));
   }
   const out = [];
-  for (const id in chunks) for (const a of chunks[id]) if (a.pa >= 250) out.push({ id: id, acc: a, ratings: draws[id] || null });
+  for (const id in chunks) for (const a of chunks[id]) {
+    if (a.starts) { a.spPitches = a.n; a.spOuts = a.outs; } // a starter's pitches and outs all come in his starts
+    if (a.pa >= 250) out.push({ id: id, acc: a, ratings: draws[id] || null });
+  }
   return out;
 }
 
@@ -295,6 +311,7 @@ function stats(a) {
     ev: a.evSum / a.bip, ev50: half.reduce((x, y) => x + y, 0) / half.length, maxEV: chunks ? maxSum / chunks : NaN,
     ev90: evs[Math.floor(0.9 * evs.length)],
     hard: pc(a.hard, a.bip), barrel: pc(a.barrel, a.bip), sweet: pc(a.sweet, a.bip), la: laMean,
+    pps: a.starts >= 10 ? a.spPitches / a.starts : NaN, ipps: a.starts >= 10 ? a.spOuts / 3 / a.starts : NaN, // per start (Session 16)
     laSd: Math.sqrt(a.laSq / a.bip - laMean * laMean),
     gb: pc(a.gb, a.bip), ld: pc(a.ld, a.bip), fb: pc(a.fb, a.bip), pu: pc(a.pu, a.bip),
     pull: pc(a.pull, a.bip), straight: pc(a.straight, a.bip), oppo: pc(a.oppo, a.bip),
@@ -314,7 +331,7 @@ function direct(B3, k, L) {
   if (k === 'velocity') out.fbSpeed = inp.pit.velo;
   if (k === 'speed') { out.sprint = inp.run.speed; out.hpTo1b = B3.tune.BALL.batterBox + B3.ball.runTime(90, inp.run.speed, 0); }
   if (k === 'arm') { out.armRF = P.RF[1] + (inp.fld.armPlus || 0); out.armSS = P.SS[1] + (inp.fld.armPlus || 0); }
-  if (k === 'stamina') out.staminaPitches = B3.ratings.stamina(L);
+  if (k === 'stamina') out.staminaPitches = B3.ratings.stamina(B3.ratings.curve(L));
   return out;
 }
 
@@ -387,6 +404,8 @@ const POP_STATS = {
     ['SLG against', 'slg', 'pit.slg_percent', 3], ['exit speed against', 'ev', 'pit.exit_velocity_avg', 1], ['hard-hit % against', 'hard', 'pit.hard_hit_percent', 1],
     ['ground-ball %', 'gb', 'pit.groundballs_percent', 1], ['whiff %', 'whiff', 'pit.whiff_percent', 1], ['chase % against', 'chase', 'pit.oz_swing_percent', 1],
     ['edge %', 'edge', 'pit.edge_percent', 1], ['meatball %', 'meatball', 'pit.meatball_percent', 1], ['zone %', 'zone', 'pit.in_zone_percent', 1],
+    // Starters only (Session 16): Stamina about 60 +- 12.2; real Baseball-Reference 2024-2026, 10+ starts.
+    ['pitches per start', 'pps', 'sp.pitches_per_start', 1], ['innings per start', 'ipps', 'sp.innings_per_start', 2],
     // Whiff % by pitch type (Session 13: the pitch grades' spread; real: Savant's arsenal table, 50+ PA ending on the pitch)
     ['FF whiff %', 'whiffFF', 'type.FF.whiff', 1], ['SL whiff %', 'whiffSL', 'type.SL.whiff', 1], ['CH whiff %', 'whiffCH', 'type.CH.whiff', 1],
     ['CU whiff %', 'whiffCU', 'type.CU.whiff', 1]]
@@ -529,10 +548,10 @@ function main() {
   for (const k of (o.parts.indexOf('sweep') >= 0 ? names : [])) {
     const R = RATINGS[k];
     if (!R) { console.error('unknown rating ' + k); process.exit(1); }
-    if (k === 'speed' || k === 'arm' || k === 'stamina') continue; // direct only for now
+    if (k === 'speed' || k === 'arm') continue; // direct only for now
     for (const L of LEVELS) {
       for (let c = 0; c * chunk < o.games; c++) {
-        jobs.push({ id: k + ':' + L + ':' + c, cond: { k: k, L: L, kind: R.kind }, games: Math.min(chunk, o.games - c * chunk), seed: o.seed + ':' + c });
+        jobs.push({ id: k + ':' + L + ':' + c, cond: { k: k, L: L, kind: R.kind, only: R.only }, games: Math.min(chunk, o.games - c * chunk), seed: o.seed + ':' + c });
       }
     }
   }

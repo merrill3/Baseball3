@@ -5,7 +5,7 @@
 'use strict';
 const assert = require('assert');
 const { loadCore } = require('../lib/load');
-const { pair, average, rated } = require('../lib/testteams');
+const { pair, average, rated, STAMINA } = require('../lib/testteams');
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, (msg || '') + ': ' + a + ' is not within ' + tol + ' of ' + b);
 const hitter = (ratings, more) => Object.assign({ id: 'H', bats: 'R', ratings: ratings || {} }, more || {});
@@ -127,7 +127,10 @@ module.exports = function (t) {
   t.test('Stamina sets the pitches before fatigue, one scale for every role', () => {
     const B3 = loadCore();
     near(B3.ratings.stamina(60), B3.tune.STAMINA.SP, 1e-9, 'a 60 is the placeholder starter');
-    near(B3.ratings.stamina(30), B3.tune.STAMINA.other, 1e-9, 'a 30 is the placeholder reliever');
+    // Session 16: relievers sit at about 20-30 on the scale (from 30 up it follows real starters' pitches per start).
+    near(B3.ratings.stamina(STAMINA.other), B3.tune.STAMINA.other, 1e-9, 'the test teams\' reliever Stamina is the placeholder reliever');
+    near(B3.ratings.stamina(STAMINA.LR), B3.tune.STAMINA.LR, 1e-9, 'and the long man\'s');
+    assert.ok(STAMINA.other > 20 && STAMINA.LR < 30, 'relievers between 20 and 30');
     let last = 0;
     for (let r = 20; r <= 110; r += 2.5) { const s = B3.ratings.stamina(r); assert.ok(s > last, 'rises at ' + r); last = s; }
     const sp = B3.ratings.inputs(pitcher({ stamina: 40 })), rp = B3.ratings.inputs(pitcher({ stamina: 40 }, { role: 'MR' }));

@@ -69,7 +69,7 @@ module.exports = function (t) {
     }
     const fresh = trial(setup(), MID, null);
     const tired = setup();
-    tired.g.teams[1].live['HOM-SP'].pitches = 92 + 40; // two fatigue steps past Stamina
+    tired.g.teams[1].live['HOM-SP'].pitches = tired.B3.tune.STAMINA.SP + 40; // two fatigue steps past Stamina
     const late = trial(tired, MID, null);
     near(avg(fresh.map((x) => x.p.speed)) - avg(late.map((x) => x.p.speed)), 2.4, 0.15, 'speed lost');
     near(sd(late.map((x) => x.p.x)) / sd(fresh.map((x) => x.p.x)), 1.6, 0.12, 'scatter growth');
