@@ -365,7 +365,7 @@ const POP_STATS = {
     ['SLG', 'slg', 'bat.slg_percent', 3], ['ISO', 'iso', 'bat.isolated_power', 3], ['BABIP', 'babip', 'bat.babip', 3], ['exit speed', 'ev', 'bat.exit_velocity_avg', 1],
     ['hard-hit %', 'hard', 'bat.hard_hit_percent', 1], ['barrel %', 'barrel', 'bat.barrel_batted_rate', 1], ['whiff %', 'whiff', 'bat.whiff_percent', 1],
     ['swing %', 'swing', 'bat.swing_percent', 1], ['zone swing %', 'zSwing', 'bat.z_swing_percent', 1],
-    ['chase %', 'chase', 'bat.oz_swing_percent', 1], ['zone contact %', 'zContact', 'bat.iz_contact_percent', 1], ['sweet-spot %', 'sweet', 'bat.sweet_spot_percent', 1],
+    ['chase %', 'chase', 'bat.oz_swing_percent', 1], ['zone swing - chase', 'zMinusO', 'bat.zswing_minus_chase', 1], ['zone contact %', 'zContact', 'bat.iz_contact_percent', 1], ['sweet-spot %', 'sweet', 'bat.sweet_spot_percent', 1],
     ['pull %', 'pull', 'bat.pull_percent', 1], ['oppo %', 'oppo', 'bat.opposite_percent', 1], ['ground-ball %', 'gb', 'bat.groundballs_percent', 1],
     ['max exit speed', 'maxEV', 'evbat.max_hit_speed', 1], ['bat speed', 'batSpeed', 'track.avg_bat_speed', 1], ['fast-swing %', 'fast', 'track.hard_swing_rate', 1],
     ['squared-up %', 'squared', 'track.squared_up_per_bat_contact', 1], ['blasts %', 'blast', 'track.blast_per_bat_contact', 1],
@@ -383,9 +383,33 @@ const POP_STATS = {
 // How Command's stats go together across pitchers (Session 14). Real: Savant's custom leaderboard 2024-2026, pitchers with
 // 250+ PA (843 player-seasons). Meatball % mostly follows zone % and, once zone % is known, hardly moves with walks.
 const POP_CORR = {
+  // Hitters: Savant's custom leaderboard 2024-2026, 250+ PA (951 player-seasons). Chasing doesn't add strikeouts (chasers
+  // swing at strikes too and end at-bats early) but costs walks.
+  hitter: [['chase', 'zSwing', 0.53], ['chase', 'k', -0.03], ['chase', 'bb', -0.71], ['zSwing', 'k', 0.12], ['zSwing', 'bb', -0.41],
+    ['zMinusO', 'k', 0.15], ['zMinusO', 'bb', 0.33], ['swing', 'bb', -0.70]],
   pitcher: [['edge', 'bb', -0.35], ['meatball', 'bb', -0.29], ['zone', 'bb', -0.52], ['meatball', 'zone', 0.71], ['edge', 'zone', 0.34], ['edge', 'meatball', -0.07],
     ['zone', 'chase', -0.22], ['chase', 'bb', -0.28]]
 };
+// Per-point effects across the population (least squares), against the same fit on real player-seasons (Session 14; hitters:
+// Savant 2024-2026, 250+ PA, 951 seasons): K% and BB% on chase %, zone swing % and zone contact %.
+const POP_FIT = {
+  hitter: [['k', ['chase', 'zSwing', 'zContact'], [0.076, -0.213, -1.057], 0.74], ['bb', ['chase', 'zSwing', 'zContact'], [-0.321, -0.067, -0.128], 0.56]]
+};
+function fitLine(ys, X) {
+  const ok = ys.map((y, i) => [y, X[i]]).filter(([y, x]) => Number.isFinite(y) && x.every(Number.isFinite));
+  const p = X[0].length + 1, A = Array.from({ length: p }, () => new Array(p).fill(0)), v = new Array(p).fill(0);
+  for (const [y, x] of ok) { const r = [1, ...x]; for (let a = 0; a < p; a++) { v[a] += r[a] * y; for (let b = 0; b < p; b++) A[a][b] += r[a] * r[b]; } }
+  for (let c = 0; c < p; c++) {
+    let m = c; for (let r = c + 1; r < p; r++) if (Math.abs(A[r][c]) > Math.abs(A[m][c])) m = r;
+    [A[c], A[m]] = [A[m], A[c]]; [v[c], v[m]] = [v[m], v[c]];
+    for (let r = 0; r < p; r++) { if (r === c) continue; const f = A[r][c] / A[c][c]; for (let k = c; k < p; k++) A[r][k] -= f * A[c][k]; v[r] -= f * v[c]; }
+  }
+  const beta = v.map((x, i) => x / A[i][i]);
+  const my = ok.reduce((t, q) => t + q[0], 0) / ok.length;
+  let ss = 0, st = 0;
+  for (const [y, x] of ok) { const f = [1, ...x].reduce((t, z, j) => t + z * beta[j], 0); ss += (y - f) ** 2; st += (y - my) ** 2; }
+  return { beta: beta.slice(1), r2: 1 - ss / st };
+}
 function corr(xs, ys) {
   const ok = xs.map((x, i) => [x, ys[i]]).filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y));
   const mx = ok.reduce((s, p) => s + p[0], 0) / ok.length, my = ok.reduce((s, p) => s + p[1], 0) / ok.length;
@@ -418,6 +442,10 @@ function popReport(res, real) {
     }
     const cs = (POP_CORR[kind] || []).map(([a, b, rv]) => ({ a: a, b: b, engine: corr(seasons.map((s2) => s2[a]), seasons.map((s2) => s2[b])), real: rv }));
     if (cs.length) console.log('  correlations (engine [real]): ' + cs.map((c) => c.a + '-' + c.b + ' ' + fmt(c.engine, 2) + ' [' + fmt(c.real, 2) + ']').join(', '));
+    for (const [y, xs, rb, rr2] of POP_FIT[kind] || []) {
+      const f = fitLine(seasons.map((s2) => s2[y]), seasons.map((s2) => xs.map((x) => s2[x])));
+      console.log('  ' + y + ' per point of ' + xs.map((x, i) => x + ' ' + fmt(f.beta[i], 3) + ' [' + fmt(rb[i], 3) + ']').join(', ') + '; R2 ' + fmt(f.r2, 2) + ' [' + fmt(rr2, 2) + ']');
+    }
     rep[kind] = { n: seasons.length, rows: rows, corr: cs };
   }
   return rep;
