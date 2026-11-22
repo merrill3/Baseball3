@@ -375,7 +375,8 @@ function direct(B3, k, L) {
   const out = {};
   if (k === 'rawPower') out.batSpeed = inp.bat.batSpeed;
   if (k === 'velocity') out.fbSpeed = inp.pit.velo;
-  if (k === 'speed') { out.sprint = inp.run.speed; out.hpTo1b = B3.tune.BALL.batterBox + B3.ball.runTime(90, inp.run.speed, 0); }
+  // Home to first (Session 20): both sides together, 40% from the left (Savant's leaderboard pools both)
+  if (k === 'speed') { const v = inp.run.speed; out.sprint = v; out.hpTo1b = 0.6 * B3.ball.boxTime(v, 'R') + 0.4 * B3.ball.boxTime(v, 'L') + B3.ball.runTime(90, v, 0); }
   if (k === 'arm') { out.armRF = P.RF[1] + (inp.fld.armPlus || 0); out.armSS = P.SS[1] + (inp.fld.armPlus || 0); }
   if (k === 'stamina') out.staminaPitches = B3.ratings.stamina(B3.ratings.curve(L));
   return out;

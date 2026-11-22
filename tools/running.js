@@ -70,15 +70,17 @@ function row(label, x, real) {
 }
 
 function speedTable(B3) {
-  console.log('\nSpeed: sprint speed (ft/s) and home to first (s, right-handed batter, no turn)');
-  const B = B3.tune.BALL;
+  console.log('\nSpeed: sprint speed (ft/s) and home to first (s, no turn: right-handed, left-handed, both with 40% left)');
+  // Real (Savant 2024-2025, 1,009 player-seasons, both sides together): home to first 4.453 s at 27.5 ft/s, -0.1285 s a ft/s
   for (const r of [20, 30, 40, 50, 60, 70, 80, 90, 99]) {
     const inp = B3.ratings.inputs({ id: 'x', ratings: { speed: r } });
     const v = inp.run.speed;
-    const t = B.batterBox + B3.ball.runTime(90, v, 0);
-    console.log('  ' + String(r).padStart(2) + '  ' + v.toFixed(2) + ' ft/s   ' + t.toFixed(2) + ' s');
+    const run = B3.ball.runTime(90, v, 0), tr = B3.ball.boxTime(v, 'R') + run, tl = B3.ball.boxTime(v, 'L') + run;
+    const real = 4.453 - 0.1285 * (v - 27.5);
+    console.log('  ' + String(r).padStart(2) + '  ' + v.toFixed(2) + ' ft/s   ' + tr.toFixed(2) + ' / ' + tl.toFixed(2) + ' / ' +
+      (0.6 * tr + 0.4 * tl).toFixed(2) + ' s   real at this speed ' + real.toFixed(2) + ' s');
   }
-  console.log('  real: slowest regulars about 23-24 ft/s, average 27, elite 30+; home to first about 4.0-4.9 s');
+  console.log('  real ladder (Savant 2024-2026): sprint 22.1 / 23.9 / 25.0 / 26.5 / 27.5 / 28.3 / 29.4 / 30.0 / 30.5 ft/s');
 }
 
 if (require.main === module) {

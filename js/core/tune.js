@@ -74,16 +74,19 @@
   };
   // Position values: [react s, arm mph, catch-to-throw s]. Shortstops and center fielders start quickest.
   // Step 1.5: infielders' catch-to-throw is 0.25 s slower than step 1.4's (so ground balls by exit speed become hits
-  // about as often as Statcast's: slow rollers beat more throws, and fewer runs come from hard grounders).
+  // about as often as Statcast's: slow rollers beat more throws, and fewer runs come from hard grounders). Session 20: 0.05 s
+  // slower than step 1.4's; the rest of that work now comes from fielding on the run (BALL.onRun), so slow rollers he
+  // charges still beat throws while a ball hit at him is turned two (with Speed's real range and home to first).
   const POS = {
-    P: [0.55, 80, 0.75], C: [0.45, 80, 0.72], '1B': [0.32, 76, 0.85], '2B': [0.28, 78, 0.8],
-    '3B': [0.28, 84, 0.95], SS: [0.26, 85, 0.87], LF: [0.42, 85, 0.95], CF: [0.36, 87, 0.9], RF: [0.42, 89, 0.95],
+    P: [0.55, 80, 0.75], C: [0.45, 80, 0.72], '1B': [0.32, 76, 0.65], '2B': [0.28, 78, 0.6],
+    '3B': [0.28, 84, 0.75], SS: [0.26, 85, 0.67], LF: [0.42, 85, 0.95], CF: [0.36, 87, 0.9], RF: [0.42, 89, 0.95],
     DH: [0.4, 80, 0.8]
   };
 
   // Running.
   const RUN = {
-    speed: 27,         // Speed: top sprint speed, feet per second (also a fielder's speed to the ball)
+    speed: 27.5,       // Speed: top sprint speed, feet per second (also a fielder's speed to the ball). Session 20: was 27;
+                       // Savant's median (2024-2026, 1,712 player-seasons with 10+ competitive runs) is 27.5
     read: 0.2,         // Baserunning: seconds to read a ball in play and break
     jump: 0.12,        // Baserunning: seconds lost on the jump when stealing
     judge: 0.14,       // Baserunning: seconds of error when he judges an extra base (lower is better)
@@ -133,7 +136,7 @@
       framing: ['framing', 'add', 0.015]
     },
     run: {
-      speed: ['speed', 'add', 0.8],
+      speed: ['speed', 'add', 1], // a step is one ft/s (Session 20: the table below is the real ladder; was 0.8 a step)
       read: ['baserunning', 'mul', 0.8],
       jump: ['baserunning', 'mul', 0.8],
       judge: ['baserunning', 'mul', 0.8],
@@ -177,7 +180,11 @@
       hands: [[20, -2.405], [30, -1.882], [40, -1.313], [50, -0.69], [60, 0], [70, 0.774], [80, 1.653], [90, 2.665], [100, 3.836], [110, 5.129]],
       arm: [[20, -1.594], [30, -1.305], [40, -0.965], [50, -0.548], [60, 0], [70, 0.799], [80, 1.92], [90, 2.851], [100, 3.559], [110, 4.263]],
       framing: [[20, -1.179], [30, -0.902], [40, -0.613], [50, -0.312], [60, 0], [70, 0.322], [80, 0.653], [90, 0.991], [100, 1.334], [110, 1.678]],
-      speed: [[20, -1.564], [30, -1.157], [40, -0.765], [50, -0.381], [60, 0], [70, 0.382], [80, 0.771], [90, 1.171], [100, 1.591], [110, 2.04]],
+      // Speed (Session 20, the owner's Session 7-8 choices: a realistic range, each ft/s doing what it does in real baseball):
+      // ft/s of sprint speed from RUN.speed, on the real ladder (Savant 2024-2026, 1,712 player-seasons with 10+ competitive
+      // runs: the worst 22.1, 1st percentile 23.9, 5th 25.0, 25th 26.5, median 27.5, 75th 28.3, 95th 29.4, 99th 30.0, best
+      // 30.5), rows at the points after the curve. Was step 1.4's fit at 0.8 ft/s a step (25.75 ft/s at 20, 28.6 at 99).
+      speed: [[20, -5.4], [30, -3.6], [40, -2.5], [50, -1.0], [60, 0], [70, 0.8], [80, 1.9], [85, 2.2], [91.25, 2.5], [100, 2.78], [108.8, 3.0]],
       baserunning: [[20, -5.57], [30, -3.415], [40, -2.068], [50, -0.985], [60, 0], [70, 0.952], [80, 1.917], [90, 2.949], [100, 4.152], [110, 6.043]]
     },
     shape: 8,          // degrees off the launch angle at shape +1 (ground-ball tilt); -1 is a fly-ball tilt (Session 19: was 4,
@@ -212,7 +219,10 @@
     // at 60: velo mph, command on the log of his scatter (RATE.pit.commandSd's 0.92 over the step table's 50-70 rows),
     // grade on the movement multiplier (RATE.grade.step over the grade table's 50-70 rows). Claude's defaults, fitted with
     // tools/starters.js to MLB 2024's starters (DESIGN.md section 10, "Starters deeper in games").
-    fade: { points: 3, power: 2, past: 40, velo: 0.15, command: 0.00656, grade: 0.0166 },
+    // max (Session 20, Claude's default): the fade stops growing at this many points (about 15 mph off his fastball), so a
+    // pitcher a player leaves in long past his Stamina stays a pitcher (without it a reliever at eight times his pitches threw
+    // at minus 300,000 mph and walked every batter; the CPU's pitching changes almost never let a pitcher get that far)
+    fade: { points: 3, power: 2, past: 40, velo: 0.15, command: 0.00656, grade: 0.0166, max: 100 },
     // Familiarity (Session 17, the owner's Session 16 choice: an order penalty, the same for every pitcher): each time a
     // hitter has already faced this pitcher in the game he plays as if his Recognition and Timing were `points` higher. Per
     // point (the ratings' slopes at 60): the share of pitches he doesn't pick up x unread (RATE.bat.recognition's 0.6 over
@@ -400,9 +410,19 @@
     tag: 0.12,         // seconds to apply a tag (a force needs none)
     playSd: 0.07,      // seconds: how sharply a close play's chance falls off
     turn: 0.12,        // seconds a runner loses rounding a base
-    batterBox: 0.3,    // seconds out of the box after the swing
+    batterBox: 0.525,  // seconds out of the box after the swing, for a right-handed batter at RUN.speed (Session 20: was 0.3,
+                       // which made home to first 4.31 s at the median Speed; Savant 2024-2025, 1,009 player-seasons: 4.45 s at
+                       // 27.5 ft/s, both sides together, about 40% of them from the left)
+    boxPer: 0.0345,    // seconds he gains out of the box per ft/s of Speed above RUN.speed (Session 20, Claude's default: fast
+                       // runners also burst out quicker; with it home to first falls 0.128 s per ft/s, as Savant's, r -0.88;
+                       // acceleration alone gives 0.094)
     lefty: 0.08,       // seconds a left-handed batter saves to first
     pivot: 0.45,       // seconds for the pivot man to catch and throw on a double play
+    onRun: 0.02,       // seconds an infielder adds to his catch-to-throw per foot he ran to a ground ball (Session 20, Claude's
+                       // default: he sets his feet before he throws), fitted with the catch-to-throw in POS so infield hits
+                       // (FanGraphs 2024-2025: 0.71-0.72 a team-game, bunt hits included) and grounded-into double plays
+                       // (0.64-0.67) come out as MLB's
+    onRunFree: 8,      // ... past this many feet (a ball hit near him is fielded set)
     infield: 125,      // feet: grounders past this have left the infield
     lead: [12, 18, 12], // feet: leads off first, second and third
     shuffle: [6, 8, 5], // feet a runner who isn't stealing adds on the pitch (his secondary lead), off each base

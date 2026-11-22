@@ -53,10 +53,11 @@
   }
 
   // His fade this game, in rating points (Session 17): with x his pitches over his Stamina's (B3.ratings.stamina),
-  // fade.points x x^fade.power, plus fade.past x (x - 1)^2 past his Stamina. One curve for every role.
+  // fade.points x x^fade.power, plus fade.past x (x - 1)^2 past his Stamina, at most fade.max (Session 20). One curve for
+  // every role.
   function fade(p, live) {
     const F = T().PITCH.fade, x = (live ? live.pitches : 0) / p.pit.stamina;
-    return F.points * Math.pow(x, F.power) + (x > 1 ? F.past * (x - 1) * (x - 1) : 0);
+    return Math.min(F.max, F.points * Math.pow(x, F.power) + (x > 1 ? F.past * (x - 1) * (x - 1) : 0));
   }
 
   // Familiarity (Session 17): his read and timing against a pitcher he has already faced `seen` times this game, as

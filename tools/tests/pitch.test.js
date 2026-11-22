@@ -79,6 +79,12 @@ module.exports = function (t) {
     const rp = team.inp['HOM-MR1'].pit.stamina;
     near(at(rp, 'HOM-MR1'), F.points, 1e-9, 'a reliever at his Stamina\'s pitches fades as a starter at his');
     assert.ok(at(30) < at(30, 'HOM-MR1'), 'at the same pitch count a low-Stamina pitcher has faded more');
+    // Session 20: the fade stops at F.max, so a pitcher left in far past his Stamina still throws real pitches.
+    near(at(8 * rp, 'HOM-MR1'), F.max, 1e-9, 'the fade stops at its most');
+    const worn = setup();
+    worn.g.teams[1].live['HOM-SP'].pitches = 10 * S;
+    const w = worn.B3.pitch.throw(worn.g, { type: 'FF', x: 0, z: 2.5 });
+    assert.ok(w.speed > 60 && isFinite(w.x) && isFinite(w.z), 'a worn-out pitcher still throws a pitch: ' + w.speed + ' mph');
     const fresh = trial(setup(), MID, null);
     const tired = setup();
     tired.g.teams[1].live['HOM-SP'].pitches = Math.round(1.5 * S);

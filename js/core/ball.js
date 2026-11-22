@@ -225,8 +225,15 @@
       out.push({ from: i + 1, id: rn.id, run: inp, going: going, s0: s0, v0: v0 });
     }
     const inp = bt.inp[id].run;
-    const batter = { from: 0, id: id, run: inp, going: false, s0: 0, v0: 0, box: B.batterBox - (w.bats === 'L' ? B.lefty : 0) };
+    const batter = { from: 0, id: id, run: inp, going: false, s0: 0, v0: 0, box: boxTime(inp.speed, w.bats) };
     return { runners: out, batter: batter };
+  }
+
+  // Seconds from contact until the batter leaves the box: a right-handed batter at the placeholder Speed takes
+  // BALL.batterBox, a faster one less (BALL.boxPer a ft/s), and a left-handed one BALL.lefty less (Session 20).
+  function boxTime(speed, bats) {
+    const B = T().BALL;
+    return B.batterBox - B.boxPer * (speed - T().RUN.speed) - (bats === 'L' ? B.lefty : 0);
   }
 
   // Seconds for a runner who starts at time t0 (at s feet past his base, moving at v0) to reach base b.
@@ -614,7 +621,9 @@
       return errorPlay(g, c, D, off, S, fd, T0 + 1, P0, bb, 1);
     }
     const up = T0 + (stop.dive ? B.diveLoss : 0); // on his feet with the ball
-    const ready = up + fd.xfer;
+    // Fielding on the run (Session 20): the farther he ran to the ball, the longer he takes to set his feet and throw
+    // (a slow roller he charges, a ball deep in the hole), BALL.onRun seconds a foot past BALL.onRunFree.
+    const ready = up + fd.xfer + B.onRun * Math.max(0, dist(fd.at, Q0) - B.onRunFree);
     // When the ball can be at base b: thrown, or carried if he is close to the bag (he runs it there).
     const carries = (b) => dist(P0, base(b)) < 22;
     const ballAt = (b, seen) => (carries(b) ? up + runTime(dist(Q0, base(b)), fd.speed, 0) : Math.max(ready + throwTime(dist(P0, base(b)), seen ? fd.armSeen : fd.arm), cover(D, b, [fd.pos]).t));
@@ -1039,6 +1048,7 @@
     tagupOdds: tagupOdds,
     flight: flight,
     runTime: runTime,
+    boxTime: boxTime,
     throwTime: throwTime
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
