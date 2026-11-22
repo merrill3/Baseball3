@@ -135,12 +135,19 @@ module.exports = function (t) {
     assert.ok(behind.zone > even.zone + 0.1 && picks(setup(), 0, 2).zone < even.zone - 0.1, 'the count moves the zone rate');
   });
 
-  t.test('Aim: attackers aim in the zone and toward the middle, nibblers at the corners', () => {
-    const nib = picks(setup({ aim: 'Nibbler' }), 1, 1), bal = picks(setup(), 1, 1), att = picks(setup({ aim: 'Attacker' }), 1, 1);
-    // Step 1.4: Aim moves where in the zone he aims (B3.tune.CPU.pitch.aimZone is 0 for every style).
-    const AZ = setup().B3.tune.CPU.pitch.aimZone;
-    assert.ok((att.zone - bal.zone) * (AZ[2] - AZ[1]) >= 0 && (bal.zone - nib.zone) * (AZ[1] - AZ[0]) >= 0, 'zone targets ' + [nib.zone, bal.zone, att.zone]);
-    assert.ok(att.inset > bal.inset + 0.04 && bal.inset > nib.inset + 0.04, 'inset ' + [nib.inset, bal.inset, att.inset]);
+  t.test('Aim (Session 16): ahead or even, attackers aim in the zone more often and a little toward the middle, nibblers the reverse; with three balls all alike', () => {
+    const at = (aim, b, s) => picks(setup(aim ? { aim } : {}), b, s, 6000);
+    const AZ = setup().B3.tune.CPU.pitch.aimZone, side = setup().B3.tune.CPU.pitch.aimSide;
+    for (const [b, s] of [[0, 1], [1, 2], [1, 1]]) {
+      const nib = at('Nibbler', b, s), bal = at(null, b, s), att = at('Attacker', b, s);
+      near(att.zone - bal.zone, side[2] * AZ[b][s], 0.025, b + '-' + s + ' attacker');
+      near(bal.zone - nib.zone, side[0] * AZ[b][s], 0.025, b + '-' + s + ' nibbler');
+      assert.ok(att.inset > bal.inset + 0.015 && bal.inset > nib.inset + 0.015, b + '-' + s + ' inset ' + [nib.inset, bal.inset, att.inset]);
+    }
+    assert.ok(AZ[0][2] > AZ[0][0] + 0.03 && AZ[1][2] > AZ[1][0] + 0.03, 'the gap grows with strikes (MLB 2024-2025)');
+    const nib = at('Nibbler', 3, 1), bal = at(null, 3, 1), att = at('Attacker', 3, 1);
+    near(nib.zone, bal.zone, 0.025, '3-1 nibbler'); near(att.zone, bal.zone, 0.025, '3-1 attacker');
+    near(nib.inset, bal.inset, 0.02, '3-1 inset'); near(att.inset, bal.inset, 0.02, '3-1 inset');
   });
 
   t.test('Command (Session 14): a sharp pitcher aims nearer the edges, in the zone and off it; a wild one deeper in the zone, but no farther off the plate', () => {

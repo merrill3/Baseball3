@@ -461,14 +461,30 @@
       behind: 1.8,         // fastballs (FF, SI, FC) x this when 2 balls ahead of the strikes (2-0, 3-0, 3-1)
       putAway: 1.6,        // the put-away pitch x this with two strikes (Session 12, was 2.5: MLB 2024 throws 40.9% off-speed
                            // pitches before two strikes and 50.7% with two)
-      // Chance the target is in the zone, by balls (rows) and strikes (columns).
-      zone: [[0.53, 0.42, 0.21], [0.62, 0.52, 0.32], [0.73, 0.67, 0.47], [0.82, 0.8, 0.72]],
-      aimZone: [0, 0, 0], // targets in the zone added by Aim (Nibbler, Balanced, Attacker)
+      // Chance the target is in the zone, by balls (rows) and strikes (columns), for a Balanced pitcher.
+      // Session 16: fitted so average pitchers' zone % by count is MLB's (2024-2025 Statcast, every pitch: 0-0 54.4, 0-1 45.5,
+      // 0-2 32.4, 1-0 55.7, 1-1 50.5, 1-2 38.2, 2-0 59.5, 2-1 56.8, 2-2 47.1, 3-0 63.2, 3-1 62.2, 3-2 58.9; the engine had the
+      // first pitch 50.3 and 3-0 72.0). Was [[0.53, 0.42, 0.21], [0.62, 0.52, 0.32], [0.73, 0.67, 0.47], [0.82, 0.8, 0.72]].
+      zone: [[0.6, 0.437, 0.219], [0.634, 0.529, 0.317], [0.68, 0.661, 0.484], [0.73, 0.69, 0.673]],
+      // Targets in the zone added by Aim, by balls and strikes, per step (Attacker +1, Nibbler -1; none with three balls).
+      // Session 16 (was one number per style, all 0): fitted so Attacker and Nibbler sit as far from Balanced, count by count, as
+      // MLB's top and bottom thirds of pitchers by the zone % their walks don't explain (2024-2025, 566 pitcher-seasons with 250+
+      // batters faced: half the gap 2.5 / 4.45 / 4.85 at 0-0 / 0-1 / 0-2, 2.4 / 3.8 / 4.85 at 1-0 / 1-1 / 1-2, 0.95 / 2.75 / 3.8
+      // at 2-0 / 2-1 / 2-2, none with three balls). With the insets (below) that is about the 15th and 85th percentiles of zone %.
+      aimZone: [[0.025, 0.065, 0.083], [0.025, 0.056, 0.086], [-0.01, 0.02, 0.051], [0, 0, 0]],
+      // aimZone x this for Nibbler, Balanced, Attacker (Session 16): with the table as fitted, a nibbler gave back part of his gap by
+      // falling behind more often (his extra balls are chased less than MLB's nibblers'), so x1.5 makes the gaps in zone % alike
+      // both ways, as MLB's thirds are (47.4 / 50.4 / 53.3): Nibbler 46.9, Balanced 49.9, Attacker 52.9 for average pitchers, near the
+      // 15th and 85th percentiles (46.1, 52.7). The cost: ahead in the count his gap is about 1.5x MLB's low third's.
+      aimSide: [1.5, 0, 1],
       // Targets in the zone added by pitch type (step 1.5 task 4: MLB 2024 zone % 55.0 for fastballs, 42.5 for off-speed).
       zoneType: { FF: 0.08, SI: 0.08, FC: 0.08, SL: -0.135, CU: -0.135, CH: -0.135, FS: -0.135 },
       // Targets in the zone: feet inside the nearest side and top or bottom, by Aim (Nibbler, Balanced,
       // Attacker). A nibbler works the corners; an attacker comes in toward the middle.
-      inset: [[0.28, 0.76], [0.34, 0.84], [0.4, 0.92]], // Session 14: +0.04 (MLB's attack zones)
+      // Session 14: +0.04 (MLB's attack zones). Session 16: the styles half as far from Balanced (was [0.28, 0.76] and
+      // [0.4, 0.92]): MLB's nibblers don't work the edges more (edge % 43.1 / 43.3 / 43.1 by thirds of the zone % their walks
+      // don't explain); they throw strikes less often (aimZone) and a little less over the middle (meatball % 6.9 / 7.7 / 8.5).
+      inset: [[0.31, 0.8], [0.34, 0.84], [0.37, 0.88]],
       groove: 0.04,        // feet of extra inset (toward the middle) on targets in the zone with three balls
       chase: [0.06, 0.55], // targets outside the zone: feet off the edge (Session 14: was 0.03-0.5; MLB's attack zones)
       commandAim: [0.5, 0.4, 1.5], // targets in the zone (insets) x (his scatter / the average's) to this

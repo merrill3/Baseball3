@@ -17,7 +17,8 @@ const STAT = {
   offWhiff: 'Whiff % on breaking and off-speed', offChaseMinusFb: 'Off-speed chase minus fastball chase', zMinusO: 'Zone swing % minus chase %',
   chase: 'Chase %', fbSpeed: 'Fastball speed (mph)', bb: 'Walk %', edge: 'Edge % (shadow zone)', meatball: 'Meatball %', whiffSL: 'Slider whiff %',
   whiffCH: 'Change-up whiff %', whiffCU: 'Curveball whiff %', sprint: 'Sprint speed (ft/s)', hpTo1b: 'Home to first (s)',
-  armRF: 'Arm strength in right field (mph)', armSS: 'Arm strength at shortstop (mph)', staminaPitches: 'Pitches before fatigue'
+  armRF: 'Arm strength in right field (mph)', armSS: 'Arm strength at shortstop (mph)', staminaPitches: 'Pitches before fatigue',
+  pps: 'Pitches per start (starters)', ipps: 'Innings per start (starters)'
 };
 const LEVELS = [20, 30, 40, 50, 60, 70, 80, 90, 99];
 

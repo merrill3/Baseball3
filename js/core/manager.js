@@ -73,8 +73,8 @@
     },
 
     // The type: by its usual share and its grade; fastballs when behind, the put-away pitch with two
-    // strikes. The target: in the zone by a chance set by the count and Aim (a nibbler works the
-    // corners, an attacker the middle), else just off the plate (low for pitches that sink or break).
+    // strikes. The target: in the zone by a chance set by the count and Aim (a nibbler throws fewer strikes when ahead or
+    // even and works the corners, an attacker more and toward the middle), else off the plate (low for pitches that sink or break).
     pitch: function (d, g) {
       const P = C().pitch, r = g.rng, Z = B3.data.ZONE;
       const pit = g.teams[d.side].inp[d.pitcher].pit;
@@ -87,13 +87,15 @@
         return x;
       });
       const type = d.pitches[r.weighted(w)];
-      const aim = pit.aim || 0;
+      // Aim (Session 16): a nibbler throws fewer strikes when ahead or even, an attacker more; with three balls both aim as
+      // Balanced does (MLB 2024-2025: the zone % a pitcher's walks don't explain shows up ahead and even, not with three balls).
+      const aim = d.balls === 3 ? 0 : pit.aim || 0;
       const sdr = pit.commandSd / B3.tune.PIT.commandSd;
       const aimBy = (q) => Math.min(q[2], Math.max(q[1], Math.pow(sdr, q[0])));
       const cm = aimBy(P.commandAim), co = aimBy(P.commandOff || P.commandAim);
       const away = B3.pitch.who(g).bats === 'L' ? -1 : 1; // the side of the plate away from the batter
       const low = r.chance(P.low[type]);
-      if (r.chance(P.zone[d.balls][d.strikes] + P.aimZone[aim + 1] + (P.zoneType[type] || 0))) {
+      if (r.chance(P.zone[d.balls][d.strikes] + aim * P.aimSide[aim + 1] * P.aimZone[d.balls][d.strikes] + (P.zoneType[type] || 0))) {
         // His targets follow his Command (step 1.4): sharper command aims nearer the edges, inside and out.
         const inset = P.inset[aim + 1].map((x) => x * cm), gr = d.balls === 3 ? P.groove : 0;
         const side = r.chance(0.55) ? away : -away;

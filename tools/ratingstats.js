@@ -81,7 +81,7 @@ function newAcc() {
     n: 0, zone: 0, sw: 0, zsw: 0, osw: 0, out: 0, contact: 0, zcontact: 0, ocontact: 0, whiff: 0, foul: 0,
     heart: 0, shadow: 0, chaseZ: 0, waste: 0, meat: 0, shTake: 0, shCalled: 0,
     fbN: 0, fbV: 0, offSw: 0, offWhiff: 0, offOut: 0, offOutSw: 0, fbOut: 0, fbOutSw: 0, sw95: 0, whiff95: 0,
-    bySw: {}, byWhiff: {}, paBy: {}, curve: {},
+    bySw: {}, byWhiff: {}, paBy: {}, curve: {}, zc: {},
     bip: 0, evSum: 0, evs: [], laSum: 0, laSq: 0, hard: 0, barrel: 0, sweet: 0, gb: 0, ld: 0, fb: 0, pu: 0, starts: 0, spPitches: 0, spOuts: 0,
     pull: 0, straight: 0, oppo: 0, squared: 0, blast: 0, fast: 0, batSpeedSum: 0, swings: 0 };
 }
@@ -133,6 +133,8 @@ function addGame(B3, g, side, accFor) {
     if (az.zone === 'shadow' && !swung) { a.shTake++; if (e.r === 'C') a.shCalled++; }
     if (FB[e.t]) { a.fbN++; a.fbV += e.v; }
     if (inZ) a.zone++; else { a.out++; if (OFF[e.t]) a.offOut++; if (FB[e.t]) a.fbOut++; }
+    a.zc['n' + e.c] = (a.zc['n' + e.c] || 0) + 1; // zone % by count (Session 16)
+    if (inZ) a.zc['z' + e.c] = (a.zc['z' + e.c] || 0) + 1;
     // The swing curve (Session 15): swings by feet from the zone's edge, before two strikes (e) and with two (t).
     const cb = (+e.c.split('-')[1] >= 2 ? 't' : 'e') + CURVE_BINS.findIndex((b) => B3.data.zoneEdge(e.x, e.z) < b);
     a.curve['n' + cb] = (a.curve['n' + cb] || 0) + 1;
@@ -476,6 +478,7 @@ function popReport(res, real) {
       const st = stats(x.acc);
       st.era = x.acc.outs ? 27 * x.acc.er / x.acc.outs : NaN;
       st.curve = x.acc.curve;
+      st.zc = x.acc.zc;
       seasons.push(st);
     }
     const rows = [];
@@ -497,6 +500,7 @@ function popReport(res, real) {
       console.log('  ' + y + ' per point of ' + xs.map((x, i) => x + ' ' + fmt(f.beta[i], 3) + ' [' + fmt(rb[i], 3) + ']').join(', ') + '; R2 ' + fmt(f.r2, 2) + ' [' + fmt(rr2, 2) + ']');
     }
     if (kind === 'hitter') rep.curves = curveReport(seasons);
+    if (kind === 'pitcher') rep.aim = aimReport(seasons);
     rep[kind] = { n: seasons.length, rows: rows, corr: cs };
   }
   return rep;
@@ -531,6 +535,37 @@ function curveReport(seasons) {
     row('all, ' + w, out.all[t], REAL_CURVE.all[t]);
     for (const g in by) for (const i of [0, 2]) row(g + (i ? ' high' : ' low') + ' third', out[g][i][t], REAL_CURVE[g][i][t]);
   }
+  return out;
+}
+
+// The Aim level by count (Session 16): MLB 2024-2025 (Statcast searches grouped by pitcher, by count and in the zone; 566
+// pitcher-seasons with 250+ batters faced, Savant's leaderboard). Pitchers in thirds by the zone % their walks don't explain
+// (the residual of zone % on BB%): the gap is ahead and even in the count, none with three balls, and costs nothing.
+const COUNTS = ['0-0', '0-1', '0-2', '1-0', '1-1', '1-2', '2-0', '2-1', '2-2', '3-0', '3-1', '3-2'];
+const REAL_AIM = {
+  note: 'Statcast 2024-2025, 566 pitcher-seasons with 250+ batters faced',
+  league: [54.4, 45.5, 32.4, 55.7, 50.5, 38.2, 59.5, 56.8, 47.1, 63.2, 62.2, 58.9],
+  thirds: [[52.5, 41.1, 26.9, 53.7, 47.1, 33.2, 59.6, 54.9, 43.6, 64.9, 63.6, 58.8], [54.5, 45.7, 32.2, 56.0, 50.6, 38.5, 60.0, 57.6, 47.5, 64.9, 63.2, 59.8],
+    [57.5, 50.0, 36.6, 58.5, 54.7, 42.9, 61.5, 60.4, 51.2, 64.1, 63.4, 60.5]],
+  // zone %, BB%, K%, chase %, meatball %, edge % of the same thirds
+  stats: [[47.4, 8.0, 23.4, 29.9, 6.9, 43.1], [50.4, 8.1, 22.6, 28.3, 7.7, 43.3], [53.3, 7.9, 22.7, 27.7, 8.5, 43.1]]
+};
+function aimReport(seasons) {
+  const ok = seasons.filter((s) => Number.isFinite(s.zone) && Number.isFinite(s.bb));
+  const f = fitLine(ok.map((s) => s.zone), ok.map((s) => [s.bb]));
+  const res = ok.map((s) => ({ s: s, r: s.zone - f.beta[0] * s.bb }));
+  res.sort((a, b) => a.r - b.r);
+  const n3 = Math.floor(res.length / 3), parts = [res.slice(0, n3), res.slice(n3, res.length - n3), res.slice(res.length - n3)].map((l) => l.map((x) => x.s));
+  const byCount = (l) => COUNTS.map((c) => { let n = 0, z = 0; for (const s of l) { n += s.zc['n' + c] || 0; z += s.zc['z' + c] || 0; } return n ? 100 * z / n : NaN; });
+  const avg = (l, k) => l.reduce((t, s) => t + s[k], 0) / l.length;
+  const out = { all: byCount(ok), thirds: parts.map(byCount), stats: parts.map((l) => ['zone', 'bb', 'k', 'chase', 'meatball', 'edge'].map((k) => avg(l, k))) };
+  console.log('  Aim level: thirds of pitchers by the zone % their walks don\'t explain; zone % by count, engine | MLB (' + REAL_AIM.note + ')');
+  console.log('  ' + ''.padEnd(10) + COUNTS.map((c) => c.padStart(6)).join('') + '  |' + COUNTS.map((c) => c.padStart(6)).join(''));
+  const row = (lab, e, r) => console.log('  ' + lab.padEnd(10) + e.map((x) => fmt(x, 1).padStart(6)).join('') + '  |' + r.map((x) => fmt(x, 1).padStart(6)).join(''));
+  row('all', out.all, REAL_AIM.league);
+  ['low', 'middle', 'high'].forEach((lab, i) => row(lab, out.thirds[i], REAL_AIM.thirds[i]));
+  console.log('  thirds: zone % / BB% / K% / chase % / meatball % / edge %, engine [MLB]');
+  console.log('  ' + out.stats.map((t, i) => t.map((x) => fmt(x, 1)).join('/') + ' [' + REAL_AIM.stats[i].join('/') + ']').join('  '));
   return out;
 }
 
