@@ -69,7 +69,7 @@
     // Does the hitter pick this pitch up? (step 1.5 task 4: one read per pitch, his read share being the chance.) The same
     // read sets his swing choice (look), his timing (cpuTiming) and where his bat goes (expect), so a breaking ball he chases
     // because he took it for a fastball is the one he misses.
-    const read = r.chance(readOf(w).rec);
+    const read = r.chance(readChance(w, grade));
     return {
       type: a.type, speed: speed, x: x, z: z, zone: B3.data.inZone(x, z),
       ms: Math.round(flightMs(speed)),
@@ -98,10 +98,27 @@
     };
   }
 
+  // The chance he picks up a pitch of this grade (the movement multiplier, 1 average). A better pitch is harder to pick up
+  // (Session 13, step 1.5 task 4): the share he doesn't read grows by PITCH.gradeHide of itself per 1 of grade (a straight
+  // line, so a population of mixed grades averages out about as an average grade does).
+  function readChance(w, grade) {
+    const g = grade === undefined ? 1 : grade;
+    return clamp(1 - (1 - readOf(w).rec) * Math.max(0, 1 + T().PITCH.gradeHide * (g - 1)), 0, 0.98);
+  }
+
+  // How far an unread pitch of this grade fools him, against an average one: 1 + PITCH.gradeSurprise x (grade - 1), at
+  // least 0 (Session 13: a straight line through average; step 1.4 had it in step with the grade below average, a flat
+  // slider hanging, and no more than average above it). It scales both errors an unread pitch brings: where the bat goes
+  // (expect), the timing of a change-up or splitter (cpuTiming, TYPE.foolTime), and how much harder it is to hit off the plate (chaseGrade).
+  function fool(grade) {
+    const g = grade === undefined ? 1 : grade;
+    return Math.max(0, 1 + T().PITCH.gradeSurprise * (g - 1));
+  }
+
   // How much of this pitch he misses reading: 1 if he didn't pick it up (he takes it for a fastball), 0 if he did. A pitch
   // without a read (a test's hand-made pitch) counts as his average: the share he doesn't read.
   function unread(w, pitch) {
-    return pitch.read === undefined ? 1 - readOf(w).rec : pitch.read ? 0 : 1;
+    return pitch.read === undefined ? 1 - readChance(w, pitch.grade) : pitch.read ? 0 : 1;
   }
 
   // The *where* error's mean and spread for this pitch, in inches (above 0: the bat passes over the ball).
@@ -114,11 +131,14 @@
     // launch angle; the grade acts through the bite below and through how the pitch looks, B3.pitch.look).
     const type = B3.data.PITCH[pitch.type], ff = B3.data.PITCH.FF;
     const surprise = unread(w, pitch) * (ff.vz - type.vz); // above 0: the ball ends lower than he thought, so the bat is over it
-    // A below-average grade fools him less (step 1.4: a flat slider hangs).
-    const mean = kind.surprise * surprise * Math.min(1, pitch.grade);
+    const mean = kind.surprise * surprise * fool(pitch.grade);
     // Spread: Contact, the type's bite (grade makes it bigger), and distance from the middle of the zone.
     const edge = B3.data.zoneEdge(pitch.x, pitch.z);
-    const loc = S.edgeSd * Math.max(0, edge + S.edgeFrom) + S.chaseSd * (kind.chase === undefined ? 1 : kind.chase) * Math.max(0, edge);
+    // Off the plate an off-speed pitch keeps breaking away from the bat (TYPE.chase); from Session 13 the grade scales
+    // that extra (fool: a better pitch breaks away more, a flat one hangs) when S.chaseGrade is on.
+    const ch = kind.chase === undefined ? 1 : kind.chase;
+    const chase = S.chaseGrade && ch > 1 ? 1 + (ch - 1) * fool(pitch.grade) : ch;
+    const loc = S.edgeSd * Math.max(0, edge + S.edgeFrom) + S.chaseSd * chase * Math.max(0, edge);
     const bite = kind.bite * pitch.grade * (kind.breaking ? w.b.bat.breakRead : 1); // Recognition tracks the break (Session 12)
     // The shape's counterweight (step 1.4, owner's choice: a value-neutral tilt): a ground-ball shape is
     // easier to square up, a fly-ball shape harder (SWING.shapeSd per unit of shape).
@@ -201,7 +221,7 @@
     const expected = pitch.speed + unread(w, pitch) * (Math.max(pitch.speed, ff) - pitch.speed);
     // ms early: he swings for a faster pitch. Measured against a fastball at refMph (step 1.4), so the speed
     // change counts as a share: a soft-tossing pitcher's change-up doesn't fool more than a hard thrower's.
-    const early = M.readShare * (flightMs(pitch.speed) - flightMs(expected)) * ff / M.refMph;
+    const early = M.readShare * (flightMs(pitch.speed) - flightMs(expected)) * ff / M.refMph * (T().TYPE[pitch.type].foolTime ? fool(pitch.grade) : 1);
     // Late: rising smoothly with the pitch's speed over his timingTop (step 1.4: a soft step, so every mph of
     // Velocity counts, not only those past timingTop). The spread grows with speed as a power of it.
     // He also gears up for this pitcher's fastball: he starts earlier by `gearUp` of the lateness that

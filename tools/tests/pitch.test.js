@@ -192,6 +192,20 @@ module.exports = function (t) {
     assert.ok(la(4) < la(-4) - 3, 'a sinking shape lowers the launch angle');
   });
 
+  t.test('pitch grades (Session 13): a better pitch is harder to pick up and fools more when he misses it', () => {
+    const unread = (grade) => rate(trial(setup({ pit: { grades: { SL: grade } } }), { type: 'SL', x: 0.3, z: 2.3 }, null), (x) => !x.p.read);
+    const avgShare = unread(1), P = loadCore().tune.PITCH;
+    near(unread(1.4), avgShare * (1 + P.gradeHide * 0.4), 0.03, 'the unread share grows with the grade');
+    assert.ok(unread(0.5) < 0.02, 'a poor pitch is nearly always read');
+    // The *where* error's mean on an unread pitch, and the timing on an unread change-up (TYPE.foolTime), grow with the grade.
+    const miss = (type, grade) => { const env = setup({ pit: { grades: { [type]: grade } } }); const p = env.B3.pitch.throw(env.g, { type: type, x: 0, z: 2.5 }); p.read = false; return { env, p }; };
+    const mean = (grade) => { const m = miss('SL', grade); return m.env.B3.pitch.expect(m.env.g, m.p).mean; };
+    near(mean(1.4) / mean(1), 1 + P.gradeSurprise * 0.4, 1e-9, 'an unread slider fools more');
+    const early = (type, grade) => avg(Array.from({ length: 400 }, () => { const m = miss(type, grade); return m.env.B3.pitch.cpuTiming(m.env.g, m.p); }));
+    assert.ok(early('CH', 1.4) < early('CH', 1) - 5, 'an unread change-up of a better grade makes him earlier');
+    assert.ok(Math.abs(early('CU', 1.4) - early('CU', 1)) < 3, 'a curve\'s grade does not change his timing');
+  });
+
   t.test('handedness: switch hitters bat opposite the pitcher; a small platoon edge', () => {
     assert.strictEqual(setup({ bats: 'S', throws: 'R' }).B3.pitch.who(setup({ bats: 'S', throws: 'R' }).g).bats, 'L');
     const s = setup({ bats: 'S', throws: 'L' });

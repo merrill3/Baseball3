@@ -190,7 +190,12 @@
     fatigueVelo: 1.2,  // mph lost per fatigue step
     fatigueCommand: 0.3, // Command scatter grows by this share per fatigue step
     callWidth: 0.055,  // umpire: feet over which a borderline call goes from likely strike to likely ball
-    framingCap: 0.1    // a catcher's framing can move the edge at most this many feet
+    framingCap: 0.1,   // a catcher's framing can move the edge at most this many feet
+    // A pitch's grade (its movement multiplier g, 1 average) beyond its movement (Session 13, step 1.5 task 4: the grades'
+    // whiffs had come through the bite, which Session 12 made small next to a hitter's own spread):
+    gradeHide: 2.5,    // the share of pitches a hitter doesn't pick up: x (1 + gradeHide x (g - 1)), at least 0 (a better
+                       // pitch is harder to read; at 99, g 1.46, he misses reading 2.15x as many)
+    gradeSurprise: 1.5 // how far an unread pitch fools him: x (1 + gradeSurprise x (g - 1)), at least 0 (B3.pitch fool)
   };
 
   // How each pitch type plays (on top of its speed and movement in B3.data.PITCH).
@@ -205,16 +210,19 @@
     //             pitch off the plate is still breaking away from the bat (MLB 2024 whiff % of swings: fastballs 16.2 in
     //             the zone and 32.1 outside it, off-speed pitches 19.3 and 52.8)
     //   breaking  an off-speed pitch: Recognition's breakRead scales its bite (Session 12)
+    //   foolTime  the grade also scales the timing error when he doesn't read it (Session 13: a change-up's or splitter's
+    //             grade is its speed change as much as its movement; a curve's is its drop)
     // Session 12 (step 1.5 task 4, with one read per pitch): fastballs' bite +0.15, off-speed pitches' bite x 0.4 and
     // surprise 0.15 (an unread pitch now carries the whole surprise, a read one none), so the whiffs by type and zone
-    // follow MLB's.
+    // follow MLB's. Session 13 (the grades' reach): the curve's surprise 0.085 (was 0.15: its drop against a fastball is
+    // 26 in, so an unread curve was nearly always missed; MLB's curve whiff at an average grade, 32.8%).
     FF: { bite: 0.65, surprise: 0.12, lift: 6, miss: 21.9, chase: 0.7 },
     SI: { bite: 0.15, surprise: 0.12, lift: -6, miss: 13.5, chase: 0.7 },
     FC: { bite: 1.05, surprise: 0.12, lift: 1, miss: 23.7, chase: 0.7 },
     SL: { bite: 0.64, surprise: 0.15, lift: 0, miss: 33.8, chase: 2.3, breaking: true },
-    CU: { bite: 0.52, surprise: 0.15, lift: -1, miss: 33.0, chase: 2.3, breaking: true },
-    CH: { bite: 0.6, surprise: 0.15, lift: -4, miss: 31.9, chase: 2.3, breaking: true },
-    FS: { bite: 0.6, surprise: 0.15, lift: -8, miss: 35.1, chase: 2.3, breaking: true }
+    CU: { bite: 0.52, surprise: 0.085, lift: -1, miss: 33.0, chase: 2.3, breaking: true },
+    CH: { bite: 0.6, surprise: 0.15, lift: -4, miss: 31.9, chase: 2.3, breaking: true, foolTime: true },
+    FS: { bite: 0.6, surprise: 0.15, lift: -8, miss: 35.1, chase: 2.3, breaking: true, foolTime: true }
   };
 
   const SWING = {
@@ -231,6 +239,7 @@
                        // middle, so a pitch down the middle is the easiest to hit; it was 0.4)
     edgeSd: 2.4,       // per foot from edgeFrom inside the edge outward
     chaseSd: 3.0,      // per foot outside the zone, on top of edgeSd
+    chaseGrade: true,  // an off-speed pitch's extra spread off the plate (TYPE.chase above 1) scales with its grade (Session 13)
     locLoss: 0.04,     // share of exit speed lost per foot from edgeFrom inside the edge outward (step 1.3; step 1.5,
                        // was 0.08)
     collision: 0.23,   // exit speed = collision x pitch speed at the plate + (1 + collision) x bat speed, for a

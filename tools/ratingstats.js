@@ -74,7 +74,7 @@ function newAcc() {
     n: 0, zone: 0, sw: 0, zsw: 0, osw: 0, out: 0, contact: 0, zcontact: 0, whiff: 0, foul: 0,
     heart: 0, shadow: 0, chaseZ: 0, waste: 0, meat: 0, shTake: 0, shCalled: 0,
     fbN: 0, fbV: 0, offSw: 0, offWhiff: 0, offOut: 0, offOutSw: 0, fbOut: 0, fbOutSw: 0, sw95: 0, whiff95: 0,
-    bySw: {}, byWhiff: {},
+    bySw: {}, byWhiff: {}, paBy: {},
     bip: 0, evSum: 0, evs: [], laSum: 0, laSq: 0, hard: 0, barrel: 0, sweet: 0, gb: 0, ld: 0, fb: 0, pu: 0,
     pull: 0, straight: 0, oppo: 0, squared: 0, blast: 0, fast: 0, batSpeedSum: 0, swings: 0 };
 }
@@ -100,12 +100,16 @@ function attack(B3, x, z) {
 function addGame(B3, g, side, accFor) {
   const S = B3.tune.SWING;
   const bt = g.teams[side], pt = g.teams[1 - side];
+  let last = null; // the type of the last pitch (the one a plate appearance ends on)
   for (const e of g.log) {
     if (e.h !== side) continue;
+    if (e.e === 'pitch') last = e.t;
     const a = accFor(e);
     if (!a) continue;
     if (e.e === 'pa') {
       a.pa++;
+      if (last) a.paBy[last] = (a.paBy[last] || 0) + 1;
+      last = null;
       const r = e.res;
       if (r === 'K') a.k++; else if (r === 'BB') a.bb++; else if (r === 'SF') a.sf++;
       if (r === '1B') a.h1++; else if (r === '2B') a.h2++; else if (r === '3B') a.h3++; else if (r === 'HR') a.hr++;
@@ -284,7 +288,8 @@ function stats(a) {
     pull: pc(a.pull, a.bip), straight: pc(a.straight, a.bip), oppo: pc(a.oppo, a.bip),
     squared: pc(a.squared, a.contact), blast: pc(a.blast, a.contact), fast: pc(a.fast, a.swings), batSpeed: a.batSpeedSum / a.swings
   };
-  for (const t of ['FF', 'SI', 'FC', 'SL', 'CU', 'CH', 'FS']) out['whiff' + t] = pc(a.byWhiff[t] || 0, a.bySw[t] || 0);
+  // Whiff % by pitch type, when 50+ plate appearances end on the type (as Savant's arsenal table).
+  for (const t of ['FF', 'SI', 'FC', 'SL', 'CU', 'CH', 'FS']) out['whiff' + t] = (a.paBy[t] || 0) >= 50 ? pc(a.byWhiff[t] || 0, a.bySw[t]) : NaN;
   return out;
 }
 
@@ -369,7 +374,10 @@ const POP_STATS = {
   pitcher: [['K%', 'k', 'pit.k_percent', 1], ['BB%', 'bb', 'pit.bb_percent', 1], ['ERA', 'era', 'pit.p_era', 2], ['AVG against', 'avg', 'pit.batting_avg', 3],
     ['SLG against', 'slg', 'pit.slg_percent', 3], ['exit speed against', 'ev', 'pit.exit_velocity_avg', 1], ['hard-hit % against', 'hard', 'pit.hard_hit_percent', 1],
     ['ground-ball %', 'gb', 'pit.groundballs_percent', 1], ['whiff %', 'whiff', 'pit.whiff_percent', 1], ['chase % against', 'chase', 'pit.oz_swing_percent', 1],
-    ['edge %', 'edge', 'pit.edge_percent', 1], ['zone %', 'zone', 'pit.in_zone_percent', 1]]
+    ['edge %', 'edge', 'pit.edge_percent', 1], ['zone %', 'zone', 'pit.in_zone_percent', 1],
+    // Whiff % by pitch type (Session 13: the pitch grades' spread; real: Savant's arsenal table, 50+ PA ending on the pitch)
+    ['FF whiff %', 'whiffFF', 'type.FF.whiff', 1], ['SL whiff %', 'whiffSL', 'type.SL.whiff', 1], ['CH whiff %', 'whiffCH', 'type.CH.whiff', 1],
+    ['CU whiff %', 'whiffCU', 'type.CU.whiff', 1]]
 };
 function popReport(res, real) {
   const q = (xs, p) => { const v = xs.filter(Number.isFinite).sort((a, b) => a - b); return v.length ? v[Math.min(v.length - 1, Math.floor(p * v.length))] : NaN; };
@@ -390,7 +398,8 @@ function popReport(res, real) {
       const r = real.pct[rk];
       const rr = r ? [r.p5, r.p25, r.p50, r.p75, r.p95] : [NaN, NaN, NaN, NaN, NaN];
       rows.push({ label: lab, key: key, real: rk, engine: e, target: rr });
-      console.log('  ' + lab.padEnd(22) + e.map((x) => fmt(x, d).padStart(7)).join('') + '  |' + rr.map((x) => fmt(x, d).padStart(7)).join(''));
+      const n = xs.filter(Number.isFinite).length;
+      console.log('  ' + lab.padEnd(22) + e.map((x) => fmt(x, d).padStart(7)).join('') + '  |' + rr.map((x) => fmt(x, d).padStart(7)).join('') + (n < seasons.length ? '   (' + n + ')' : ''));
     }
     rep[kind] = { n: seasons.length, rows: rows };
   }
