@@ -31,6 +31,9 @@
                        // (SWING.sprayBase; step 1.5, was 20 on every ball)
     recognition: 0.8,  // Recognition: the chance he picks up a pitch (its movement and speed change), 0 to 1; one read per
                        // pitch (step 1.5 task 4, Session 12: was a share of every pitch, 0.75)
+    breakRead: 1,      // Recognition: multiplier on the late break (TYPE bite) of an off-speed pitch he swings at (below 1:
+                       // he tracks the break; step 1.5 task 4, Session 12: so Recognition still counts once he reads nearly
+                       // every pitch, as DESIGN.md section 10 says, "less fooled by off-speed and break")
     judgeSd: 0.4,      // Discipline: feet of noise in judging where a pitch will cross, for swing or take (Session 12, was
                        // 0.45: MLB hitters chase fastballs off the plate 24.8% of the time)
     judgeLean: 0.1,    // Discipline: feet he leans toward seeing a ball as a strike (the CPU's swing choice)
@@ -110,6 +113,7 @@
       sprayNoise: ['launch', 'mul', 0.87],
       batSpeed: ['rawPower', 'add', 1], // a step is one mph (step 1.5: the table below is the real ladder)
       recognition: ['recognition', 'up', 0.6], // Session 12: was 0.75, so the population's off-speed whiff spreads as MLB's
+      breakRead: ['recognition', 'mul', 0.95],
       judgeSd: ['discipline', 'mul', 0.85],
       judgeLean: ['discipline', 'mul', 0.7]
     },
@@ -200,16 +204,17 @@
     //   chase     multiplier on SWING.chaseSd (the extra spread per foot outside the zone; step 1.5 task 4): an off-speed
     //             pitch off the plate is still breaking away from the bat (MLB 2024 whiff % of swings: fastballs 16.2 in
     //             the zone and 32.1 outside it, off-speed pitches 19.3 and 52.8)
+    //   breaking  an off-speed pitch: Recognition's breakRead scales its bite (Session 12)
     // Session 12 (step 1.5 task 4, with one read per pitch): fastballs' bite +0.15, off-speed pitches' bite x 0.4 and
     // surprise 0.15 (an unread pitch now carries the whole surprise, a read one none), so the whiffs by type and zone
     // follow MLB's.
     FF: { bite: 0.65, surprise: 0.12, lift: 6, miss: 21.9, chase: 0.7 },
     SI: { bite: 0.15, surprise: 0.12, lift: -6, miss: 13.5, chase: 0.7 },
     FC: { bite: 1.05, surprise: 0.12, lift: 1, miss: 23.7, chase: 0.7 },
-    SL: { bite: 0.64, surprise: 0.15, lift: 0, miss: 33.8, chase: 2.3 },
-    CU: { bite: 0.52, surprise: 0.15, lift: -1, miss: 33.0, chase: 2.3 },
-    CH: { bite: 0.6, surprise: 0.15, lift: -4, miss: 31.9, chase: 2.3 },
-    FS: { bite: 0.6, surprise: 0.15, lift: -8, miss: 35.1, chase: 2.3 }
+    SL: { bite: 0.64, surprise: 0.15, lift: 0, miss: 33.8, chase: 2.3, breaking: true },
+    CU: { bite: 0.52, surprise: 0.15, lift: -1, miss: 33.0, chase: 2.3, breaking: true },
+    CH: { bite: 0.6, surprise: 0.15, lift: -4, miss: 31.9, chase: 2.3, breaking: true },
+    FS: { bite: 0.6, surprise: 0.15, lift: -8, miss: 35.1, chase: 2.3, breaking: true }
   };
 
   const SWING = {

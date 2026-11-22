@@ -119,7 +119,7 @@
     // Spread: Contact, the type's bite (grade makes it bigger), and distance from the middle of the zone.
     const edge = B3.data.zoneEdge(pitch.x, pitch.z);
     const loc = S.edgeSd * Math.max(0, edge + S.edgeFrom) + S.chaseSd * (kind.chase === undefined ? 1 : kind.chase) * Math.max(0, edge);
-    const bite = kind.bite * pitch.grade;
+    const bite = kind.bite * pitch.grade * (kind.breaking ? w.b.bat.breakRead : 1); // Recognition tracks the break (Session 12)
     // The shape's counterweight (step 1.4, owner's choice: a value-neutral tilt): a ground-ball shape is
     // easier to square up, a fly-ball shape harder (SWING.shapeSd per unit of shape).
     const s = (pitch.shape || 0) / T().RATE.shape;
