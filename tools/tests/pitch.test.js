@@ -253,6 +253,26 @@ module.exports = function (t) {
     assert.ok(la(4) < la(-4) - 3, 'a sinking shape lowers the launch angle');
   });
 
+  t.test('fastballs (Session 19): a better four-seamer or sinker is harder to put the bat on, a flat one easier', () => {
+    const TY = loadCore().tune.TYPE;
+    // The spread against the same pitch without the effect (the grade also widens it through the bite).
+    const sdAt = (type, grade, off) => {
+      const env = setup({ pit: { grades: { [type]: grade } } });
+      if (off) env.B3.tune.TYPE[type].gradeSd = [0, 0];
+      return env.B3.pitch.expect(env.g, Object.assign({ grade: grade, read: true }, MID, { type: type })).sd;
+    };
+    for (const type of ['FF', 'SI']) {
+      const k = TY[type].gradeSd;
+      near(sdAt(type, 1, false), sdAt(type, 1, true), 1e-12, type + ' at an average grade');
+      near(sdAt(type, 1.3, false) / sdAt(type, 1.3, true), Math.pow(1.3, k[1]), 1e-9, type + ' above average');
+      near(sdAt(type, 0.7, false) / sdAt(type, 0.7, true), Math.pow(0.7, k[0]), 1e-9, type + ' below average');
+      assert.ok(k[1] > k[0], type + ': an elite one stands out more than a flat one falls behind');
+    }
+    assert.strictEqual(TY.SL.gradeSd, undefined, 'off-speed pitches keep their own grade effects');
+    const whiff = (grade) => rate(trial(setup({ pit: { grades: { FF: grade } } }), MID, 'cpu'), (x) => x.r.r === 'S');
+    assert.ok(whiff(1.35) > whiff(0.7) + 0.04, 'a riding four-seamer misses more bats: ' + whiff(1.35).toFixed(3) + ' against ' + whiff(0.7).toFixed(3));
+  });
+
   t.test('Velocity (Session 13): a harder thrower\'s pitches are harder to put the bat on, his off-speed ones too', () => {
     const S = loadCore().tune.SWING, P = loadCore().tune.PIT;
     const sdAt = (velo, type) => { const env = setup({ pit: { velo } }); const p = env.B3.pitch.throw(env.g, { type: type, x: 0, z: 2.5 }); return env.B3.pitch.expect(env.g, p).sd; };

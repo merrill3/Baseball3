@@ -177,7 +177,13 @@
     // A harder thrower's pitches are harder to put the bat on (Session 13: Velocity brings whiffs, not weak contact): the whole
     // spread grows as (his fastball today / an average fastball, PIT.velo)^SWING.veloSd, his off-speed pitches too.
     const velo = Math.pow(fastball(w.p, pitch.fade) / T().PIT.velo, S.veloSd);
-    const sd = velo * cost * tilt * path * Math.sqrt(read.contactSd * read.contactSd + m * m * (bite * bite + loc * loc));
+    // A better four-seamer or sinker is harder to put the bat on (Session 19: its ride or sink beats the bat, so MLB's four-seam
+    // whiffs spread far more than velocity explains): the whole spread x its grade^TYPE.gradeSd; a flat one is easier.
+    // [below average, above average]: an elite fastball stands out more than a flat one falls behind (MLB's four-seam whiffs
+    // spread further above the median than below it).
+    const gr = pitch.grade === undefined ? 1 : pitch.grade;
+    const life = kind.gradeSd ? Math.pow(gr, kind.gradeSd[gr < 1 ? 0 : 1]) : 1;
+    const sd = velo * life * cost * tilt * path * Math.sqrt(read.contactSd * read.contactSd + m * m * (bite * bite + loc * loc));
     return { mean: mean, sd: sd, rec: read.rec, bats: w.bats };
   }
 

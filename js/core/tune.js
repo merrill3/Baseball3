@@ -244,12 +244,15 @@
     //   breaking  an off-speed pitch: Recognition's breakRead scales its bite (Session 12)
     //   foolTime  the grade also scales the timing error when he doesn't read it (Session 13: a change-up's or splitter's
     //             grade is its speed change as much as its movement; a curve's is its drop)
+    //   gradeSd   the whole *where* spread x the grade^gradeSd (Session 19: a four-seamer's ride or a sinker's sink beats the
+    //             bat; MLB 2024-2026, four-seam whiff % across pitchers 12.7 to 32.0 at the 5th and 95th percentiles, velocity
+    //             explaining r 0.34 of it)
     // Session 12 (step 1.5 task 4, with one read per pitch): fastballs' bite +0.15, off-speed pitches' bite x 0.4 and
     // surprise 0.15 (an unread pitch now carries the whole surprise, a read one none), so the whiffs by type and zone
     // follow MLB's. Session 13 (the grades' reach): the curve's surprise 0.085 (was 0.15: its drop against a fastball is
     // 26 in, so an unread curve was nearly always missed; MLB's curve whiff at an average grade, 32.8%).
-    FF: { bite: 0.65, surprise: 0.12, lift: 6, miss: 21.9, chase: 0.7 },
-    SI: { bite: 0.15, surprise: 0.12, lift: -6, miss: 13.5, chase: 0.7 },
+    FF: { bite: 0.65, surprise: 0.12, lift: 6, miss: 21.9, chase: 0.7, gradeSd: [0.3, 0.8] },
+    SI: { bite: 0.15, surprise: 0.12, lift: -6, miss: 13.5, chase: 0.7, gradeSd: [0.15, 0.3] },
     FC: { bite: 1.05, surprise: 0.12, lift: 1, miss: 23.7, chase: 0.7 },
     SL: { bite: 0.64, surprise: 0.15, lift: 0, miss: 33.8, chase: 2.3, breaking: true },
     CU: { bite: 0.52, surprise: 0.085, lift: -1, miss: 33.0, chase: 2.3, breaking: true },
