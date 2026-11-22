@@ -1,7 +1,7 @@
 // Ratings against real stats (M1 step 1.5; DESIGN.md section 10, "Ratings measured against stats").
 // Usage: node tools/ratingstats.js [--games=400] [--only=contact,velocity,...] [--seed=1] [--jobs=N]
 //                                  [--tweak=file.js] [--json=out.json] [--part=sweep,pop] [--popteams=40]
-//                                  [--html=page.html] [--value=calibrate.json]
+//                                  [--html=page.html] [--value=calibrate.json] [--popkind=hitter|pitcher]
 // For each rating it moves one side's players to 20, 30, ... 99 (everyone else at 60, Balanced) and reads:
 //   layer 1  the rating's own stat (the one that isolates its job) against the real ladder: the real
 //            players' percentiles mirrored around the 50th (owner's choice, Session 8): 20 = the worst
@@ -64,7 +64,8 @@ function args() {
     parts: opt('part', 'sweep,pop').split(','),
     html: opt('html', null),
     value: opt('value', null),
-    popTeams: parseInt(opt('popteams', '40'), 10)
+    popTeams: parseInt(opt('popteams', '40'), 10),
+    popKind: opt('popkind', null) // only the hitters' or the pitchers' population (Session 14)
   };
 }
 
@@ -374,15 +375,29 @@ const POP_STATS = {
   pitcher: [['K%', 'k', 'pit.k_percent', 1], ['BB%', 'bb', 'pit.bb_percent', 1], ['ERA', 'era', 'pit.p_era', 2], ['AVG against', 'avg', 'pit.batting_avg', 3],
     ['SLG against', 'slg', 'pit.slg_percent', 3], ['exit speed against', 'ev', 'pit.exit_velocity_avg', 1], ['hard-hit % against', 'hard', 'pit.hard_hit_percent', 1],
     ['ground-ball %', 'gb', 'pit.groundballs_percent', 1], ['whiff %', 'whiff', 'pit.whiff_percent', 1], ['chase % against', 'chase', 'pit.oz_swing_percent', 1],
-    ['edge %', 'edge', 'pit.edge_percent', 1], ['zone %', 'zone', 'pit.in_zone_percent', 1],
+    ['edge %', 'edge', 'pit.edge_percent', 1], ['meatball %', 'meatball', 'pit.meatball_percent', 1], ['zone %', 'zone', 'pit.in_zone_percent', 1],
     // Whiff % by pitch type (Session 13: the pitch grades' spread; real: Savant's arsenal table, 50+ PA ending on the pitch)
     ['FF whiff %', 'whiffFF', 'type.FF.whiff', 1], ['SL whiff %', 'whiffSL', 'type.SL.whiff', 1], ['CH whiff %', 'whiffCH', 'type.CH.whiff', 1],
     ['CU whiff %', 'whiffCU', 'type.CU.whiff', 1]]
 };
+// How Command's stats go together across pitchers (Session 14). Real: Savant's custom leaderboard 2024-2026, pitchers with
+// 250+ PA (843 player-seasons). Meatball % mostly follows zone % and, once zone % is known, hardly moves with walks.
+const POP_CORR = {
+  pitcher: [['edge', 'bb', -0.35], ['meatball', 'bb', -0.29], ['zone', 'bb', -0.52], ['meatball', 'zone', 0.71], ['edge', 'zone', 0.34], ['edge', 'meatball', -0.07],
+    ['zone', 'chase', -0.22], ['chase', 'bb', -0.28]]
+};
+function corr(xs, ys) {
+  const ok = xs.map((x, i) => [x, ys[i]]).filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y));
+  const mx = ok.reduce((s, p) => s + p[0], 0) / ok.length, my = ok.reduce((s, p) => s + p[1], 0) / ok.length;
+  let sxy = 0, sxx = 0, syy = 0;
+  for (const [x, y] of ok) { sxy += (x - mx) * (y - my); sxx += (x - mx) ** 2; syy += (y - my) ** 2; }
+  return sxy / Math.sqrt(sxx * syy);
+}
 function popReport(res, real) {
   const q = (xs, p) => { const v = xs.filter(Number.isFinite).sort((a, b) => a - b); return v.length ? v[Math.min(v.length - 1, Math.floor(p * v.length))] : NaN; };
   const rep = {};
   for (const kind of ['hitter', 'pitcher']) {
+    if (!Object.keys(res).some((id) => id.startsWith('pop:' + kind[0] + ':'))) continue;
     const seasons = [];
     for (const id in res) if (id.startsWith('pop:' + kind[0] + ':')) for (const x of res[id]) {
       const st = stats(x.acc);
@@ -401,7 +416,9 @@ function popReport(res, real) {
       const n = xs.filter(Number.isFinite).length;
       console.log('  ' + lab.padEnd(22) + e.map((x) => fmt(x, d).padStart(7)).join('') + '  |' + rr.map((x) => fmt(x, d).padStart(7)).join('') + (n < seasons.length ? '   (' + n + ')' : ''));
     }
-    rep[kind] = { n: seasons.length, rows: rows };
+    const cs = (POP_CORR[kind] || []).map(([a, b, rv]) => ({ a: a, b: b, engine: corr(seasons.map((s2) => s2[a]), seasons.map((s2) => s2[b])), real: rv }));
+    if (cs.length) console.log('  correlations (engine [real]): ' + cs.map((c) => c.a + '-' + c.b + ' ' + fmt(c.engine, 2) + ' [' + fmt(c.real, 2) + ']').join(', '));
+    rep[kind] = { n: seasons.length, rows: rows, corr: cs };
   }
   return rep;
 }
@@ -430,8 +447,8 @@ function main() {
   if (o.parts.indexOf('pop') >= 0) {
     // Hitters: 9 per team, about 118 games for a 500-PA season each. Pitchers: three times the teams at
     // 40 games each (the starter's two seasons; relievers rarely reach 250 batters faced).
-    for (let t = 0; t < o.popTeams; t++) jobs.push({ id: 'pop:h:' + t, pop: { kind: 'hitter', team: t, games: 118, seed: o.seed } });
-    for (let t = 0; t < 3 * o.popTeams; t++) jobs.push({ id: 'pop:p:' + t, pop: { kind: 'pitcher', team: t, games: 40, seed: o.seed } });
+    if (o.popKind !== 'pitcher') for (let t = 0; t < o.popTeams; t++) jobs.push({ id: 'pop:h:' + t, pop: { kind: 'hitter', team: t, games: 118, seed: o.seed } });
+    if (o.popKind !== 'hitter') for (let t = 0; t < 3 * o.popTeams; t++) jobs.push({ id: 'pop:p:' + t, pop: { kind: 'pitcher', team: t, games: 40, seed: o.seed } });
   }
   const t0 = Date.now();
   pool(jobs, o.jobs, o.tweak, (res) => {

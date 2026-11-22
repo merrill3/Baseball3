@@ -45,13 +45,13 @@ function picks(env, balls, strikes, n) {
   const { B3, g } = env;
   const d = { kind: 'pitch', side: 1, pitcher: 'HOM-SP', batter: 'AWY-CF', pitches: g.teams[1].players['HOM-SP'].pitches.slice(), balls: balls, strikes: strikes };
   const types = {};
-  let zone = 0, edge = 0;
+  let zone = 0, edge = 0, off = 0;
   for (let i = 0; i < (n || N); i++) {
     const a = B3.manager.cpu.pitch(d, g);
     types[a.type] = (types[a.type] || 0) + 1 / (n || N);
-    if (B3.data.inZone(a.x, a.z)) { zone++; edge += -B3.data.zoneEdge(a.x, a.z); }
+    if (B3.data.inZone(a.x, a.z)) { zone++; edge += -B3.data.zoneEdge(a.x, a.z); } else off += B3.data.zoneEdge(a.x, a.z);
   }
-  return { types, zone: zone / (n || N), inset: edge / zone };
+  return { types, zone: zone / (n || N), inset: edge / zone, off: off / ((n || N) - zone) };
 }
 
 
@@ -136,6 +136,14 @@ module.exports = function (t) {
     const AZ = setup().B3.tune.CPU.pitch.aimZone;
     assert.ok((att.zone - bal.zone) * (AZ[2] - AZ[1]) >= 0 && (bal.zone - nib.zone) * (AZ[1] - AZ[0]) >= 0, 'zone targets ' + [nib.zone, bal.zone, att.zone]);
     assert.ok(att.inset > bal.inset + 0.04 && bal.inset > nib.inset + 0.04, 'inset ' + [nib.inset, bal.inset, att.inset]);
+  });
+
+  t.test('Command (Session 14): a sharp pitcher aims nearer the edges, in the zone and off it; a wild one deeper in the zone, but no farther off the plate', () => {
+    const wild = picks(setup({ pit: { command: 25 } }), 1, 1), avg = picks(setup(), 1, 1), sharp = picks(setup({ pit: { command: 95 } }), 1, 1);
+    assert.ok(wild.inset > avg.inset + 0.03 && avg.inset > sharp.inset + 0.03, 'inset ' + [wild.inset, avg.inset, sharp.inset]);
+    assert.ok(sharp.off < avg.off - 0.02, 'off the plate, sharp ' + sharp.off + ' against ' + avg.off);
+    near(wild.off, avg.off, 0.015, 'off the plate, wild against average');
+    near(wild.zone, avg.zone, 0.03, 'Command does not move how often he aims in the zone');
   });
 
   t.test('pitching changes: Stamina sets when a starter tires; runs take him out; relievers by role', () => {

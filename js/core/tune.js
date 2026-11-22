@@ -137,7 +137,7 @@
     },
     pit: {
       velo: ['velocity', 'add', 1], // a step is one mph (Session 13: the table below is the real ladder)
-      commandSd: ['command', 'mul', 0.88],
+      commandSd: ['command', 'mul', 0.92], // Session 14: was 0.88 (the test population's walk, edge and chase spreads)
       deception: ['deception', 'mul', 1 / 0.75] // the mirror of Recognition: the unread share grows by the same step
     },
     grade: { step: 0.12, min: 0.3 }, // a pitch grade: movement multiplier 1 + step x u (at least min)
@@ -160,7 +160,8 @@
       // batters faced, against their median 94.4: the worst season 82.3, 1st percentile 87.8, 5th 90.7, 25th 92.9, 75th 95.9,
       // 95th 97.9, 99th 99.3, best 101.4), rows at the points after the curve; the step 1.4 fit had 20 at 69 mph.
       velocity: [[20, -12.1], [30, -6.59], [40, -3.7], [50, -1.5], [60, 0], [70, 1.5], [80, 3.5], [85, 4.2], [91.25, 4.9], [100, 6.0], [108.8, 7.0]],
-      command: [[20, -3.317], [30, -2.508], [40, -1.698], [50, -0.87], [60, 0], [70, 0.92], [80, 1.899], [90, 2.952], [100, 4.098], [110, 5.368]],
+      // Command (Session 14): step 1.4's rows below 60 x 0.75, so poor Command walks as MLB's worst do (with the 0.92 step).
+      command: [[20, -2.488], [30, -1.881], [40, -1.274], [50, -0.653], [60, 0], [70, 0.92], [80, 1.899], [90, 2.952], [100, 4.098], [110, 5.368]],
       deception: [[20, -7.939], [30, -4.465], [40, -2.294], [50, -0.937], [60, 0], [70, 0.739], [80, 1.358], [90, 1.896], [100, 2.376], [110, 2.812]],
       grade: [[20, -7.141], [30, -4.387], [40, -2.666], [50, -1.304], [60, 0], [70, 1.461], [80, 2.408], [90, 3.128], [100, 3.831], [110, 4.534]],
       range: [[20, -2.101], [30, -1.611], [40, -1.099], [50, -0.563], [60, 0], [70, 0.593], [80, 1.22], [90, 1.884], [100, 2.591], [110, 3.347]],
@@ -453,11 +454,13 @@
       zoneType: { FF: 0.08, SI: 0.08, FC: 0.08, SL: -0.135, CU: -0.135, CH: -0.135, FS: -0.135 },
       // Targets in the zone: feet inside the nearest side and top or bottom, by Aim (Nibbler, Balanced,
       // Attacker). A nibbler works the corners; an attacker comes in toward the middle.
-      inset: [[0.24, 0.72], [0.3, 0.8], [0.36, 0.88]],
+      inset: [[0.28, 0.76], [0.34, 0.84], [0.4, 0.92]], // Session 14: +0.04 (MLB's attack zones)
       groove: 0.04,        // feet of extra inset (toward the middle) on targets in the zone with three balls
-      chase: [0.03, 0.5],  // targets outside the zone: feet off the edge
-      commandAim: [0.5, 0.4, 1.5], // targets (insets and feet off the edge) x (his scatter / the average's) to this
+      chase: [0.06, 0.55], // targets outside the zone: feet off the edge (Session 14: was 0.03-0.5; MLB's attack zones)
+      commandAim: [0.5, 0.4, 1.5], // targets in the zone (insets) x (his scatter / the average's) to this
                            // power, between these limits: sharper command aims nearer the edges (step 1.4)
+      commandOff: [0.5, 0.4, 1], // the same for targets off the plate (feet off the edge), but a wild pitcher doesn't aim
+                           // farther off than an average one (Session 14)
       low: { FF: 0.4, SI: 0.75, FC: 0.55, SL: 0.7, CU: 0.8, CH: 0.8, FS: 0.85 } // share of targets kept low, by type
     },
     pull: {
