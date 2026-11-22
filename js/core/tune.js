@@ -72,14 +72,17 @@
     armPlus: 0,        // Arm: mph added to that throw speed
     framing: 0         // Framing (catchers): feet the borderline edge of the zone moves toward strikes
   };
-  // Position values: [react s, arm mph, catch-to-throw s]. Shortstops and center fielders start quickest.
+  // Position values: [react s, arm mph, catch-to-throw s]. Shortstops and center fielders start quickest. Arms (Session 20):
+  // Savant's 2024-2026 medians where step 1.4's were more than 1 mph off (1B 74.7, SS 83.5, LF 86.6); the catcher stays at 80
+  // mph and 0.72 s (his pop time 2.02 s against Savant's median 1.95, arm 82.8 and exchange 0.65: with those, steals fell
+  // to 0.58 a team-game at 66% safe, MLB's about 0.9 at 78%; reported)
   // Step 1.5: infielders' catch-to-throw is 0.25 s slower than step 1.4's (so ground balls by exit speed become hits
   // about as often as Statcast's: slow rollers beat more throws, and fewer runs come from hard grounders). Session 20: 0.05 s
   // slower than step 1.4's; the rest of that work now comes from fielding on the run (BALL.onRun), so slow rollers he
   // charges still beat throws while a ball hit at him is turned two (with Speed's real range and home to first).
   const POS = {
-    P: [0.55, 80, 0.75], C: [0.45, 80, 0.72], '1B': [0.32, 76, 0.65], '2B': [0.28, 78, 0.6],
-    '3B': [0.28, 84, 0.75], SS: [0.26, 85, 0.67], LF: [0.42, 85, 0.95], CF: [0.36, 87, 0.9], RF: [0.42, 89, 0.95],
+    P: [0.55, 80, 0.75], C: [0.45, 80, 0.72], '1B': [0.32, 74.7, 0.65], '2B': [0.28, 78, 0.6],
+    '3B': [0.28, 84, 0.75], SS: [0.26, 83.5, 0.67], LF: [0.42, 86.6, 0.95], CF: [0.36, 87, 0.9], RF: [0.42, 89, 0.95],
     DH: [0.4, 80, 0.8]
   };
 
@@ -132,7 +135,7 @@
       route: ['range', 'add', 0.012],
       hands: ['hands', 'mul', 0.8],
       release: ['hands', 'add', 0.03],
-      armPlus: ['arm', 'add', 2.5],
+      armPlus: ['arm', 'add', 1], // a step is one mph (Session 20: the table below is the real ladder; was 2.5 mph a step)
       framing: ['framing', 'add', 0.015]
     },
     run: {
@@ -178,7 +181,11 @@
       grade: [[20, -7.141], [30, -4.387], [40, -2.666], [50, -1.304], [60, 0], [70, 1.461], [80, 2.408], [90, 3.128], [100, 3.831], [110, 4.534]],
       range: [[20, -2.101], [30, -1.611], [40, -1.099], [50, -0.563], [60, 0], [70, 0.593], [80, 1.22], [90, 1.884], [100, 2.591], [110, 3.347]],
       hands: [[20, -2.405], [30, -1.882], [40, -1.313], [50, -0.69], [60, 0], [70, 0.774], [80, 1.653], [90, 2.665], [100, 3.836], [110, 5.129]],
-      arm: [[20, -1.594], [30, -1.305], [40, -0.965], [50, -0.548], [60, 0], [70, 0.799], [80, 1.92], [90, 2.851], [100, 3.559], [110, 4.263]],
+      // Arm (Session 20, the ladder rule): mph from his position's arm (POS), on the real ladder (Savant 2024-2026 arm strength,
+      // the eight positions' ladders around their medians, averaged: the worst -9.9, 1st percentile -7.7, 5th -5.6, 25th -2.4,
+      // 75th +2.5, 95th +6.3, 99th +8.8, the best +10.4), rows at the points after the curve. Was step 1.4's fit at 2.5 mph a
+      // step (-4.0 mph at 20, -2.4 at 40, +4.8 at 80, +10.5 at 99).
+      arm: [[20, -9.9], [30, -7.7], [40, -5.6], [50, -2.4], [60, 0], [70, 2.5], [80, 6.3], [85, 7.55], [91.25, 8.8], [100, 9.7], [108.8, 10.4]],
       framing: [[20, -1.179], [30, -0.902], [40, -0.613], [50, -0.312], [60, 0], [70, 0.322], [80, 0.653], [90, 0.991], [100, 1.334], [110, 1.678]],
       // Speed (Session 20, the owner's Session 7-8 choices: a realistic range, each ft/s doing what it does in real baseball):
       // ft/s of sprint speed from RUN.speed, on the real ladder (Savant 2024-2026, 1,712 player-seasons with 10+ competitive
@@ -404,6 +411,11 @@
     getUp: 1.0,        // seconds a fielder loses chasing a ball he dove for and missed
     gather: 0.25,      // seconds to pick up a ball in the outfield
     accel: 20,         // ft/s per second: how fast runners and fielders reach top speed
+    fieldSpeed: 0.35,  // share of a fielder's sprint-speed edge over the placeholder Speed that he runs to a ball with (Session 20,
+                       // Claude's default: Statcast's sprint speed is a top speed on the bases, and a catch is a short burst where
+                       // the jump and the route count more). Savant 2024-2025 OAA against sprint speed: center fielders +3.0 outs
+                       // a ft/s (r 0.42, 122 seasons), corner outfielders +0.9-1.0; with the full edge the engine's center fielder
+                       // gained 9-13 a ft/s, now 2.6-4.6 (left field 0.6-1.2)
     throwShort: 0.9,   // average speed of a throw as a share of release speed, up to 100 ft
     throwLong: 0.68,   // ... at throwFar and more (an arc, a bounce or a relay); in between it slides
     throwFar: 300,     // feet where a throw reaches throwLong's share

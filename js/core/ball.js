@@ -158,7 +158,8 @@
       out[pos] = {
         pos: pos, id: id, at: at,
         react: (isNum(inp.fld.react) ? inp.fld.react : P[0]) * (isNum(inp.fld.first) ? inp.fld.first : 1),
-        speed: inp.run.speed * inp.fld.route,
+        // Speed in the field (Session 20): a share (BALL.fieldSpeed) of his sprint speed's edge over the placeholder Speed
+        speed: (T().RUN.speed + T().BALL.fieldSpeed * (inp.run.speed - T().RUN.speed)) * inp.fld.route,
         arm: (isNum(inp.fld.arm) ? inp.fld.arm : P[1]) + (isNum(inp.fld.armPlus) ? inp.fld.armPlus : 0),
         // The arm runners judge him by: they see only part of how far his arm is from his position's (step 1.4).
         armSeen: (isNum(inp.fld.arm) ? inp.fld.arm : P[1]) + (1 - T().BALL.armBlind) * (isNum(inp.fld.armPlus) ? inp.fld.armPlus : 0),
