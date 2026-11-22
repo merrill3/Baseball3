@@ -90,10 +90,11 @@ module.exports = function (t) {
     // Frozen takes: with two strikes he still takes a strike down the middle now and then (MLB 2024 takes 4.9% of two-strike
     // pitches 0.4 ft or more inside the zone).
     const mid = { type: 'FF', x: 0, z: 2.55 };
+    const frozen = S.take[0][2]; // Session 22: 0.009 (was 0.02)
     const withTakes = swings(env, mid, 0, 2, 20000);
     S.take[0][2] = 0;
     const without = swings(env, mid, 0, 2, 20000);
-    near(without - withTakes, 0.02 * without, 0.01, 'frozen takes at 0-2');
+    near(without - withTakes, frozen * without, 0.01, 'frozen takes at 0-2');
     assert.ok(withTakes > 0.9, 'he still swings at nearly every two-strike pitch down the middle');
   });
 

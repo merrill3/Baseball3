@@ -16,7 +16,8 @@
 
   // Hitting (DESIGN.md section 10: each input names the rating whose job it is).
   const BAT = {
-    contactSd: 1.33,   // Contact: spread of the *where* error, inches between bat and ball centers
+    contactSd: 1.26,   // Contact: spread of the *where* error, inches between bat and ball centers (Session 22, was 1.33: the
+                       // level fit, SWING.attack; rated teams' whiffs 26.2 -> 25.5% of swings [MLB 2024 25.3])
     timingSd: 20,      // Timing: spread of a CPU hitter's *when* error at 92 mph, in ms
     square: 1,         // Timing (Session 11, owner's choice: Timing's job is squaring up): multiplier on the exit speed he
                        // loses to a mishit, off center or mistimed (below 1: he keeps the barrel on the ball)
@@ -26,7 +27,8 @@
                        // contact; step 1.5, real units, was 90.3 in the engine's own); each swing varies by SWING.batSd
     launchK: 15,       // Launch: degrees of launch angle per inch of *where* error near the bat's center (lower is a
                        // tighter band); it bends steeper toward the bat's edge (SWING.launchCurve; step 1.5, was 22)
-    launchSd: 12,      // Launch: extra launch-angle noise in degrees (the swing's own plane; step 1.5, was 15)
+    launchSd: 13.9,    // Launch: extra launch-angle noise in degrees (the swing's own plane; step 1.5, was 15; Session 22, was 12:
+                       // the level fit, SWING.attack)
     sprayNoise: 27,    // Launch: spray-direction noise in degrees (spray control), on a mishit at the glancing edge
                        // (SWING.sprayBase; step 1.5, was 20 on every ball; Session 22, was 29: the spray fit, SWING.pullAt0)
     recognition: 0.8,  // Recognition: the chance he picks up a pitch (its movement and speed change), 0 to 1; one read per
@@ -279,10 +281,10 @@
 
   const SWING = {
     radius: 2.75,      // bat radius plus ball radius, inches: a bigger *where* error misses
-    foulBack: 0.445,   // share of radius past which contact is a glancing foul (tipped back; step 1.5, was 0.52: about
+    foulBack: 0.463,   // share of radius past which contact is a glancing foul (tipped back; step 1.5, was 0.52: about
                        // half of all bat contact is foul, as in MLB; Session 12, 0.45; Session 22, was 0.42: with the wider
-                       // spray more fouls come from balls hit outside the lines, so fewer are tipped back), for a pitch at
-                       // foulRef mph ...
+                       // spray more fouls come from balls hit outside the lines, so fewer are tipped back; 0.445 in the spray
+                       // fit, 0.463 in the level fit), for a pitch at foulRef mph ...
     foulRef: 88,       // ... and it narrows as (foulRef / pitch speed)^foulPow (step 1.5 task 4: a faster pitch is fouled
     foulPow: 2.5,      // back more often; MLB 2024: 43% of swings at fastballs are fouls, 32% at off-speed pitches)
     foulSpeedShare: 0, // share of this pitch's own speed in that (Session 13; the rest is the type's typical speed, PIT.velo x
@@ -323,7 +325,7 @@
     batCap: 1.3,       // his hardest swing: batSd x this above his average (step 1.5: Raw Power is a ceiling; Statcast's
                        // hardest-hit balls stop near 110 mph for an average bat)
     plateShare: 0.9,   // pitch speed at the plate as a share of release speed
-    offLoss: 0.47,     // exit speed lost at the glancing edge (scales with the *where* error to offPow; step 1.5, was 0.42
+    offLoss: 0.485,    // exit speed lost at the glancing edge (scales with the *where* error to offPow; step 1.5, was 0.42
                        // with a square; Session 22, was 0.45: with foulBack's wider fair core)
     offPow: 2.5,       // the power: a near-center hit loses little, a mishit near the edge a lot (step 1.5)
     offUnder: 0.89,    // share of that loss when the bat passes under the ball (step 1.5: Statcast's fly balls come off
@@ -334,8 +336,15 @@
                        // opposite-field fly balls came off 9.7 mph slower than its pulled ones, MLB's 6.6, now about 8)
     evSd: 2.5,         // exit-speed noise, mph (step 1.5, was 2.5: a swing's own bat speed carries most of the spread; Session 21: 2.5
                        // again, with chaseOff the exit speeds' 10th-90th percentiles 68 / 82 / 93 / 99 / 103.5 [69 / 80.5 / 91.5 / 99 / 104.5])
-    attack: 17.5,      // launch angle of a dead-center hit at the middle of the zone, degrees (step 1.5, was 13.5; Session 12,
-                       // 19.5: with one read per pitch fewer swings roll over an unread pitch)
+    attack: 15.8,      // launch angle of a dead-center hit at the middle of the zone, degrees (step 1.5, was 13.5; Session 12,
+                       // 19.5: with one read per pitch fewer swings roll over an unread pitch; Session 22, was 17.5: the level fit
+                       // (a Nelder-Mead with BAT.launchSd, foulBack, BAT.contactSd, offLoss and the two-strike takes, CPU.swing.take,
+                       // on rated test teams against MLB 2024: launch angles by band and percentile, strikeouts and the share
+                       // looking, whiffs, fouls, pitches per plate appearance, chase, with the spray kept). Launch angles are now
+                       // compared by band, as the engine sorts its balls (12 Wednesdays of 2024, all balls in play: under 10
+                       // degrees 44.6%, 10-25 22.3, 25-50 22.3, over 50 10.8; 10th / 50th / 90th percentiles -22 / 13 / 51): the
+                       // engine's had 41.2 / 23.8 / 25.2 / 9.8, too few ground balls and too many fly balls, now 44.4 / 22.3 / 22.9 /
+                       // 10.4
     launchCurve: 1.5, // per square inch: the *where* error's launch angle grows as off x (1 + launchCurve x off^2), so
                        // a ball hit far under the center pops up and one far over it is chopped (step 1.5)
     heightLA: 13.5,      // degrees of launch angle per foot the pitch is above the middle of the zone (2.55 ft; step 1.5,
@@ -552,7 +561,9 @@
       // pitch and 3-0 (was [[0.24, 0.096, 0], [0.144, 0.08, 0], [0.24, 0.096, 0], [0.9, 0.12, 0]]).
       // Session 18: with two strikes 0.02 (was 0): frozen by a pitch he wasn't looking for (MLB 2024 takes 4.9% of two-strike
       // pitches 0.4 ft or more inside the zone; the engine took 2.8%, all from Discipline's noise).
-      take: [[0.44, 0.1, 0.02], [0.22, 0.1, 0.02], [0.25, 0.03, 0.02], [0.8, 0.1, 0.02]],
+      // Session 22: with two strikes 0.009 (was 0.02; the level fit, SWING.attack): strikeouts looking 25.6% of strikeouts on rated
+      // teams, now 23.6 [MLB 2024 23.7].
+      take: [[0.44, 0.1, 0.009], [0.22, 0.1, 0.009], [0.25, 0.03, 0.009], [0.8, 0.1, 0.009]],
       aggTake: 0.45,       // share of those takes an Aggressive hitter skips (a Patient one adds): he judges
                            // more pitches himself, which pays off with good Discipline (owner's choice). Session 15:
                            // was 0.6 (Aggressive moved zone swing 2x as much as chase; MLB's overall swing moves both alike)
