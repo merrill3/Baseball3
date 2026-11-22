@@ -192,6 +192,16 @@ module.exports = function (t) {
     assert.ok(la(4) < la(-4) - 3, 'a sinking shape lowers the launch angle');
   });
 
+  t.test('Velocity (Session 13): a harder thrower\'s pitches are harder to put the bat on, his off-speed ones too', () => {
+    const S = loadCore().tune.SWING, P = loadCore().tune.PIT;
+    const sdAt = (velo, type) => { const env = setup({ pit: { velo } }); const p = env.B3.pitch.throw(env.g, { type: type, x: 0, z: 2.5 }); return env.B3.pitch.expect(env.g, p).sd; };
+    for (const type of ['FF', 'SL']) near(sdAt(99, type) / sdAt(P.velo, type), Math.pow(99 / P.velo, S.veloSd), 1e-9, type + ' spread');
+    // The fair core comes from the type's typical speed (foulSpeedShare 0), so with the spread held (veloSd 0 here) contact
+    // is fouled back as often against a soft thrower as against a hard one.
+    const fouls = (velo) => { const env = setup({ pit: { velo } }); env.B3.tune.SWING.veloSd = 0; return rate(trial(env, MID, 0).filter((x) => x.r.r !== 'S'), (x) => x.r.r === 'F' && !x.r.contact); };
+    if (S.foulSpeedShare === 0) assert.ok(Math.abs(fouls(85) - fouls(99)) < 0.03, 'a pitcher\'s velocity does not move the foul share of contact');
+  });
+
   t.test('pitch grades (Session 13): a better pitch is harder to pick up and fools more when he misses it', () => {
     const unread = (grade) => rate(trial(setup({ pit: { grades: { SL: grade } } }), { type: 'SL', x: 0.3, z: 2.3 }, null), (x) => !x.p.read);
     const avgShare = unread(1), P = loadCore().tune.PITCH;

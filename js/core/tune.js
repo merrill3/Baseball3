@@ -136,7 +136,7 @@
       lead: ['baserunning', 'add', 1.0]
     },
     pit: {
-      velo: ['velocity', 'add', 1.6],
+      velo: ['velocity', 'add', 1], // a step is one mph (Session 13: the table below is the real ladder)
       commandSd: ['command', 'mul', 0.88],
       deception: ['deception', 'mul', 1 / 0.75] // the mirror of Recognition: the unread share grows by the same step
     },
@@ -156,7 +156,10 @@
       rawPower: [[20, -9.332], [30, -7.2], [40, -4.438], [50, -1.751], [60, 0], [70, 1.724], [80, 4.322], [85, 5.251], [91.25, 6.181], [100, 8.013], [108.8, 9.478]],
       recognition: [[20, -2.382], [30, -1.85], [40, -1.369], [50, -0.746], [60, 0], [70, 0.946], [80, 2.287], [90, 4.433], [100, 7.866], [110, 13.358]],
       discipline: [[20, -4.112], [30, -3.042], [40, -2.014], [50, -1.014], [60, 0], [70, 0.945], [80, 2.147], [90, 3.667], [100, 5.975], [110, 8.284]],
-      velocity: [[20, -15.069], [30, -8.4], [40, -4.233], [50, -1.628], [60, 0], [70, 1.236], [80, 2.057], [90, 2.746], [100, 3.379], [110, 4.008]],
+      // Velocity (Session 13): mph of four-seam speed from PIT.velo, on the real ladder (Savant 2024-2026, pitchers with 250+
+      // batters faced, against their median 94.4: the worst season 82.3, 1st percentile 87.8, 5th 90.7, 25th 92.9, 75th 95.9,
+      // 95th 97.9, 99th 99.3, best 101.4), rows at the points after the curve; the step 1.4 fit had 20 at 69 mph.
+      velocity: [[20, -12.1], [30, -6.59], [40, -3.7], [50, -1.5], [60, 0], [70, 1.5], [80, 3.5], [85, 4.2], [91.25, 4.9], [100, 6.0], [108.8, 7.0]],
       command: [[20, -3.317], [30, -2.508], [40, -1.698], [50, -0.87], [60, 0], [70, 0.92], [80, 1.899], [90, 2.952], [100, 4.098], [110, 5.368]],
       deception: [[20, -7.939], [30, -4.465], [40, -2.294], [50, -0.937], [60, 0], [70, 0.739], [80, 1.358], [90, 1.896], [100, 2.376], [110, 2.812]],
       grade: [[20, -7.141], [30, -4.387], [40, -2.666], [50, -1.304], [60, 0], [70, 1.461], [80, 2.408], [90, 3.128], [100, 3.831], [110, 4.534]],
@@ -231,6 +234,9 @@
                        // half of all bat contact is foul, as in MLB; Session 12, 0.45), for a pitch at foulRef mph ...
     foulRef: 88,       // ... and it narrows as (foulRef / pitch speed)^foulPow (step 1.5 task 4: a faster pitch is fouled
     foulPow: 2.5,      // back more often; MLB 2024: 43% of swings at fastballs are fouls, 32% at off-speed pitches)
+    foulSpeedShare: 0, // share of this pitch's own speed in that (Session 13; the rest is the type's typical speed, PIT.velo x
+                       // its share): 0 keeps the fastball/off-speed split without tying a pitcher's velocity to his BABIP (with
+                       // 1, from 50 to 20 Velocity his BABIP fell .290 to .258 and pop-ups rose 9.5 to 15.2%)
     missMs: 80,        // a *when* error past this many ms misses the ball
     timeRadius: 0.7,   // share of the bat's reach (radius) lost at missMs; scales with the square of the *when*
                        // error (step 1.3: so velocity and Timing move whiffs, not only exit speed)
@@ -239,6 +245,8 @@
                        // middle, so a pitch down the middle is the easiest to hit; it was 0.4)
     edgeSd: 2.4,       // per foot from edgeFrom inside the edge outward
     chaseSd: 3.0,      // per foot outside the zone, on top of edgeSd
+    veloSd: 2.5,       // the whole spread x (his fastball / PIT.velo)^veloSd (Session 13: Velocity brings whiffs, not weak
+                       // contact; real per mph, the same pitcher year to year: whiff +1.65, K% +1.69, exit speed -0.16)
     chaseGrade: true,  // an off-speed pitch's extra spread off the plate (TYPE.chase above 1) scales with its grade (Session 13)
     locLoss: 0.04,     // share of exit speed lost per foot from edgeFrom inside the edge outward (step 1.3; step 1.5,
                        // was 0.08)
@@ -304,7 +312,8 @@
   const TIMING = {
     refMph: 92,        // timingSd is the spread at this pitch speed
     sdPow: 6,          // the spread grows as (speed / refMph) to this power (step 1.4; was +60% per 10 mph, floored)
-    latePerMph: 8,     // ms late per mph well above the hitter's timingTop (Velocity attacks Timing)
+    latePerMph: 6,     // ms late per mph well above the hitter's timingTop (Velocity attacks Timing; Session 13, was 8: with
+                       // SWING.veloSd carrying Velocity's whiffs, less of it goes into late, weak contact)
     lateSoft: 4,       // mph over which lateness eases in around timingTop (step 1.4: a soft step, so every
                        // mph of Velocity counts; 8 x 4 x ln(1 + e^((speed - top) / 4)) ms)
     gearUp: 0.6,       // share of his fastball's lateness a hitter makes up by starting earlier, on every pitch

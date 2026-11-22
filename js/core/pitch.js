@@ -153,7 +153,10 @@
     // Swing path (Session 11, owner's choice): a Lift swing crosses the zone more steeply and misses a little more.
     const sp = w.b.bat.swingPath || 0;
     const path = 1 + (sp < 0 ? S.pathSd[0] : S.pathSd[1]) * sp;
-    const sd = cost * tilt * path * Math.sqrt(read.contactSd * read.contactSd + m * m * (bite * bite + loc * loc));
+    // A harder thrower's pitches are harder to put the bat on (Session 13: Velocity brings whiffs, not weak contact): the whole
+    // spread grows as (his fastball today / an average fastball, PIT.velo)^SWING.veloSd, his off-speed pitches too.
+    const velo = Math.pow(fastball(w.p, pitch.fatigue || 0) / T().PIT.velo, S.veloSd);
+    const sd = velo * cost * tilt * path * Math.sqrt(read.contactSd * read.contactSd + m * m * (bite * bite + loc * loc));
     return { mean: mean, sd: sd, rec: read.rec, bats: w.bats };
   }
 
@@ -176,7 +179,11 @@
     if (Math.abs(tm) > S.missMs || Math.abs(off) > radius) return out; // whiff
     // Glancing contact is fouled back. The faster the pitch, the more of it goes back (step 1.5 task 4: on a glancing hit the
     // ball keeps much of its own speed toward the catcher), so the fair core narrows as (foulRef / speed)^foulPow.
-    const fair = radius * S.foulBack * Math.pow(S.foulRef / pitch.speed, S.foulPow);
+    // Session 13: the speed is the type's typical one (its share of an average fastball, PIT.velo), blended with this pitch's
+    // by S.foulSpeedShare (0: the type's only): MLB's fastball/off-speed foul split stays, but a pitcher's own velocity no
+    // longer moves his BABIP (with this pitch's speed a slow thrower's glancing hits stayed fair as pop-ups and topped balls).
+    const typical = T().PIT.velo * B3.data.PITCH[pitch.type].v;
+    const fair = radius * S.foulBack * Math.pow(S.foulRef / (typical + S.foulSpeedShare * (pitch.speed - typical)), S.foulPow);
     if (Math.abs(off) > fair) { out.r = 'F'; return out; }
     // Exit speed: bat speed and pitch speed (Savant's most a swing can give), less for an off-center hit and for bad timing.
     const u = off / fair;

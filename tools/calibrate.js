@@ -223,6 +223,9 @@ const DEFENSE = [
 // 'pit' runs saved for a whole staff, 'def' runs saved by one fielder (the mean over its key spots),
 // 'both' one away player's runs scored minus runs allowed. slope: runs per 10 points.
 const FIT_LEVELS = [20, 30, 40, 50, 70, 80, 90, 99];
+// Tables set to the real ladder in physical units are not fitted (realism wins over equal value, DESIGN.md section 10):
+// Raw Power's bat speed (step 1.5) and Velocity's fastball speed (Session 13), one mph a step.
+const LADDER = { rawPower: true, velocity: true };
 const FIT = [
   ...HIT.map((k) => ({ key: k, read: 'hit', slope: TARGET, conds: (L) => [ratingCond(k, L)] })),
   ...['velocity', 'command', 'deception'].map((k) => ({ key: k, read: 'pit', slope: TARGET, conds: (L) => [ratingCond(k, L)] })),
@@ -367,7 +370,7 @@ function main() {
     const { averagePair } = require('./lib/testteams');
     const B3 = loadCore();
     if (o.tweak) require(o.tweak)(B3);
-    for (const f of FIT) {
+    for (const f of FIT.filter((x) => !LADDER[x.key])) {
       if (!want(f.key)) continue;
       const lv = FIT_LEVELS.map((L) => {
         // The steps this level gives now: through the curve (and, for grades, the cap) and the current table.
