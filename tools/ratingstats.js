@@ -213,6 +213,10 @@ const POP_SD = 12.2, POP_R = process.env.POPR !== undefined ? +process.env.POPR 
 // POP_PC: the correlation between Raw Power and Contact.
 const POP_PC = process.env.POPPC !== undefined ? +process.env.POPPC : -0.3;
 const POP_DC = process.env.POPDC !== undefined ? +process.env.POPDC : 0;
+// Pitch shapes (Session 19): the spread of a pitch's shape and the share of it his own tilt carries (POPSHAPE and POPSHAPER for
+// experiments).
+const POP_SHAPE = process.env.POPSHAPE !== undefined ? +process.env.POPSHAPE : 0.35;
+const POP_SHAPE_R = process.env.POPSHAPER !== undefined ? +process.env.POPSHAPER : 0.8;
 function popRatings(rng, keys) {
   const common = rng.normal(0, 1), z = {}, out = {};
   for (const k of keys) z[k] = Math.sqrt(POP_R) * common + Math.sqrt(1 - POP_R) * rng.normal(0, 1);
@@ -244,6 +248,19 @@ function measurePop(B3, spec) {
   for (const id in teams.away.players) {
     const p = teams.away.players[id];
     if (spec.kind === 'pitcher' && p.role === 'SP') p.ratings.stamina = Math.round(Math.max(20, Math.min(99, 60 + POP_SD * strng.normal(0, 1))));
+  }
+  // Pitch shapes (Session 19, Claude's default; the rated test teams have them, the population had none): a pitcher's own tilt
+  // shared by his pitches (POP_SHAPE_R of each pitch's variance) plus each pitch's own, POP_SHAPE x a standard normal, rounded to
+  // 0.1 and kept within -1 to 1, from a fifth stream so the other draws stay the same.
+  const shrng = B3.rng.create('popshape:' + spec.seed + ':' + spec.kind + ':' + spec.team);
+  for (const id in teams.away.players) {
+    const p = teams.away.players[id];
+    if (spec.kind !== 'pitcher' || !p.pitches || !POP_SHAPE) continue;
+    const own = shrng.normal(0, 1);
+    for (const t of p.pitches) {
+      const z = Math.sqrt(POP_SHAPE_R) * own + Math.sqrt(1 - POP_SHAPE_R) * shrng.normal(0, 1);
+      p.arsenal[t].shape = Math.round(Math.max(-1, Math.min(1, POP_SHAPE * z)) * 10) / 10;
+    }
   }
   for (const id in teams.away.players) {
     const p = teams.away.players[id];

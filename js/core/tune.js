@@ -180,7 +180,9 @@
       speed: [[20, -1.564], [30, -1.157], [40, -0.765], [50, -0.381], [60, 0], [70, 0.382], [80, 0.771], [90, 1.171], [100, 1.591], [110, 2.04]],
       baserunning: [[20, -5.57], [30, -3.415], [40, -2.068], [50, -0.985], [60, 0], [70, 0.952], [80, 1.917], [90, 2.949], [100, 4.152], [110, 6.043]]
     },
-    shape: 4,          // degrees off the launch angle at shape +1 (ground-ball tilt); -1 is a fly-ball tilt
+    shape: 8,          // degrees off the launch angle at shape +1 (ground-ball tilt); -1 is a fly-ball tilt (Session 19: was 4,
+                       // with which a pitcher's every pitch at +1 or -1 gave a ground-ball % of only about 46.5 or 33.5 [MLB
+                       // starters 2024-2025: 5th percentile 32.9, 95th 53.0, best 66.0])
     // Stamina: pitches before fatigue sets in, by rating (points after the curve; straight lines between; past the last row
     // its slope). One scale for every role: relievers are low-Stamina pitchers. 60 is the placeholder starter.
     // Session 16 (step 1.5 task 4): from 30 up, fitted so a starter's pitches per start (everyone else at 60) follow the
@@ -322,9 +324,12 @@
     twoStrike: [0.75, 2], // with two strikes a hitter shortens up (step 1.4; Session 12, was 0.64: MLB 2024 whiffs 25.9% of
                        // swings before two strikes and 24.5% with two): [share of his *where* spread, mph of bat
                        // speed he gives up (step 1.5; it was 4% of exit speed)]
-    shapeSd: [0.112, 0.09], // the shape's counterweight (step 1.4, owner's choice: value-neutral): share of the
+    shapeSd: [0.137, 0.065], // the shape's counterweight (step 1.4, owner's choice: value-neutral): share of the
                        // *where* spread taken off per unit of ground-ball shape (easier to square up), and
-                       // added per unit of fly-ball shape (harder)
+                       // added per unit of fly-ball shape (harder). Session 19, with the 8-degree shape: refitted (was
+                       // [0.112, 0.09], which on Session 18's code cost +0.29 runs a team-game at +1 and saved 0.27 at -1); the
+                       // value bends (a big tilt either way moves hitters off their best launch angle), so +-0.5 and +-1 are
+                       // balanced within about +-0.1 runs
     // Swing path (owner's choice, Session 11: a hitter's own shape; the sizes are Claude's defaults): per unit of
     // swingPath (+1 Lift, -1 Ground-ball), degrees added to his launch angle (real: the 15th and 85th percentiles of
     // hitters' average launch angle sit about 4.5 degrees from the median), degrees of spray toward his pull side
