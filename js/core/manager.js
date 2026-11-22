@@ -76,6 +76,7 @@
       if (p < S.min[k]) return null;
       let go = S.rate[k] * Math.min(1, (p - S.min[k]) / (S.full[k] - S.min[k]));
       if (g.outs === 2) go *= S.twoOut;
+      go *= Math.exp(S.green * (run.speed - B3.tune.RUN.speed)); // the green light: fast runners are sent more often (Session 20)
       if (!g.rng.chance(go)) return null;
       return { runners: lead === 2 && g.bases[0] ? [1, 2] : [lead] };
     },

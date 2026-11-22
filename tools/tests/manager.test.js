@@ -295,7 +295,8 @@ module.exports = function (t) {
       return k / n;
     };
     const avg = env(), fast = env({ speed: 80 }), quick = env({ baserunning: 80 }), arm = env({}, { arm: 80 }), hands = env({}, { hands: 80 });
-    assert.ok(odds(fast) > odds(avg) + 0.05, 'Speed: ' + odds(fast) + ' vs ' + odds(avg));
+    assert.ok(odds(fast) > odds(avg) + 0.02, 'Speed: ' + odds(fast) + ' vs ' + odds(avg)); // Session 20: the battery adjusts (STEAL.adapt)
+    assert.ok(tries(fast, 6000) > 1.4 * tries(avg, 6000), 'a fast runner gets the green light more often (CPU.steal.green)');
     assert.ok(odds(quick) > odds(avg) + 0.02, 'Baserunning (the jump)');
     assert.ok(odds(arm) < odds(avg) - 0.03, 'the catcher\'s Arm (runners see half of it, BALL.armBlind)');
     assert.ok(odds(hands) < odds(avg) - 0.01, 'the catcher\'s quick release (Hands)');

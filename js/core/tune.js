@@ -423,6 +423,11 @@
                        // (FanGraphs 2024-2025: 0.71-0.72 a team-game, bunt hits included) and grounded-into double plays
                        // (0.64-0.67) come out as MLB's
     onRunFree: 8,      // ... past this many feet (a ball hit near him is fielded set)
+    adapt: 0.7,        // share of a batter's time to first above or below the average batter's that the infield makes up on
+                       // plays at first (Session 20, Claude's default): it plays in and hurries against fast runners, and takes
+                       // its time against slow ones. Fitted to MLB's infield hits by sprint speed (FanGraphs and Savant
+                       // 2024-2025, 633 player-seasons with 250+ PA, bunts left out: 2.1% of balls in play under 26 ft/s, 2.5%
+                       // at 27-28, 3.6% at 29+, +0.34 points a ft/s; without it the engine's rose 1.2 points a ft/s)
     infield: 125,      // feet: grounders past this have left the infield
     lead: [12, 18, 12], // feet: leads off first, second and third
     shuffle: [6, 8, 5], // feet a runner who isn't stealing adds on the pitch (his secondary lead), off each base
@@ -464,7 +469,11 @@
   const STEAL = {
     delivery: 1.05,    // seconds from the pitcher's first move to release (from the stretch)
     secondLead: [3, 7], // extra feet of lead a stealing runner takes off first and off second
-    sd: 0.12           // seconds of noise on a steal play
+    sd: 0.12,          // seconds of noise on a steal play
+    adapt: 0.8         // share of a runner's Speed edge (his time to the next base against a runner at the placeholder Speed)
+                       // the battery makes up (Session 20, Claude's default): it holds fast runners and slide-steps, and pays slow
+                       // ones less mind. MLB's steal success hardly moves with speed (FanGraphs and Savant 2024-2025: 75% under
+                       // 25.5 ft/s, 75-79% from 25.5 to 29.5, 82% past 29.5); without it the engine's went 30% / 75% / 91%
   };
 
   // The CPU's choices (B3.manager.cpu, M1 step 1.3 task 10). Claude's defaults, tuned in step 1.4.
@@ -473,7 +482,11 @@
     // and Speed against the delivery and the catcher's release and Arm). Below `min` he stays; from there
     // to `full` his chance of going on this pitch rises to `rate`. Steals of third need more. He judges
     // his chance with an error of `judge` x his Baserunning's judge seconds on the margin.
-    steal: { min: [0.68, 0.78], full: [0.85, 0.92], rate: [0.09, 0.05], twoOut: 0.6, judge: 0.8 },
+    // green (Session 20): his chance of going on a pitch x e^(green x his ft/s over the placeholder Speed): fast runners get the
+    // green light more often (MLB's attempts rise steeply with sprint speed while their success stays about flat).
+    // Fitted: a lineup at Speed 40 / 80 tries 0.23 / 2.47 times as many steals as an average one [MLB, per time on first: 0.21 /
+    // 2.3; attempts 2.0% of times on first under 25.5 ft/s, 12.8% at 27.5-28.5, 26.3% past 29.5].
+    steal: { min: [0.68, 0.78], full: [0.85, 0.92], rate: [0.09, 0.05], twoOut: 0.6, judge: 0.8, green: 0.42 },
     // Tag-ups (step 1.4): the lead runner goes when he judges his chance (B3.ball.tagupOdds, plus his own
     // Baserunning error) is at least this, from second or from third.
     tagup: { need: { 2: 0.8, 3: 0.6 } },

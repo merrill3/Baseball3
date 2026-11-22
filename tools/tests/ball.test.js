@@ -33,6 +33,7 @@ const grounders = () => fair().filter((c) => c.la < 10);
 function setup(opts, seed) {
   opts = opts || {};
   const B3 = loadCore();
+  if (opts.tune) opts.tune(B3); // a change to B3.tune for this test (Session 20)
   const t = pair();
   const fld = opts.fld || {}, run = opts.run || {};
   for (const id in t.home.players) {
@@ -205,7 +206,10 @@ module.exports = function (t) {
     const base = safe({});
     more(base, safe({ fld: { C: { arm: 88, release: 0.15 } } }), 0.08, 'a strong, quick catcher');
     more(safe({ fld: { C: { arm: 72 } } }), base, 0.05, 'a weak-armed catcher');
-    more(safe({ run: { 'AWY-SS': { speed: 30 } } }), base, 0.08, 'a fast runner');
+    more(safe({ run: { 'AWY-SS': { speed: 30 } } }), base, 0.02, 'a fast runner');
+    // Session 20: the battery makes up STEAL.adapt of a runner's Speed edge; without it his edge is several times bigger.
+    const flat = (speed) => safe({ run: { 'AWY-SS': { speed: speed } }, tune: (B3) => { B3.tune.STEAL.adapt = 0; } });
+    more(flat(30) - flat(27.5), 2.5 * (safe({ run: { 'AWY-SS': { speed: 30 } } }) - base), 0, 'the battery adjusts to a fast runner');
     more(safe({ run: { 'AWY-SS': { jump: 0 } } }), safe({ run: { 'AWY-SS': { jump: 0.35 } } }), 0.15, 'a good jump (Baserunning)');
     assert.ok(base > 0.5 && base < 0.95, 'an average steal of second is usually safe: ' + base.toFixed(3));
   });
@@ -213,6 +217,11 @@ module.exports = function (t) {
   t.test('Speed: more infield hits and more extra bases', () => {
     const ifh = (speed) => rate(plays(setup({ run: { 'AWY-CF': { speed: speed } } }), grounders()), (x) => x.p.code === '1B' && INFIELD.indexOf(x.p.fielder) >= 0);
     more(ifh(31), ifh(23), 0.01, 'infield hits');
+    // Session 20: the infield makes up BALL.adapt of a batter's time to first against the average batter's, so Speed moves
+    // infield hits about as much as MLB's (without it, several times as much).
+    const ifhFlat = (speed) => rate(plays(setup({ run: { 'AWY-CF': { speed: speed } }, tune: (B3) => { B3.tune.BALL.adapt = 0; } }), grounders()),
+      (x) => x.p.code === '1B' && INFIELD.indexOf(x.p.fielder) >= 0);
+    more(ifhFlat(31) - ifhFlat(23), 2 * (ifh(31) - ifh(23)), 0, 'the infield adjusts to the runner');
     const extra = (speed) => {
       const rows = plays(setup({ run: { 'AWY-CF': { speed: speed } } }), fair()).filter((x) => isHit(x) && x.p.code !== 'HR');
       return rate(rows, (x) => x.p.code !== '1B');

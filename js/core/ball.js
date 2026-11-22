@@ -225,7 +225,7 @@
       out.push({ from: i + 1, id: rn.id, run: inp, going: going, s0: s0, v0: v0 });
     }
     const inp = bt.inp[id].run;
-    const batter = { from: 0, id: id, run: inp, going: false, s0: 0, v0: 0, box: boxTime(inp.speed, w.bats) };
+    const batter = { from: 0, id: id, run: inp, going: false, s0: 0, v0: 0, box: boxTime(inp.speed, w.bats), bats: w.bats };
     return { runners: out, batter: batter };
   }
 
@@ -615,6 +615,11 @@
     const forced = forcedOn(g);
     const R = off.runners, bt = off.batter;
     const tb = arrive(bt, 1, bt.box, 0, 0); // batter to first
+    // The infield adjusts to the runner (Session 20): against a batter faster than the average one (the same side, at the
+    // placeholder Speed) infielders play in and hurry their throw to first, and against a slower one they take their time,
+    // making up BALL.adapt of the difference.
+    const avgT = arrive({ from: 0, run: { speed: T().RUN.speed } }, 1, boxTime(T().RUN.speed, bt.bats), 0, 0);
+    const hurry = B.adapt * (avgT - tb);
     // A fumble: everyone safe, a base each.
     if (g.rng.chance(E.ground * fd.hands * (stop.dive ? E.hard : 1))) {
       S.event(T0, 'error', { pos: fd.pos });
@@ -626,7 +631,8 @@
     const ready = up + fd.xfer + B.onRun * Math.max(0, dist(fd.at, Q0) - B.onRunFree);
     // When the ball can be at base b: thrown, or carried if he is close to the bag (he runs it there).
     const carries = (b) => dist(P0, base(b)) < 22;
-    const ballAt = (b, seen) => (carries(b) ? up + runTime(dist(Q0, base(b)), fd.speed, 0) : Math.max(ready + throwTime(dist(P0, base(b)), seen ? fd.armSeen : fd.arm), cover(D, b, [fd.pos]).t));
+    const ballAt = (b, seen) => (carries(b) ? up + runTime(dist(Q0, base(b)), fd.speed, 0) :
+      Math.max(ready - (b === 1 ? hurry : 0) + throwTime(dist(P0, base(b)), seen ? fd.armSeen : fd.arm), cover(D, b, [fd.pos]).t));
     // Runners: forced runners go on contact; the rest go only if they can beat a throw.
     const tGo = (rn) => (rn.going ? 0 : rn.run.read);
     const runT = (rn, b) => arrive(rn, b, tGo(rn), rn.s0, rn.v0);
@@ -691,7 +697,7 @@
       // A relay to first for a double play (or a triple-play-free second out).
       if (choice !== first && g.outs + 1 < 3) {
         const piv = carries(choice.b) ? fd : cover(D, choice.b, [fd.pos]).fd;
-        const release = choice.tBall + Math.max(0.2, B.pivot - piv.release);
+        const release = choice.tBall + Math.max(0.2, B.pivot - piv.release - hurry); // the pivot hurries too
         const cv1 = cover(D, 1, [fd.pos, piv.pos]);
         const t1b = Math.max(release + throwTime(dist(base(choice.b), base(1)), piv.arm), cv1.t);
         relay = { t: t1b, release: release, piv: piv, cv1: cv1 };
@@ -960,7 +966,10 @@
     const D = defense(g, 'R');
     const c = D.C;
     const lead = B.lead[from - 1] + ST.secondLead[from - 1] + (run.lead || 0);
-    const tRun = run.jump + runTime(90 - lead, run.speed, 0);
+    // The battery adjusts to the runner (Session 20): it holds a fast runner close and quickens (a slide step), and pays a
+    // slow one less mind, making up STEAL.adapt of his time against a runner at the placeholder Speed.
+    const tFlat = run.jump + runTime(90 - lead, run.speed, 0);
+    const tRun = tFlat + ST.adapt * (run.jump + runTime(90 - lead, T().RUN.speed, 0) - tFlat);
     const cv = cover(D, from + 1, ['C']);
     const tBall = Math.max(ST.delivery + ms / 1000 + c.xfer + throwTime(dist(c.at, base(from + 1)), seen ? c.armSeen : c.arm), cv.t);
     return tBall + B.tag - tRun;
