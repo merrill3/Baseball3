@@ -53,7 +53,7 @@
     putAway: null,     // the put-away pitch (his best-graded type); null: the CPU picks by pitch type
     aim: 0             // tendency (-1 Nibbler, 0 Balanced, 1 Attacker): the CPU's pitch targets
   };
-  const STAMINA = { SP: 88, LR: 50, other: 28 }; // placeholder Stamina by role, in pitches (Session 16: SP was 92)
+  const STAMINA = { SP: 82, LR: 50, other: 28 }; // placeholder Stamina by role, in pitches (Session 17: SP was 88, 92 before Session 16)
 
   // Fielding. A null takes the position's value from POS below (a fielder's inputs don't move with
   // his position in a game: there are no defensive substitutions in M1).
@@ -179,7 +179,7 @@
     // median 87, 75th 90.5, 95th 95, 99th 98, best 100); 20 stays a short reliever (the worst real starter-season was an
     // opener's, 17). Relievers sit at about 20-30. Was [[20, 18], [30, 28], [40, 45], [50, 68], [60, 92], [70, 102], [80, 110],
     // [90, 117], [100, 123]] (a starter's 56 pitches a start at 40, 111 at 99).
-    stamina: [[20, 18], [30, 53], [40, 69], [50, 80], [60, 88], [70, 94], [80, 102], [91.25, 107], [108.8, 111]],
+    stamina: [[20, 18], [30, 57], [40, 70], [50, 77.5], [60, 82], [70, 86], [80, 91], [91.25, 95], [108.8, 97.5]],
     tendency: {
       aggressiveness: { Patient: -1, Balanced: 0, Aggressive: 1 },
       aim: { Nibbler: -1, Balanced: 0, Attacker: 1 },
@@ -194,10 +194,20 @@
     contactFt: 3.4,    // the ideal contact point, feet in front of the plate's tip
     avgSpeedShare: 0.92, // average speed over the flight, as a share of release speed (drag)
     speedSd: 0.7,      // pitch-to-pitch speed spread, mph
-    fatigueSpan: 20,   // pitches past Stamina for one step of fatigue
-    fatigueMax: 3,     // fatigue steps cap
-    fatigueVelo: 1.2,  // mph lost per fatigue step
-    fatigueCommand: 0.3, // Command scatter grows by this share per fatigue step
+    // The fade (Session 17, the owner's Session 16 choice: a gradual fade paced by Stamina, wearing down velocity, command and
+    // stuff together; replaces Session 16's fatigue, none until his Stamina's pitches and then 1.2 mph and 30% more scatter
+    // every 20). With x = his pitches / his Stamina's pitches (B3.ratings.stamina), he plays as if his Velocity, Command and
+    // every pitch grade were points x x^power + past x (x - 1)^2 (past his Stamina) points lower. A point is a rating's slope
+    // at 60: velo mph, command on the log of his scatter (RATE.pit.commandSd's 0.92 over the step table's 50-70 rows),
+    // grade on the movement multiplier (RATE.grade.step over the grade table's 50-70 rows). Claude's defaults, fitted with
+    // tools/starters.js to MLB 2024's starters (DESIGN.md section 10, "Starters deeper in games").
+    fade: { points: 3, power: 2, past: 40, velo: 0.15, command: 0.00656, grade: 0.0166 },
+    // Familiarity (Session 17, the owner's Session 16 choice: an order penalty, the same for every pitcher): each time a
+    // hitter has already faced this pitcher in the game he plays as if his Recognition and Timing were `points` higher. Per
+    // point (the ratings' slopes at 60): the share of pitches he doesn't pick up x unread (RATE.bat.recognition's 0.6 over
+    // the table's 50-70 rows), his *when* spread x timingSd and the exit speed he loses to a mishit x square (Timing's 0.85
+    // and 0.9 over its 50-70 rows).
+    familiar: { points: 1, unread: 0.9577, timingSd: 0.9881, square: 0.9923 },
     callWidth: 0.085,  // umpire: feet over which a borderline call goes from likely strike to likely ball (the logistic's
                        // scale; Session 15, was 0.055: MLB 2024's called strikes by feet from the zone padded by the ball,
                        // 97.6 / 93.1 / 85.7 / 66.6 / 33.9 / 15.9 / 5.3% from 0.4 ft inside to 0.3 ft off, 109,184 pitches)
@@ -494,13 +504,18 @@
       low: { FF: 0.4, SI: 0.75, FC: 0.55, SL: 0.7, CU: 0.8, CH: 0.8, FS: 0.85 } // share of targets kept low, by type
     },
     pull: {
-      starter: 0.55,       // fatigue steps (B3.tune.PITCH.fatigueSpan pitches each) at which a starter comes out
-      late: 0,             // ... from the 7th inning on
-      starterRuns: 5,      // runs that take a starter out (hit hard); 4 once he is within 25 pitches of his Stamina
-      reliever: 0,         // fatigue steps at which a reliever comes out
+      // The starter's hook (Session 17, the owner's Session 16 choice: MLB-like; replaces Session 16's rules, out at 11 pitches
+      // past his Stamina, at his Stamina from the 7th inning, or for 5 runs). Before each batter he comes out with chance
+      // 1 / (1 + e^-z), x his pitches over his Stamina's (B3.manager.load): before an inning z = (x - at) / width; in the
+      // middle of one z = (x - midAt) / midWidth + trouble x (runs this inning + onBase x runners on); + fourth when the batter
+      // due up would face him a fourth time. Claude's defaults, fitted with tools/starters.js to MLB 2024's exits (DESIGN.md
+      // section 10).
+      hook: { at: 1, width: 0.05, midAt: 1.25, midWidth: 0.04, trouble: 2.4, onBase: 0.3, fourth: 3 },
+      reliever: 1,         // a reliever comes out at this share of his Stamina's pitches
       relieverRuns: 3,
       oneInning: ['CL', 'SU'], // roles that pitch one inning: out when a new inning starts after 3 outs
-      middleOuts: 6        // a middle reliever goes at most this many outs
+      middleOuts: 6,       // a middle reliever goes at most this many outs,
+      middleRest: 12       // and doesn't start another inning (after 3 outs) within this many pitches of his Stamina's
     }
   };
 

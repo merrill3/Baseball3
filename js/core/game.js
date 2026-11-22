@@ -115,12 +115,12 @@
       lineup: lineup, pos: pos, byPos: byPos,
       spot: 0, // index in lineup of the batter due up
       pitcher: t.pitcher, used: [t.pitcher], bullpen: bullpen,
-      live: live, // per pitcher this game: { pitches, outs, runs, bf }, for in-game choices
+      live: live, // per pitcher this game: { pitches, outs, runs, bf, seen: { batter id: times faced } }, for in-game choices
       inp: inp // per player: B3.ratings.inputs (bats, throws, bat, pit, fld, run)
     };
   }
 
-  function newLive() { return { pitches: 0, outs: 0, runs: 0, bf: 0 }; }
+  function newLive() { return { pitches: 0, outs: 0, runs: 0, bf: 0, seen: {} }; }
 
   function bat(g) { return g.teams[g.half]; }
   function fld(g) { return g.teams[1 - g.half]; }
@@ -344,7 +344,9 @@
     pa.o = g.outs;
     pa.bs = g.bases.map((r) => (r ? r.id : null));
     emit(g, pa);
-    f.live[pa.p].bf++;
+    const live = f.live[pa.p];
+    live.bf++;
+    live.seen[pa.b] = (live.seen[pa.b] || 0) + 1; // familiarity (B3.pitch): times this batter has faced him
     b.spot = (b.spot + 1) % 9;
     g.balls = 0; g.strikes = 0;
   }

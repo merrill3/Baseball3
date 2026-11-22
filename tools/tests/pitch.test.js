@@ -59,7 +59,7 @@ module.exports = function (t) {
     assert.ok(right.hx > 0 && left.hx < 0 && Math.abs(right.hx + left.hx) < 1e-9, 'a slider breaks to the glove side');
   });
 
-  t.test('Command scatters pitches around the target; fatigue widens it and costs speed', () => {
+  t.test('Command scatters pitches around the target; his fade (Session 17) widens it, costs speed and flattens his pitches', () => {
     for (const cmd of [0.25, 0.5, 0.9]) {
       const rows = trial(setup({ pit: { commandSd: cmd } }), { type: 'FF', x: 0.4, z: 2.2 }, null);
       near(avg(rows.map((x) => x.p.x)), 0.4, 0.05, 'mean x');
@@ -67,12 +67,64 @@ module.exports = function (t) {
       near(sd(rows.map((x) => x.p.x)), cmd, cmd * 0.08, 'scatter x');
       near(sd(rows.map((x) => x.p.z)), cmd, cmd * 0.08, 'scatter z');
     }
+    // The curve: nothing at the first pitch, points x x^2 to his Stamina's pitches, steeper past them; one rule for every role.
+    const env = setup(), B3 = env.B3, F = B3.tune.PITCH.fade, team = env.g.teams[1];
+    const S = team.inp['HOM-SP'].pit.stamina;
+    const at = (n, id) => { const l = { pitches: n }; return B3.pitch.fade(team.inp[id || 'HOM-SP'], l); };
+    near(S, B3.tune.STAMINA.SP, 1e-9, 'the placeholder starter');
+    near(at(0), 0, 1e-9, 'fresh');
+    near(at(S / 2), F.points / 4, 1e-9, 'half his Stamina');
+    near(at(S), F.points, 1e-9, 'at his Stamina');
+    assert.ok(at(1.2 * S) - at(S) > 2 * (at(S) - at(0.8 * S)), 'steeper past his Stamina');
+    const rp = team.inp['HOM-MR1'].pit.stamina;
+    near(at(rp, 'HOM-MR1'), F.points, 1e-9, 'a reliever at his Stamina\'s pitches fades as a starter at his');
+    assert.ok(at(30) < at(30, 'HOM-MR1'), 'at the same pitch count a low-Stamina pitcher has faded more');
     const fresh = trial(setup(), MID, null);
     const tired = setup();
-    tired.g.teams[1].live['HOM-SP'].pitches = tired.B3.tune.STAMINA.SP + 40; // two fatigue steps past Stamina
+    tired.g.teams[1].live['HOM-SP'].pitches = Math.round(1.5 * S);
+    const d = tired.B3.pitch.fade(tired.g.teams[1].inp['HOM-SP'], tired.g.teams[1].live['HOM-SP']);
     const late = trial(tired, MID, null);
-    near(avg(fresh.map((x) => x.p.speed)) - avg(late.map((x) => x.p.speed)), 2.4, 0.15, 'speed lost');
-    near(sd(late.map((x) => x.p.x)) / sd(fresh.map((x) => x.p.x)), 1.6, 0.12, 'scatter growth');
+    assert.ok(late.every((x) => x.p.fade === d) && fresh.every((x) => x.p.fade === 0), 'the pitch carries his fade');
+    near(avg(fresh.map((x) => x.p.speed)) - avg(late.map((x) => x.p.speed)), F.velo * d, 0.1, 'speed lost');
+    near(sd(late.map((x) => x.p.x)) / sd(fresh.map((x) => x.p.x)), Math.exp(F.command * d), 0.06, 'scatter growth');
+    const sl = tired.B3.pitch.throw(tired.g, { type: 'SL', x: 0, z: 2.5 });
+    near(sl.grade, 1 - F.grade * d, 1e-9, 'the slider flattens (a lower grade)');
+  });
+
+  t.test('familiarity (Session 17): a hitter who has faced this pitcher already reads him, times him and squares him up a little better', () => {
+    const env = setup(), B3 = env.B3, g = env.g, live = g.teams[1].live['HOM-SP'];
+    assert.strictEqual(Object.keys(live.seen).length, 0, 'nobody has faced him yet');
+    const rec0 = B3.pitch.expect(g, Object.assign({ grade: 1 }, MID)).rec;
+    live.seen['AWY-CF'] = 2;
+    const rec2 = B3.pitch.expect(g, Object.assign({ grade: 1 }, MID)).rec;
+    const Lr = B3.tune.PLATOON.recognition; // AWY-CF bats left against a right-hander: the platoon edge adds to his read
+    near(1 - rec2 + Lr, (1 - rec0 + Lr) * Math.pow(B3.tune.PITCH.familiar.unread, 2 * B3.tune.PITCH.familiar.points), 1e-9, 'the share he does not pick up');
+    assert.ok(rec2 > rec0, 'he reads more');
+    live.seen['AWY-CF'] = 0;
+    // The timing spread and the mishit's exit speed, with familiarity made large so sampling shows it.
+    const F = B3.tune.PITCH.familiar;
+    F.points = 10;
+    const pitch = B3.pitch.throw(g, MID);
+    const spread = (seen) => { live.seen['AWY-CF'] = seen; const xs = []; for (let i = 0; i < N; i++) xs.push(B3.pitch.cpuTiming(g, pitch)); return sd(xs); };
+    near(spread(2) / spread(0), Math.pow(F.timingSd, 20), 0.05, 'the timing spread');
+    const ev = (seen) => { live.seen['AWY-CF'] = seen; const env2 = { B3, g }; g.rng = B3.rng.create('familiar ev'); return avg(inPlay(trial(env2, MID, 0)).map((x) => x.r.contact.ev)); };
+    assert.ok(ev(2) > ev(0) + 0.5, 'he squares the ball up better: ' + ev(2).toFixed(1) + ' against ' + ev(0).toFixed(1));
+  });
+
+  t.test('the game counts each batter\'s times against each pitcher', () => {
+    const B3 = loadCore();
+    const g = B3.game.sim(Object.assign(pair(), { type: 'regular', rng: B3.rng.create('seen test') }));
+    for (const side of [0, 1]) {
+      const team = g.teams[side];
+      for (const id of team.used) {
+        const pas = g.log.filter((e) => e.e === 'pa' && e.p === id);
+        const seen = {};
+        for (const e of pas) seen[e.b] = (seen[e.b] || 0) + 1;
+        assert.strictEqual(JSON.stringify(team.live[id].seen, Object.keys(seen).sort()), JSON.stringify(seen, Object.keys(seen).sort()), id);
+        assert.strictEqual(Object.keys(team.live[id].seen).length, Object.keys(seen).length, id + ' batters');
+        assert.strictEqual(team.live[id].bf, pas.length, id + ' batters faced');
+      }
+    }
   });
 
   t.test('the umpire: strikes down the middle, balls well outside, either way at the edge; Framing moves the edge', () => {

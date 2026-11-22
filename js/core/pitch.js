@@ -1,7 +1,8 @@
 // Pitches, the swing's two errors and contact. Logic file: no DOM.
 //
 //   B3.pitch.throw(g, { type, x, z })  the pitch as thrown: speed, movement and where it crosses the plate
-//                                      (Command's scatter around the target, worse when tired)
+//                                      (Command's scatter around the target; all three wear down with his fade)
+//   B3.pitch.fade(p, live)             a pitcher's fade this game, in rating points (B3.tune.PITCH.fade)
 //   B3.pitch.call(g, pitch)            a taken pitch: 'C' called strike or 'B' ball (Framing at the edges)
 //   B3.pitch.resolve(g, pitch, swing)  { r, ... }: B or C on a take; on a swing S (whiff), F (foul) or
 //                                      X (in play, with contact { ev, la, sp, slice }), and the swing's bat speed (bat)
@@ -21,6 +22,12 @@
 //           launch angle (over the ball is a ground ball) and costs exit speed.
 // Your own batting is timing only: the UI gives the *when*, and your hitter's ratings roll the *where*.
 //
+// Deeper in games (Session 17, the owner's Session 16 choices; sizes Claude's defaults, PITCH.fade and PITCH.familiar):
+//   the fade      from the first pitch a pitcher slowly loses ground, at a pace set by his Stamina and steeper past it: he
+//                 plays as if his Velocity, Command and every pitch grade were a few points lower (the same for every role)
+//   familiarity   each time a hitter has already faced this pitcher in the game, he reads and times him a little better: he
+//                 plays as if his Recognition and Timing were a few points higher (the same for every pitcher)
+//
 // Coordinates: x in feet from the middle of the plate, seen from the catcher (plus is the first-base
 // side), z feet above the ground. Spray in degrees from straightaway center, plus toward right field.
 // Every function reads the game but changes nothing except drawing from g.rng.
@@ -33,19 +40,30 @@
   function T() { return B3.tune; }
   function clamp(x, lo, hi) { return x < lo ? lo : x > hi ? hi : x; }
 
-  // The players on this pitch: inputs for the batter, pitcher and catcher, and the batter's side.
+  // The players on this pitch: inputs for the batter, pitcher and catcher, the batter's side, and how many times this
+  // batter has already faced this pitcher in the game (seen).
   function who(g) {
     const bat = g.teams[g.half], fld = g.teams[1 - g.half];
-    const b = bat.inp[bat.lineup[bat.spot]], p = fld.inp[fld.pitcher], c = fld.inp[fld.byPos.C];
+    const id = bat.lineup[bat.spot], live = fld.live[fld.pitcher];
+    const b = bat.inp[id], p = fld.inp[fld.pitcher], c = fld.inp[fld.byPos.C];
     const throws = p.throws;
     const bats = b.bats === 'S' ? (throws === 'L' ? 'R' : 'L') : b.bats;
-    return { b: b, p: p, c: c, bats: bats, throws: throws, live: fld.live[fld.pitcher] };
+    const seen = live && live.seen && live.seen[id] ? live.seen[id] : 0;
+    return { b: b, p: p, c: c, bats: bats, throws: throws, live: live, seen: seen };
   }
 
-  // Fatigue steps: 0 while fresh, rising past Stamina, capped.
-  function fatigue(p, live) {
-    const P = T().PITCH;
-    return clamp((live.pitches - p.pit.stamina) / P.fatigueSpan, 0, P.fatigueMax);
+  // His fade this game, in rating points (Session 17): with x his pitches over his Stamina's (B3.ratings.stamina),
+  // fade.points x x^fade.power, plus fade.past x (x - 1)^2 past his Stamina. One curve for every role.
+  function fade(p, live) {
+    const F = T().PITCH.fade, x = (live ? live.pitches : 0) / p.pit.stamina;
+    return F.points * Math.pow(x, F.power) + (x > 1 ? F.past * (x - 1) * (x - 1) : 0);
+  }
+
+  // Familiarity (Session 17): his read and timing against a pitcher he has already faced `seen` times this game, as
+  // multipliers on the share of pitches he doesn't pick up, his *when* spread and the exit speed he loses to a mishit.
+  function familiar(w) {
+    const F = T().PITCH.familiar, pts = F.points * (w.seen || 0);
+    return { unread: Math.pow(F.unread, pts), timingSd: Math.pow(F.timingSd, pts), square: Math.pow(F.square, pts) };
   }
 
   // Flight time in ms from release to the ideal contact point, for a release speed in mph.
@@ -54,17 +72,19 @@
     return 1000 * (P.releaseFt - P.contactFt) / (speed * P.avgSpeedShare * MPH);
   }
 
-  // The fastball this pitcher throws today, mph (what a hitter times by default).
-  function fastball(p, f) { return p.pit.velo - T().PITCH.fatigueVelo * f; }
+  // The fastball this pitcher throws now, mph (what a hitter times by default), for his fade in points.
+  function fastball(p, d) { return p.pit.velo - T().PITCH.fade.velo * (d || 0); }
 
   function throwPitch(g, a) {
     const r = g.rng, P = T().PITCH, w = who(g);
     const type = B3.data.PITCH[a.type];
-    const f = fatigue(w.p, w.live);
-    const sd = w.p.pit.commandSd * (1 + P.fatigueCommand * f);
+    // His fade wears down all three (the owner's choice, Session 16): speed, Command's scatter and the pitch's grade.
+    const d = fade(w.p, w.live);
+    const sd = w.p.pit.commandSd * Math.exp(P.fade.command * d);
     const x = a.x + r.normal(0, sd), z = a.z + r.normal(0, sd);
-    const speed = Math.round((fastball(w.p, f) * type.v + r.normal(0, P.speedSd)) * 10) / 10;
-    const grade = w.p.pit.grades[a.type] === undefined ? 1 : w.p.pit.grades[a.type];
+    const speed = Math.round((fastball(w.p, d) * type.v + r.normal(0, P.speedSd)) * 10) / 10;
+    const rated = w.p.pit.grades[a.type] === undefined ? 1 : w.p.pit.grades[a.type];
+    const grade = Math.max(T().RATE.grade.min, rated - P.fade.grade * d);
     const mirror = w.throws === 'L' ? -1 : 1;
     // Does the hitter pick this pitch up? (step 1.5 task 4: one read per pitch, his read share being the chance.) The same
     // read sets his swing choice (look), his timing (cpuTiming) and where his bat goes (expect), so a breaking ball he chases
@@ -74,7 +94,7 @@
       type: a.type, speed: speed, x: x, z: z, zone: B3.data.inZone(x, z),
       ms: Math.round(flightMs(speed)),
       hx: mirror * type.hx * grade, vz: type.vz * grade, // movement as thrown, inches
-      grade: grade, shape: w.p.pit.shapes[a.type] || 0, throws: w.throws, fatigue: f, read: read
+      grade: grade, shape: w.p.pit.shapes[a.type] || 0, throws: w.throws, fade: d, read: read
     };
   }
 
@@ -87,13 +107,14 @@
     return g.rng.chance(pStrike) ? 'C' : 'B';
   }
 
-  // The hitter's read of this pitch: recognition against the pitcher's deception, plus the platoon edge.
+  // The hitter's read of this pitch: recognition against the pitcher's deception, plus the platoon edge and familiarity.
   function readOf(w) {
     const L = T().PLATOON;
     const opp = w.bats !== w.throws ? 1 : -1;
     return {
-      // Deception multiplies the share he doesn't read (step 1.4: the mirror of Recognition, which shrinks it).
-      rec: clamp(1 - (1 - w.b.bat.recognition) * w.p.pit.deception + L.recognition * opp, 0, 0.98),
+      // Deception multiplies the share he doesn't read (step 1.4: the mirror of Recognition, which shrinks it), and so does
+      // having faced him already this game (Session 17: familiarity, a few points of Recognition a time).
+      rec: clamp(1 - (1 - w.b.bat.recognition) * w.p.pit.deception * familiar(w).unread + L.recognition * opp, 0, 0.98),
       contactSd: w.b.bat.contactSd * (1 - L.contactSd * opp)
     };
   }
@@ -155,7 +176,7 @@
     const path = 1 + (sp < 0 ? S.pathSd[0] : S.pathSd[1]) * sp;
     // A harder thrower's pitches are harder to put the bat on (Session 13: Velocity brings whiffs, not weak contact): the whole
     // spread grows as (his fastball today / an average fastball, PIT.velo)^SWING.veloSd, his off-speed pitches too.
-    const velo = Math.pow(fastball(w.p, pitch.fatigue || 0) / T().PIT.velo, S.veloSd);
+    const velo = Math.pow(fastball(w.p, pitch.fade) / T().PIT.velo, S.veloSd);
     const sd = velo * cost * tilt * path * Math.sqrt(read.contactSd * read.contactSd + m * m * (bite * bite + loc * loc));
     return { mean: mean, sd: sd, rec: read.rec, bats: w.bats };
   }
@@ -195,7 +216,7 @@
     const away = Math.max(0, B3.data.zoneEdge(pitch.x, pitch.z) + S.edgeFrom);
     // Off center (step 1.5): the loss grows with the *where* error to offPow, a little less under the ball than over it.
     // Timing squares it up (Session 11, owner's choice): bat.square scales both losses (1 for an average hitter).
-    const sq = w.b.bat.square;
+    const sq = w.b.bat.square * familiar(w).square; // and a hitter who has faced him already squares him up a little better
     const lossOff = sq * S.offLoss * Math.pow(Math.abs(u), S.offPow) * (u < 0 ? S.offUnder : 1);
     const ev = top * (1 - lossOff) * (1 - sq * S.timeLoss * v * v * (v > 0 ? 1 + S.lateLoss : 1)) * (1 - S.locLoss * away) + r.normal(0, S.evSd);
     // Launch angle: over the ball drives it down; high pitches go up. Launch sets the band.
@@ -224,7 +245,7 @@
   // doesn't read make him early; faster pitches make him late and widen his spread (Velocity against Timing).
   function cpuTiming(g, pitch) {
     const w = who(g), M = T().TIMING;
-    const ff = fastball(w.p, pitch.fatigue);
+    const ff = fastball(w.p, pitch.fade);
     const expected = pitch.speed + unread(w, pitch) * (Math.max(pitch.speed, ff) - pitch.speed);
     // ms early: he swings for a faster pitch. Measured against a fastball at refMph (step 1.4), so the speed
     // change counts as a share: a soft-tossing pitcher's change-up doesn't fool more than a hard thrower's.
@@ -235,7 +256,7 @@
     // fastball would give him, on every pitch, so a harder thrower makes him early on the slower ones.
     const lateAt = (mph) => { const x = (mph - w.b.bat.timingTop) / M.lateSoft; return M.latePerMph * M.lateSoft * (x > 30 ? x : Math.log(1 + Math.exp(x))); };
     const late = lateAt(pitch.speed) - M.gearUp * lateAt(ff);
-    const sd = w.b.bat.timingSd * Math.pow(pitch.speed / M.refMph, M.sdPow);
+    const sd = w.b.bat.timingSd * familiar(w).timingSd * Math.pow(pitch.speed / M.refMph, M.sdPow); // familiarity: times him better
     return Math.round(late - early + g.rng.normal(0, sd));
   }
 
@@ -274,6 +295,7 @@
     resolve: resolve,
     cpuTiming: cpuTiming,
     expect: expect,
+    fade: fade,
     flightMs: flightMs,
     who: who
   };

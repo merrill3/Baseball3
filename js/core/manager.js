@@ -21,35 +21,43 @@
     return id || pen.find((x) => role(team, x) !== 'CL') || pen[0];
   }
 
-  // Fatigue steps for a pitcher this game: 0 until his Stamina's pitches, then one per fatigueSpan.
-  function fatigue(team, id) {
-    return (team.live[id].pitches - team.inp[id].pit.stamina) / B3.tune.PITCH.fatigueSpan;
+  // How far into his Stamina a pitcher is this game: his pitches over his Stamina's (1 at his Stamina; B3.pitch.fade's x).
+  function load(team, id) { return team.live[id].pitches / team.inp[id].pit.stamina; }
+
+  // The starter's hook (Session 17, the owner's Session 16 choice: MLB-like): the chance he comes out before this batter.
+  // It rises with his pitch count against his Stamina (so with his fade), is higher when the batter due up would face him a
+  // fourth time, and in the middle of an inning needs more: trouble this inning (runs, runners on) or a high count. Total
+  // runs, the score and the inning don't count (later, with the managers' styles in M2).
+  function hook(g, team, id) {
+    const H = C().pull.hook, live = team.live[id];
+    const next = g.teams[1 - g.teams.indexOf(team)], due = next.lineup[next.spot];
+    const x = load(team, id), on = g.bases.filter((b) => b).length;
+    let z = g.halfPitches ? (x - H.midAt) / H.midWidth + H.trouble * (g.halfRuns + H.onBase * on) : (x - H.at) / H.width;
+    if (live.seen && (live.seen[due] || 0) >= 3) z += H.fourth;
+    return 1 / (1 + Math.exp(-z));
   }
 
-  // Is the pitcher done? Starters go until tired or hit hard; relievers by role, outs and Stamina.
+  // Is a reliever done? By his Stamina, runs and role (one-inning roles; a middle reliever's outs).
   function done(g, team, id) {
-    const P = C().pull, live = team.live[id], f = fatigue(team, id);
+    const P = C().pull, live = team.live[id], x = load(team, id);
     const newInning = !g.halfPitches; // no pitch yet this half (in extra innings a runner is already on second)
-    if (team.used[0] === id) {
-      if (f >= P.starter || (g.inning >= 7 && f >= P.late)) return true;
-      return live.runs >= P.starterRuns || (live.runs >= P.starterRuns - 1 && f >= -25 / B3.tune.PITCH.fatigueSpan);
-    }
-    if (f >= P.reliever || live.runs >= P.relieverRuns) return true;
+    if (x >= P.reliever || live.runs >= P.relieverRuns) return true;
     if (P.oneInning.indexOf(role(team, id)) >= 0) return newInning && live.outs >= 3;
-    if (role(team, id) === 'MR') return live.outs >= P.middleOuts || (newInning && live.outs >= 3 && f >= -0.6);
+    if (role(team, id) === 'MR') return live.outs >= P.middleOuts || (newInning && live.outs >= 3 && live.pitches >= team.inp[id].pit.stamina - P.middleRest);
     return false;
   }
 
   function fast(type) { return type === 'FF' || type === 'SI' || type === 'FC'; }
 
   const cpu = {
-    // Changes only between batters: when the pitcher is tired or hit hard, and the closer for a save spot.
+    // Changes only between batters: the starter by the hook, a reliever when tired, hit hard or done with his role, and
+    // the closer for a save spot.
     change: function (d, g) {
       if (g.balls || g.strikes || !d.bullpen.length) return null;
       const team = g.teams[d.side];
       const lead = g.score[d.side] - g.score[1 - d.side];
       const saveSpot = g.inning >= 9 && lead >= 1 && lead <= 3 && !g.halfPitches;
-      let out = done(g, team, d.pitcher);
+      let out = team.used[0] === d.pitcher ? g.rng.chance(hook(g, team, d.pitcher)) : done(g, team, d.pitcher);
       if (saveSpot && role(team, d.pitcher) !== 'CL' && team.bullpen.some((id) => role(team, id) === 'CL')) out = true;
       if (!out) return null;
       return { pitcher: pickReliever(g, team, lead) };
@@ -140,5 +148,5 @@
     }
   };
 
-  B3.manager = { cpu: cpu, fatigue: fatigue, done: done };
+  B3.manager = { cpu: cpu, load: load, hook: hook, done: done };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

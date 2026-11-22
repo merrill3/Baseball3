@@ -158,32 +158,72 @@ module.exports = function (t) {
     near(wild.zone, avg.zone, 0.03, 'Command does not move how often he aims in the zone');
   });
 
-  t.test('pitching changes: Stamina sets when a starter tires; runs take him out; relievers by role', () => {
+  t.test('the starter\'s hook (Session 17): his pitch count against his Stamina, rarely a fourth time through, trouble this inning, not total runs', () => {
     const { B3, g } = setup({ pit: { stamina: 60 } });
-    const cpu = B3.manager.cpu, team = g.teams[1];
+    const cpu = B3.manager.cpu, team = g.teams[1], H = B3.tune.CPU.pull.hook;
     const d = () => ({ kind: 'change', side: 1, pitcher: team.pitcher, bullpen: team.bullpen.slice() });
-    const live = team.live['HOM-SP'];
-    live.pitches = 60;
-    assert.strictEqual(cpu.change(d(), g), null, 'a fresh starter stays');
-    live.pitches = team.inp['HOM-SP'].pit.stamina + 15;
-    assert.ok(cpu.change(d(), g), 'a tired starter comes out');
-    live.pitches = 50; live.runs = 6;
-    assert.ok(cpu.change(d(), g), 'a starter hit hard comes out');
-    live.runs = 0;
-    // A higher Stamina rating keeps him in longer.
-    const s70 = setup({ pit: { stamina: 75 } });
-    s70.g.teams[1].live['HOM-SP'].pitches = team.inp['HOM-SP'].pit.stamina + 10;
-    assert.strictEqual(s70.B3.manager.cpu.change({ kind: 'change', side: 1, pitcher: 'HOM-SP', bullpen: s70.g.teams[1].bullpen.slice() }, s70.g), null, 'Stamina 75 is not tired yet');
-    // A setup man pitches one inning: out when a new inning starts after his 3 outs.
+    const live = team.live['HOM-SP'], S = team.inp['HOM-SP'].pit.stamina;
+    const hook = () => B3.manager.hook(g, team, 'HOM-SP');
+    // Before an inning (no pitch yet this half): by his pitches against his Stamina's.
+    live.pitches = Math.round(0.6 * S);
+    assert.ok(hook() < 0.001, 'a fresh starter stays: ' + hook());
+    assert.strictEqual(cpu.change(d(), g), null, 'and the CPU keeps him');
+    live.pitches = S;
+    near(hook(), 0.5, 0.01, 'at his Stamina\'s pitches, half the time');
+    live.pitches = Math.round(1.3 * S);
+    assert.ok(hook() > 0.99 && cpu.change(d(), g), 'well past them he comes out');
+    // A higher Stamina keeps him in longer at the same pitch count.
+    const s75 = setup({ pit: { stamina: 75 } }), t75 = s75.g.teams[1];
+    t75.live['HOM-SP'].pitches = S;
+    assert.ok(s75.B3.manager.hook(s75.g, t75, 'HOM-SP') < 0.2, 'Stamina 75 at a 60\'s Stamina pitches');
+    // Total runs alone don't take him out; trouble this inning does, more readily as he tires.
+    live.pitches = Math.round(0.6 * S); live.runs = 6;
+    assert.ok(hook() < 0.001, 'six runs over the game, a new inning: ' + hook());
+    g.halfPitches = 10; g.halfRuns = 0; g.bases = [null, null, null];
+    live.pitches = S;
+    assert.ok(hook() < 0.05, 'mid-inning at his Stamina, nobody on, no runs this inning: ' + hook());
+    g.halfRuns = 3; g.bases = [{ id: 'AWY-CF' }, { id: 'AWY-SS' }, null];
+    const tired = hook();
+    live.pitches = Math.round(0.8 * S);
+    const fresher = hook();
+    assert.ok(tired > 0.6 && fresher > 0.03 && fresher < tired / 4, 'three runs in and two on: ' + tired + ' at his Stamina, ' + fresher + ' at 80% of it');
+    const x = live.pitches / S;
+    near(fresher, 1 / (1 + Math.exp(-((x - H.midAt) / H.midWidth + H.trouble * (3 + 2 * H.onBase)))), 1e-9, 'the mid-inning formula');
+    // The order: the batter due up would face him a fourth time.
+    g.halfPitches = 0; g.halfRuns = 0; g.bases = [null, null, null];
+    live.pitches = Math.round(0.9 * S);
+    const third = hook();
+    live.seen['AWY-CF'] = 3;
+    assert.ok(hook() > 0.5 && hook() > 5 * third, 'a fourth time through: ' + hook() + ' against ' + third);
+    live.seen['AWY-CF'] = 0; live.runs = 0;
+    // Relievers: by role. A setup man pitches one inning: out when a new inning starts after his 3 outs.
     team.pitcher = 'HOM-SU1'; team.used.push('HOM-SU1'); team.bullpen.splice(team.bullpen.indexOf('HOM-SU1'), 1);
-    team.live['HOM-SU1'] = { pitches: 14, outs: 3, runs: 0, bf: 4 };
+    team.live['HOM-SU1'] = { pitches: 14, outs: 3, runs: 0, bf: 4, seen: {} };
     assert.ok(cpu.change(d(), g), 'a setup man after his inning');
-    team.live['HOM-SU1'].outs = 1; g.outs = 1;
+    team.live['HOM-SU1'].outs = 1; g.outs = 1; g.halfPitches = 5;
     assert.strictEqual(cpu.change(d(), g), null, 'a setup man in the middle of his inning');
-    g.outs = 0;
+    team.live['HOM-SU1'].pitches = team.inp['HOM-SU1'].pit.stamina;
+    assert.ok(cpu.change(d(), g), 'a reliever at his Stamina\'s pitches');
+    g.outs = 0; g.halfPitches = 0;
     // The count: never during a plate appearance.
     live.pitches = 200; team.pitcher = 'HOM-SP'; g.balls = 1;
     assert.strictEqual(cpu.change(d(), g), null, 'not in the middle of a plate appearance');
+  });
+
+  t.test('starters deeper in games (Session 17): the fade and the hook against MLB 2024, measured as tools/realstarters.js does', () => {
+    // 600 starts of the pitchers' population (Stamina about 60 +- 12.2; tools/starters.js). Loose bands around MLB's numbers
+    // (DESIGN.md section 10): the full check is node tools/starters.js 12000 pop.
+    const B3 = loadCore(), S = require('../starters');
+    const o = S.summarize(S.play(B3, 0, 600, 'pop', 'deep test'));
+    assert.ok(o.exit[2] >= 82 && o.exit[2] <= 93, 'exit pitches median ' + o.exit[2] + ' [90]');
+    assert.ok(o.exit[4] - o.exit[0] >= 18 && o.exit[4] - o.exit[0] <= 36, 'p10 to p90 ' + o.exit[0] + '-' + o.exit[4] + ' [70-101]');
+    assert.ok(o.mid >= 28 && o.mid <= 52, 'pulled mid-inning ' + o.mid.toFixed(1) + '% [41]');
+    assert.ok(o.before3 >= 6 && o.before3 <= 24, 'out before the third time through ' + o.before3.toFixed(1) + '% [13]');
+    assert.ok(o.fourth <= 7, 'a fourth time through ' + o.fourth.toFixed(1) + '% [4.5]');
+    const v = o.velo[3].d;
+    assert.ok(v <= -0.25 && v >= -0.65, 'fastball at 76-90 pitches against his first 25: ' + v.toFixed(2) + ' [-0.39]');
+    assert.ok(o.velo[1].d > o.velo[2].d && o.velo[2].d > o.velo[3].d, 'the fade grows: ' + o.velo.slice(1, 4).map((x) => x.d.toFixed(2)));
+    assert.ok(o.byRuns[5].p > o.byRuns[0].p - 8, 'five runs or more don\'t cut his start short: ' + o.byRuns[5].p.toFixed(1) + ' against ' + o.byRuns[0].p.toFixed(1) + ' [82.5, 86.6]');
   });
 
   t.test('Stamina in games: a starter\'s pitches per start follow real starters\' (5th, 50th, 95th percentiles 76, 87, 95)', () => {
