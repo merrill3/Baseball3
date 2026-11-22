@@ -327,3 +327,6 @@ Branch `ccr-c777bb6f-lwwlhz` (from `ccr-050ac00d-3jd0c3`); everything is committ
 `node tools/plate.js 400 rating=level ...` (seconds) shows plate discipline by pitch group against MLB 2024; `node tools/ratingstats.js --part=pop` (about 50 s) the population; `--only=recognition --part=sweep` one rating.
 
 **Prompt for the next session:** "Start Session 13 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from the branch `ccr-c777bb6f-lwwlhz` (not main: Sessions 6–12 are not merged). Read CLAUDE.md, then `state.md` (sections 17–18 first) and the "Stopped at:" line in docs/plan.md. First ask me the Recognition decision in state.md section 18, then continue step 1.5 task 4 (the pitch grades next). Baseball1 is reference only; never change it."
+
+## 19. Session 13 (Nov 22, 2026; branch `ccr-1ff3ba4e-c7diuo`, started from `ccr-c777bb6f-lwwlhz`)
+**The owner's Recognition choice:** keep one rating; Recognition keeps both of its own stats (off-speed whiff and the off-speed chase gap), and the gap's narrower spread (0.68× MLB's) is a reported miss (option 1 of section 18). Recorded in DESIGN.md section 10.
