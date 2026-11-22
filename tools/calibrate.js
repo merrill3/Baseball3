@@ -357,6 +357,7 @@ function main() {
   }
   if (o.parts.indexOf('styles') >= 0) {
     for (const [rating, tend, words, kind] of STYLES) {
+      if (!want(rating)) continue; // --only also picks the styles rows (Session 15)
       for (const at of [40, 60, 80]) {
         const a = {}; a[rating] = at;
         const bal = at === 60 ? base : add({ kind: kind, at: a });

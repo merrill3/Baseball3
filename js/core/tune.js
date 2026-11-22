@@ -193,7 +193,9 @@
     fatigueMax: 3,     // fatigue steps cap
     fatigueVelo: 1.2,  // mph lost per fatigue step
     fatigueCommand: 0.3, // Command scatter grows by this share per fatigue step
-    callWidth: 0.055,  // umpire: feet over which a borderline call goes from likely strike to likely ball
+    callWidth: 0.085,  // umpire: feet over which a borderline call goes from likely strike to likely ball (the logistic's
+                       // scale; Session 15, was 0.055: MLB 2024's called strikes by feet from the zone padded by the ball,
+                       // 97.6 / 93.1 / 85.7 / 66.6 / 33.9 / 15.9 / 5.3% from 0.4 ft inside to 0.3 ft off, 109,184 pitches)
     framingCap: 0.1,   // a catcher's framing can move the edge at most this many feet
     // A pitch's grade (its movement multiplier g, 1 average) beyond its movement (Session 13, step 1.5 task 4: the grades'
     // whiffs had come through the bite, which Session 12 made small next to a hitter's own spread):
@@ -428,13 +430,20 @@
       // (below 0 inside), by balls (rows 0-3) and strikes (columns 0-2). He takes the corners early in the
       // count and protects the plate with two strikes; on 3-0 he waits for one down the middle.
       // Session 12: two strikes 0.09 ft tighter (MLB 2024 swings at 59.9% of two-strike pitches).
-      line: [[-0.12, -0.04, 0.15], [-0.12, -0.05, 0.15], [-0.13, -0.07, 0.13], [-0.5, -0.1, 0.1]],
-      agg: [0.1, 0.08, 0.03], // feet the line moves out per step of Aggressiveness, by strikes, for an average
-                           // lean (judgeLean); in proportion to his own lean
+      // Session 15: before two strikes 0.05 ft looser, with more blind takes (below): MLB 2024's swing curve by feet from
+      // the zone (tools/ratingstats.js, the population check's swing curves by thirds of hitters).
+      line: [[-0.07, 0.01, 0.15], [-0.07, 0.04, 0.15], [-0.08, -0.02, 0.13], [-0.3, -0.05, 0.1]],
+      agg: [0.05, 0.04, 0.015], // feet the line moves out per step of Aggressiveness, by strikes, for an average
+                           // lean (judgeLean); in proportion to his own lean (Session 15: x 0.5, so the tendency stays about
+                           // value-neutral with the fitted takes: each chase costs more than a first-pitch take)
       // Chance he takes all the way, whatever the pitch looks like, by balls and strikes.
-      take: [[0.24, 0.096, 0], [0.144, 0.08, 0], [0.24, 0.096, 0], [0.9, 0.12, 0]], // Session 12: x 0.8, except 3-0
-      aggTake: 0.6,        // share of those takes an Aggressive hitter skips (a Patient one adds): he judges
-                           // more pitches himself, which pays off with good Discipline (owner's choice)
+      // Session 15: fitted count by count to MLB 2024's swings at pitches 0.4 ft or more inside the zone (0-0 52.0%, 0-1 84.6,
+      // 1-0 71.2, 1-1 85.5, 2-0 66.0, 2-1 89.5, 3-0 17.7, 3-1 83.9; 109,184 Statcast pitches): real hitters take mostly the first
+      // pitch and 3-0 (was [[0.24, 0.096, 0], [0.144, 0.08, 0], [0.24, 0.096, 0], [0.9, 0.12, 0]]).
+      take: [[0.44, 0.1, 0], [0.22, 0.1, 0], [0.25, 0.03, 0], [0.8, 0.1, 0]],
+      aggTake: 0.45,       // share of those takes an Aggressive hitter skips (a Patient one adds): he judges
+                           // more pitches himself, which pays off with good Discipline (owner's choice). Session 15:
+                           // was 0.6 (Aggressive moved zone swing 2x as much as chase; MLB's overall swing moves both alike)
       lookShare: 1,        // share of the movement he doesn't read that misleads where he thinks it crosses
       lookCloser: true     // a misread draws his eye toward the zone, never away from it, on each axis (step 1.5 task 4)
     },

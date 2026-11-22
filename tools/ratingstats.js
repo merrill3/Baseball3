@@ -23,6 +23,9 @@ const LEVELS = [20, 30, 40, 50, 60, 70, 80, 90, 99];
 const ANCHOR = { 20: 'min', 30: 'p1', 40: 'p5', 50: 'p25', 60: 'p50', 70: 'p75', 80: 'p95', 90: 'p99', 99: 'max' };
 const FB = { FF: 1, SI: 1, FC: 1 };
 const OFF = { SL: 1, CU: 1, CH: 1, FS: 1 };
+// The swing curve (Session 15): bins of feet from the zone's edge (below 0 inside; upper bounds).
+const CURVE_BINS = [-0.4, -0.2, 0, 0.2, 0.4, 0.7, 1, Infinity];
+const CURVE_LABELS = ['i.4+', 'i.2-.4', 'i0-.2', 'o0-.2', 'o.2-.4', 'o.4-.7', 'o.7-1', 'o1+']; // i: inside the zone, o: off it
 
 // Each rating: the side it changes (kind), its own stats (engine key, real key, sign: + when a higher
 // rating means a higher real stat), and its per-unit check (engine x, engine y, real slope key).
@@ -73,10 +76,10 @@ function args() {
 // ---- Measuring one condition (in a worker) ----
 function newAcc() {
   return { games: 0, runs: 0, pa: 0, ab: 0, k: 0, bb: 0, h1: 0, h2: 0, h3: 0, hr: 0, sf: 0,
-    n: 0, zone: 0, sw: 0, zsw: 0, osw: 0, out: 0, contact: 0, zcontact: 0, whiff: 0, foul: 0,
+    n: 0, zone: 0, sw: 0, zsw: 0, osw: 0, out: 0, contact: 0, zcontact: 0, ocontact: 0, whiff: 0, foul: 0,
     heart: 0, shadow: 0, chaseZ: 0, waste: 0, meat: 0, shTake: 0, shCalled: 0,
     fbN: 0, fbV: 0, offSw: 0, offWhiff: 0, offOut: 0, offOutSw: 0, fbOut: 0, fbOutSw: 0, sw95: 0, whiff95: 0,
-    bySw: {}, byWhiff: {}, paBy: {},
+    bySw: {}, byWhiff: {}, paBy: {}, curve: {},
     bip: 0, evSum: 0, evs: [], laSum: 0, laSq: 0, hard: 0, barrel: 0, sweet: 0, gb: 0, ld: 0, fb: 0, pu: 0,
     pull: 0, straight: 0, oppo: 0, squared: 0, blast: 0, fast: 0, batSpeedSum: 0, swings: 0 };
 }
@@ -128,6 +131,10 @@ function addGame(B3, g, side, accFor) {
     if (az.zone === 'shadow' && !swung) { a.shTake++; if (e.r === 'C') a.shCalled++; }
     if (FB[e.t]) { a.fbN++; a.fbV += e.v; }
     if (inZ) a.zone++; else { a.out++; if (OFF[e.t]) a.offOut++; if (FB[e.t]) a.fbOut++; }
+    // The swing curve (Session 15): swings by feet from the zone's edge, before two strikes (e) and with two (t).
+    const cb = (+e.c.split('-')[1] >= 2 ? 't' : 'e') + CURVE_BINS.findIndex((b) => B3.data.zoneEdge(e.x, e.z) < b);
+    a.curve['n' + cb] = (a.curve['n' + cb] || 0) + 1;
+    if (swung) a.curve['s' + cb] = (a.curve['s' + cb] || 0) + 1;
     if (!swung) continue;
     a.sw++;
     if (inZ) a.zsw++; else a.osw++;
@@ -144,7 +151,7 @@ function addGame(B3, g, side, accFor) {
       if (sq >= 0.8) a.squared++;
       if (100 * sq + bat >= 164) a.blast++;
     }
-    if (e.r === 'S') { a.whiff++; a.byWhiff[e.t] = (a.byWhiff[e.t] || 0) + 1; } else { a.contact++; if (inZ) a.zcontact++; }
+    if (e.r === 'S') { a.whiff++; a.byWhiff[e.t] = (a.byWhiff[e.t] || 0) + 1; } else { a.contact++; if (inZ) a.zcontact++; else a.ocontact++; }
     if (e.r === 'F') a.foul++;
     if (OFF[e.t]) { a.offSw++; if (e.r === 'S') a.offWhiff++; }
     if (!inZ && OFF[e.t]) a.offOutSw++;
@@ -199,10 +206,13 @@ function measure(B3, cond, games, seed) {
 const POP_SD = 12.2, POP_R = process.env.POPR !== undefined ? +process.env.POPR : 0;
 // POP_PC: the correlation between Raw Power and Contact.
 const POP_PC = process.env.POPPC !== undefined ? +process.env.POPPC : -0.3;
+const POP_DC = process.env.POPDC !== undefined ? +process.env.POPDC : 0;
 function popRatings(rng, keys) {
   const common = rng.normal(0, 1), z = {}, out = {};
   for (const k of keys) z[k] = Math.sqrt(POP_R) * common + Math.sqrt(1 - POP_R) * rng.normal(0, 1);
   if (POP_PC && z.rawPower !== undefined && z.contact !== undefined) z.rawPower = POP_PC * z.contact + Math.sqrt(1 - POP_PC * POP_PC) * z.rawPower;
+  // POPDC (experiments only, Session 15): a link between Discipline and Contact.
+  if (POP_DC && z.discipline !== undefined && z.contact !== undefined) z.discipline = POP_DC * z.contact + Math.sqrt(1 - POP_DC * POP_DC) * z.discipline;
   for (const k of keys) out[k] = Math.round(Math.max(20, Math.min(99, 60 + POP_SD * z[k])));
   return out;
 }
@@ -277,7 +287,7 @@ function stats(a) {
     hrPa: pc(a.hr, a.pa), babip: (h - a.hr) / (a.ab - a.k - a.hr + a.sf),
     swing: pc(a.sw, a.n), zone: pc(a.zone, a.n), zSwing: pc(a.zsw, a.zone), chase: pc(a.osw, a.out),
     zMinusO: pc(a.zsw, a.zone) - pc(a.osw, a.out),
-    whiff: pc(a.whiff, a.sw), zContact: pc(a.zcontact, a.zsw), contactPct: pc(a.contact, a.sw),
+    whiff: pc(a.whiff, a.sw), zContact: pc(a.zcontact, a.zsw), oContact: pc(a.ocontact, a.osw), contactPct: pc(a.contact, a.sw),
     edge: pc(a.shadow, a.n), meatball: pc(a.meat, a.n), heart: pc(a.heart, a.n), framingStrike: pc(a.shCalled, a.shTake),
     fbSpeed: a.fbV / a.fbN,
     offWhiff: pc(a.offWhiff, a.offSw), offChase: pc(a.offOutSw, a.offOut), fbChase: pc(a.fbOutSw, a.fbOut),
@@ -366,7 +376,7 @@ const POP_STATS = {
     ['SLG', 'slg', 'bat.slg_percent', 3], ['ISO', 'iso', 'bat.isolated_power', 3], ['BABIP', 'babip', 'bat.babip', 3], ['exit speed', 'ev', 'bat.exit_velocity_avg', 1],
     ['hard-hit %', 'hard', 'bat.hard_hit_percent', 1], ['barrel %', 'barrel', 'bat.barrel_batted_rate', 1], ['whiff %', 'whiff', 'bat.whiff_percent', 1],
     ['swing %', 'swing', 'bat.swing_percent', 1], ['zone swing %', 'zSwing', 'bat.z_swing_percent', 1],
-    ['chase %', 'chase', 'bat.oz_swing_percent', 1], ['zone swing - chase', 'zMinusO', 'bat.zswing_minus_chase', 1], ['zone contact %', 'zContact', 'bat.iz_contact_percent', 1], ['sweet-spot %', 'sweet', 'bat.sweet_spot_percent', 1],
+    ['chase %', 'chase', 'bat.oz_swing_percent', 1], ['zone swing - chase', 'zMinusO', 'bat.zswing_minus_chase', 1], ['zone contact %', 'zContact', 'bat.iz_contact_percent', 1], ['chase contact %', 'oContact', 'bat.oz_contact_percent', 1], ['sweet-spot %', 'sweet', 'bat.sweet_spot_percent', 1],
     ['pull %', 'pull', 'bat.pull_percent', 1], ['oppo %', 'oppo', 'bat.opposite_percent', 1], ['ground-ball %', 'gb', 'bat.groundballs_percent', 1],
     ['max exit speed', 'maxEV', 'evbat.max_hit_speed', 1], ['bat speed', 'batSpeed', 'track.avg_bat_speed', 1], ['fast-swing %', 'fast', 'track.hard_swing_rate', 1],
     ['squared-up %', 'squared', 'track.squared_up_per_bat_contact', 1], ['blasts %', 'blast', 'track.blast_per_bat_contact', 1],
@@ -387,14 +397,16 @@ const POP_CORR = {
   // Hitters: Savant's custom leaderboard 2024-2026, 250+ PA (951 player-seasons). Chasing doesn't add strikeouts (chasers
   // swing at strikes too and end at-bats early) but costs walks.
   hitter: [['chase', 'zSwing', 0.53], ['chase', 'k', -0.03], ['chase', 'bb', -0.71], ['zSwing', 'k', 0.12], ['zSwing', 'bb', -0.41],
-    ['zMinusO', 'k', 0.15], ['zMinusO', 'bb', 0.33], ['swing', 'bb', -0.70]],
+    ['zMinusO', 'k', 0.15], ['zMinusO', 'bb', 0.33], ['swing', 'bb', -0.70], ['chase', 'oContact', 0.09], ['oContact', 'zContact', 0.71]],
   pitcher: [['edge', 'bb', -0.35], ['meatball', 'bb', -0.29], ['zone', 'bb', -0.52], ['meatball', 'zone', 0.71], ['edge', 'zone', 0.34], ['edge', 'meatball', -0.07],
     ['zone', 'chase', -0.22], ['chase', 'bb', -0.28]]
 };
 // Per-point effects across the population (least squares), against the same fit on real player-seasons (Session 14; hitters:
 // Savant 2024-2026, 250+ PA, 951 seasons): K% and BB% on chase %, zone swing % and zone contact %.
 const POP_FIT = {
-  hitter: [['k', ['chase', 'zSwing', 'zContact'], [0.076, -0.213, -1.057], 0.74], ['bb', ['chase', 'zSwing', 'zContact'], [-0.321, -0.067, -0.128], 0.56]]
+  hitter: [['k', ['chase', 'zSwing', 'zContact'], [0.076, -0.213, -1.057], 0.74],
+    ['k', ['chase', 'zSwing', 'zContact', 'oContact'], [0.162, -0.279, -0.670, -0.295], 0.85], // Session 15: with chase contact %
+    ['bb', ['chase', 'zSwing', 'zContact'], [-0.321, -0.067, -0.128], 0.56]]
 };
 function fitLine(ys, X) {
   const ok = ys.map((y, i) => [y, X[i]]).filter(([y, x]) => Number.isFinite(y) && x.every(Number.isFinite));
@@ -418,6 +430,23 @@ function corr(xs, ys) {
   for (const [x, y] of ok) { sxy += (x - mx) * (y - my); sxx += (x - mx) ** 2; syy += (y - my) ** 2; }
   return sxy / Math.sqrt(sxx * syy);
 }
+// MLB 2024 swing curves (Session 15): Statcast pitches on 24 days, a Wednesday each week from April 10 to September 25
+// (109,184 pitches, bunts, pitchouts and hit-by-pitches left out), feet from the zone padded by the ball's radius on every
+// side (the batter's own top and bottom), before two strikes (e) and with two (t); hitters in thirds by their 2024 season
+// (Savant custom leaderboard, 250+ PA): chase %, chase % + zone swing % (overall), zone swing % - chase % (sharp).
+const REAL_CURVE = {
+  note: '109,184 pitches, 24 days of 2024',
+  // K%, BB%, chase %, zone swing %, zone contact %, chase contact % by the same thirds of hitters (2024-2026, 951 seasons).
+  thirds: {
+    chase: [[21.9, 10.8, 23.0, 63.9, 83.8, 56.1], [22.2, 8.5, 28.8, 67.6, 83.2, 55.9], [21.4, 6.3, 35.6, 70.7, 83.7, 58.1]],
+    overall: [[21.6, 10.6, 23.6, 62.0, 84.6, 57.6], [21.8, 8.4, 28.9, 67.3, 83.5, 57.0], [22.2, 6.5, 34.8, 72.9, 82.5, 55.5]],
+    sharp: [[20.5, 7.5, 32.5, 64.7, 85.5, 60.9], [22.4, 8.7, 28.5, 66.9, 83.3, 55.9], [22.6, 9.4, 26.3, 70.5, 81.8, 53.3]]
+  },
+  all: { e: [68.3, 60.4, 50.6, 37.5, 27.4, 16.5, 8.3, 4.1], t: [95.1, 88.5, 81.4, 67.2, 53.7, 35, 20.1, 7.3] },
+  chase: [{ e: [65.8, 55, 43.9, 31.3, 20.7, 11.4, 3.8, 1.6], t: [94.8, 86.6, 80.4, 62.2, 48.9, 27.1, 13.8, 5] }, { e: [67.6, 61.4, 51.5, 36.3, 27.2, 15.9, 8.1, 4.6], t: [95.1, 88, 80.8, 67.9, 51.4, 33.3, 16.9, 6.7] }, { e: [71.7, 64.6, 57.6, 46.4, 34.9, 22, 12.1, 5.6], t: [96.1, 93.7, 85.5, 73.7, 62.5, 45.3, 28.8, 9.3] }],
+  overall: [{ e: [62.3, 53.3, 43.3, 30.6, 20.6, 11.7, 4.5, 1.8], t: [94.5, 86.1, 80.8, 62.4, 49.9, 29.1, 14.6, 5.9] }, { e: [68.6, 60.3, 50.2, 37.2, 26.6, 15.9, 8.2, 4.1], t: [95.4, 89.7, 81.1, 69.3, 53.3, 34.6, 20.2, 7.3] }, { e: [74.6, 67.8, 59.7, 46.2, 35.6, 21.6, 11.3, 6.1], t: [96.1, 92.6, 84.6, 71.8, 59.1, 41.7, 25.1, 8] }],
+  sharp: [{ e: [62.6, 56.2, 50.6, 39.5, 29.8, 18.1, 10.8, 4.4], t: [96.1, 90.2, 82.8, 71.6, 60.4, 44.5, 26.2, 10] }, { e: [67.6, 59.5, 48, 37.8, 26, 15.7, 7.3, 4.3], t: [94.7, 89.7, 82.1, 67.4, 54, 33.4, 18.6, 6.1] }, { e: [74, 65, 53.9, 36, 26.8, 15.1, 6, 3.2], t: [95.1, 88, 81.4, 64.6, 48.3, 28.1, 14.9, 5.3] }]
+};
 function popReport(res, real) {
   const q = (xs, p) => { const v = xs.filter(Number.isFinite).sort((a, b) => a - b); return v.length ? v[Math.min(v.length - 1, Math.floor(p * v.length))] : NaN; };
   const rep = {};
@@ -427,6 +456,7 @@ function popReport(res, real) {
     for (const id in res) if (id.startsWith('pop:' + kind[0] + ':')) for (const x of res[id]) {
       const st = stats(x.acc);
       st.era = x.acc.outs ? 27 * x.acc.er / x.acc.outs : NaN;
+      st.curve = x.acc.curve;
       seasons.push(st);
     }
     const rows = [];
@@ -447,9 +477,42 @@ function popReport(res, real) {
       const f = fitLine(seasons.map((s2) => s2[y]), seasons.map((s2) => xs.map((x) => s2[x])));
       console.log('  ' + y + ' per point of ' + xs.map((x, i) => x + ' ' + fmt(f.beta[i], 3) + ' [' + fmt(rb[i], 3) + ']').join(', ') + '; R2 ' + fmt(f.r2, 2) + ' [' + fmt(rr2, 2) + ']');
     }
+    if (kind === 'hitter') rep.curves = curveReport(seasons);
     rep[kind] = { n: seasons.length, rows: rows, corr: cs };
   }
   return rep;
+}
+
+// The swing curve by thirds of hitters (Session 15): swing % by feet from the zone's edge, before two strikes and with two,
+// for the lowest and highest third of hitters by chase %, by their overall swing (chase % + zone swing %) and by their
+// sharpness (zone swing % - chase %), against the same on real pitches (REAL_CURVE).
+function curveReport(seasons) {
+  const by = { chase: (s) => s.chase, overall: (s) => s.chase + s.zSwing, sharp: (s) => s.zSwing - s.chase };
+  const curve = (list) => {
+    const c = {};
+    for (const s of list) for (const k in s.curve) c[k] = (c[k] || 0) + s.curve[k];
+    const pc = (t) => CURVE_BINS.map((_, i) => (c['n' + t + i] ? 100 * (c['s' + t + i] || 0) / c['n' + t + i] : NaN));
+    return { e: pc('e'), t: pc('t') };
+  };
+  const out = { all: curve(seasons), thirds: {} };
+  const avg = (list, k) => list.reduce((t, s) => t + s[k], 0) / list.length;
+  for (const g in by) {
+    const v = seasons.slice().sort((a, b) => by[g](a) - by[g](b)), n3 = Math.floor(v.length / 3);
+    const parts = [v.slice(0, n3), v.slice(n3, v.length - n3), v.slice(v.length - n3)];
+    out[g] = parts.map(curve);
+    out.thirds[g] = parts.map((l) => ['k', 'bb', 'chase', 'zSwing', 'zContact', 'oContact'].map((k) => avg(l, k)));
+  }
+  console.log('  thirds of hitters: K% / BB% / chase % / zone swing % / zone contact % / chase contact %, engine [MLB 2024-2026]');
+  for (const g in by) console.log('  ' + g.padEnd(8) + out.thirds[g].map((t, i) => t.map((x) => fmt(x, 1)).join('/') + ' [' + REAL_CURVE.thirds[g][i].join('/') + ']').join('  '));
+  const row = (lab, e, r) => console.log('  ' + lab.padEnd(22) + e.map((x) => fmt(x, 1).padStart(6)).join('') + '  |' + r.map((x) => fmt(x, 1).padStart(6)).join(''));
+  console.log('  swing % by feet from the zone edge, engine | MLB 2024 (' + REAL_CURVE.note + ')');
+  console.log('  ' + ''.padEnd(22) + CURVE_LABELS.map((x) => x.padStart(6).slice(-6)).join('') + '  |' + CURVE_LABELS.map((x) => x.padStart(6).slice(-6)).join(''));
+  for (const t of ['e', 't']) {
+    const w = t === 'e' ? 'before 2 strikes' : 'two strikes';
+    row('all, ' + w, out.all[t], REAL_CURVE.all[t]);
+    for (const g in by) for (const i of [0, 2]) row(g + (i ? ' high' : ' low') + ' third', out[g][i][t], REAL_CURVE[g][i][t]);
+  }
+  return out;
 }
 
 function fmt(x, d) { return Number.isFinite(x) ? x.toFixed(d === undefined ? 1 : d) : '-'; }

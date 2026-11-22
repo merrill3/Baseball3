@@ -63,7 +63,12 @@ module.exports = function (t) {
     assert.ok(swings(env, far, 1, 1) < 0.05, 'far off');
     const edge = { type: 'FF', x: 0.95, z: 2.4 };
     assert.ok(swings(env, edge, 0, 2) > swings(env, edge, 0, 0) + 0.2, 'two strikes: protect the plate');
-    assert.ok(swings(env, mid, 3, 0) < 0.15, '3-0: take');
+    // Session 15: the blind takes are fitted to MLB 2024's swings at pitches deep in the zone, count by count
+    // (0-0 52.0%, 1-1 85.5%, 2-1 89.5%, 3-0 17.7%).
+    near(swings(env, mid, 3, 0), 0.177, 0.06, '3-0: take');
+    near(swings(env, mid, 0, 0), 0.52, 0.06, 'first pitch');
+    near(swings(env, mid, 1, 1), 0.855, 0.05, '1-1');
+    near(swings(env, mid, 2, 1), 0.895, 0.05, '2-1');
     assert.ok(swings(env, mid, 0, 0) < swings(env, mid, 1, 1) - 0.1, 'more first-pitch takes');
   });
 

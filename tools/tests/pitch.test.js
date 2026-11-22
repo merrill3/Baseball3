@@ -83,9 +83,12 @@ module.exports = function (t) {
     assert.strictEqual(call(env, edge + 1, 2.55), 0);
     near(call(env, edge, 2.55), 0.5, 0.05, 'a pitch on the edge');
     near(call(env, 0, env.B3.data.ZONE.bottom), 0.5, 0.05, 'a pitch at the knees');
-    assert.ok(call(env, edge + 0.08, 2.55) < 0.25, 'a pitch an inch off is mostly a ball');
+    // Session 15: the band is MLB 2024's (called strikes 33.9% from 0 to 0.1 ft off the zone padded by the ball, 15.9%
+    // from 0.1 to 0.2), so a pitch an inch off is a strike about 28% of the time.
+    near(call(env, edge + 0.08, 2.55), 0.28, 0.05, 'a pitch an inch off is mostly a ball');
+    assert.ok(call(env, edge + 0.25, 2.55) < 0.07, 'three inches off is nearly always a ball');
     const framer = setup({ fld: { framing: 0.06 } });
-    assert.ok(call(framer, edge, 2.55) > 0.65 && call(framer, edge + 0.08, 2.55) > 0.35, 'a good framer gets the edge');
+    assert.ok(call(framer, edge, 2.55) > 0.62 && call(framer, edge + 0.08, 2.55) > 0.38, 'a good framer gets the edge');
     const takes = trial(env, { type: 'SL', x: 1.6, z: 1.0 }, null).map((x) => x.r.r);
     assert.ok(takes.every((r) => r === 'B' || r === 'C'));
   });
