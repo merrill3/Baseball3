@@ -299,6 +299,7 @@
     chaseGrade: true,  // an off-speed pitch's extra spread off the plate (TYPE.chase above 1) scales with its grade (Session 13)
     locLoss: 0.04,     // share of exit speed lost per foot from edgeFrom inside the edge outward (step 1.3; step 1.5,
                        // was 0.08)
+    chaseOff: 0,       // an off-center hit's loss (offLoss) grows by this share per foot outside the zone (Session 21)
     collision: 0.23,   // exit speed = collision x pitch speed at the plate + (1 + collision) x bat speed, for a
                        // squared-up ball (step 1.5: Savant's 0.23 with bat speed in real units; step 1.4 had 0.12)
     contactAll: 1,     // Contact's reach (step 1.5 task 4): the location and movement parts of the *where* spread are
@@ -341,6 +342,7 @@
     sprayLA: 1.4,      // degrees toward the opposite field per degree of launch angle he gets from hitting under the
                        // ball's center (step 1.5: a ball hit under slices the other way; Statcast 2024: 27% of fly balls
                        // are pulled and 57% of pop-ups go the other way, against 49% of ground balls pulled)
+    sprayTop: 0,       // degrees toward the pull side per degree of launch angle he loses hitting over the ball (Session 21)
     twoStrike: [0.75, 2], // with two strikes a hitter shortens up (step 1.4; Session 12, was 0.64: MLB 2024 whiffs 25.9% of
                        // swings before two strikes and 24.5% with two): [share of his *where* spread, mph of bat
                        // speed he gives up (step 1.5; it was 4% of exit speed)]
@@ -381,32 +383,43 @@
 
   // Ball flight, fielding, throws and running (M1 step 1.2 task 7).
   const BALL = {
-    drag: 0.00165,     // air drag per foot (step 1.5, was 0.0018; with dragPow and lift below, Statcast's fly-ball
-                       // distances by exit speed: 230 / 280 / 315 / 345 / 370 / 395 ft for 74 / 86 / 93 / 98 / 102 / 108 mph)
+    // Session 21 (step 1.5 task 6, Claude's default): drag, dragPow, lift and liftFull refitted on 4,296 real air balls (Statcast,
+    // 12 Wednesdays of 2024, 10-70 degrees and 70+ mph, each one's own exit speed, launch angle and spray through this flight):
+    // the gap to Statcast's distance falls from 30 to 23 ft rms, and the home runs (367 against MLB's 369) peak at 25-35 degrees
+    // as MLB's do. Before, balls at 20-30 degrees fell 10-16 ft short and those at 35+ carried 20-60 ft too far (at 100-105 mph
+    // and 35-40 degrees, 61% home runs against MLB's 26%), so high fly balls fell in and left the park too often.
+    drag: 0.00161,     // air drag per foot (step 1.5: 0.00165; before that 0.0018)
     dragRef: 140,      // ft/s (95 mph) at which the first flight's drag is `drag` ...
-    dragPow: 0.3,      // ... and it grows as (dragRef / speed) to this power below it, falls above it (step 1.5)
-    lift: 0.00065,      // backspin lift per foot on balls hit in the air (step 1.5, was 0.0009: Statcast 2024 fly balls
-                       // average 314 ft, and 12% of those hit 95-100 mph and 41% at 100-105 mph are home runs)
+    dragPow: 0.73,     // ... and it grows as (dragRef / speed) to this power below it, falls above it (step 1.5: 0.3): the drag
+                       // crisis, so a high fly ball slows and dies near its peak
+    lift: 0.00117,     // backspin lift per foot on balls hit in the air (step 1.5: 0.00065, before that 0.0009)
     sliceLift: 0.015,  // share of that lift lost per degree a ball goes toward the opposite field (step 1.5: it leaves with
                        // slice spin; Statcast 2024 fly balls carry 338 ft pulled, 326 to center, 285 the other way)
-    liftFull: 35,      // degrees of launch angle at which backspin (and lift) is full; less below it
+    liftFull: 33,      // degrees of launch angle at which backspin (and lift) is full; less below it (Session 21: was 35)
     dt: 0.02,          // integration step in the air, seconds
     sample: 0.1,       // the ball's path is kept every this many seconds (fielding and the play script)
     startHeight: 3,    // feet: the ball's height at contact
     bounceUp: 0.42,    // share of the downward speed kept on a bounce
     bounceOn: 0.72,    // share of the forward speed kept on a bounce (step 1.5, was 0.78: hard grounders reach fielders
                        // as often as Statcast's do)
+    bounceFric: 1.1,   // friction on a bounce (Session 21, Claude's default): the forward speed lost is bounceFric x (1 + bounceUp) x
+                       // the downward speed, at most down to bounceOn (the rolling limit), so a skimming grounder keeps its speed
+                       // and a steep chop doesn't. Before, every bounce took bounceOn's share: real grounders at -10 to 0 degrees
+                       // and 90-100 mph are hits 30-33% of the time (Statcast 2024), the engine's 6-9% on the same balls.
+                       // Fitted with reach, glove and catchAt below on 9,374 real balls in play (12 Wednesdays of 2024, each
+                       // through this engine's flight and fielding with average fielders): hits .319 of them [.320], total
+                       // bases .508 [.512], the error by exit speed and launch angle half what it was
     rolling: 4,        // ft/s of bounce below which the ball rolls (slowing at a steady rate)
     rollDecel: 9,      // ft/s per second a rolling ball slows (grass)
     wallBack: 0.2,     // share of speed a ball keeps bouncing off the wall
     maxTime: 12,       // seconds: a guard
-    reach: 8,          // feet: a fielder can catch a ball this high (with a reach or jump)
-    glove: 4,          // feet: a fielder gets a ball this far from where he stands (arm, glove, lean)
+    reach: 8.3,        // feet: a fielder can catch a ball this high (with a reach or jump; Session 21: was 8)
+    glove: 4.4,        // feet: a fielder gets a ball this far from where he stands (arm, glove, lean; Session 21: was 4)
     diveReach: 4,      // feet a dive (a diving stop or catch) reaches past the glove
     wallReach: 10.5,   // feet: a leap at the wall
     fieldHeight: 3.5,  // feet: a bouncing ball this low can be fielded
     catchSd: 0.09,     // seconds: how sharply a catch's chance falls off with the margin
-    catchAt: 0.05,     // seconds of margin for an even chance at a running or diving catch
+    catchAt: 0.005,    // seconds of margin for an even chance at a running or diving catch (Session 21: was 0.05)
     diveLoss: 0.6,     // seconds a diving stop adds before the throw
     getUp: 1.0,        // seconds a fielder loses chasing a ball he dove for and missed
     gather: 0.25,      // seconds to pick up a ball in the outfield

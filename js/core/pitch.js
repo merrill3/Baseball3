@@ -226,7 +226,11 @@
     // and a hitter who has faced him already squares him up a little better; a deceptive pitcher is squared up less (Session 19,
     // owner's choice: Deception carries the pitchers' contact skill, pit.soft)
     const sq = w.b.bat.square * familiar(w).square * w.p.pit.soft;
-    const lossOff = sq * S.offLoss * Math.pow(Math.abs(u), S.offPow) * (u < 0 ? S.offUnder : 1);
+    // Off the plate (Session 21) an off-center hit loses more: x (1 + chaseOff x feet outside the zone), so a chased pitch is
+    // mostly met weakly while a squared-up one still comes off hard (Statcast 2024: 0.4-0.7 ft off, 74.3 mph on average and
+    // 11% hit 95+).
+    const outside = Math.max(0, B3.data.zoneEdge(pitch.x, pitch.z));
+    const lossOff = Math.min(0.9, sq * S.offLoss * (1 + S.chaseOff * outside) * Math.pow(Math.abs(u), S.offPow) * (u < 0 ? S.offUnder : 1));
     const ev = top * (1 - lossOff) * (1 - sq * S.timeLoss * v * v * (v > 0 ? 1 + S.lateLoss : 1)) * (1 - S.locLoss * away) + r.normal(0, S.evSd);
     // Launch angle: over the ball drives it down; high pitches go up. Launch sets the band.
     // The pitch's shape tilts it: a ground-ball shape (above 0) lowers the launch angle (step 1.3: a tilt,
@@ -237,10 +241,10 @@
     const la = S.attack + S.pathLA * path + T().TYPE[pitch.type].lift - (pitch.shape || 0) + lift + S.heightLA * (pitch.z - 2.55) + r.normal(0, w.b.bat.launchSd);
     // Spray: worked out for the pull side (minus), then turned for the batter's side.
     const inside = w.bats === 'R' ? -pitch.x : pitch.x; // feet toward the batter
-    // A ball hit under the center drifts the other way (step 1.5).
+    // A ball hit under the center drifts the other way (step 1.5); one topped over it is pulled (Session 21: sprayTop).
     // A squared-up ball goes where the bat points (timing); a mishit squirts more (step 1.5: sprayBase).
     const noise = w.b.bat.sprayNoise * (S.sprayBase + (1 - S.sprayBase) * Math.min(1, Math.abs(u)));
-    const pull = S.pullAt0 - S.pathPull * path + S.sprayPerMs * tm - S.insidePull * inside + S.sprayLA * Math.max(0, lift) + r.normal(0, noise);
+    const pull = S.pullAt0 - S.pathPull * path + S.sprayPerMs * tm - S.insidePull * inside + S.sprayLA * Math.max(0, lift) + S.sprayTop * Math.min(0, lift) + r.normal(0, noise);
     const sp = w.bats === 'R' ? pull : -pull;
     // slice: degrees toward the opposite field; that ball's sidespin costs it some carry (B3.ball.flight, step 1.5).
     out.contact = { ev: Math.round(Math.max(20, ev) * 10) / 10, la: Math.round(clamp(la, -80, 89) * 10) / 10, sp: Math.round(sp * 10) / 10,

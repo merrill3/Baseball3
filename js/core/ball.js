@@ -110,7 +110,10 @@
         h = 0;
         if (!land) { land = { t: t, r: r, x: r * ux, y: r * uy }; if (r < 0) fair = false; }
         if (hr || !fair) { keep(); break; } // out of play
-        vh = -vh * B.bounceUp; vr *= B.bounceOn;
+        // A bounce's friction takes forward speed in step with the downward speed, at most down to the rolling limit
+        // (bounceOn; Session 21: every bounce took that share, so a skimming grounder slowed as much as a steep chop).
+        const kept = Math.max(B.bounceOn, 1 - B.bounceFric * (1 + B.bounceUp) * Math.abs(vh) / Math.max(1, Math.abs(vr)));
+        vh = -vh * B.bounceUp; vr *= kept;
         if (vh < B.rolling) break; // it rolls from here
       }
       if (t >= next - 1e-9) { keep(); next += every; }
