@@ -525,9 +525,20 @@ function popReport(res, real) {
     for (const id in res) if (id.startsWith('pop:' + kind[0] + ':')) for (const x of res[id]) {
       const st = stats(x.acc);
       st.era = x.acc.outs ? 27 * x.acc.er / x.acc.outs : NaN;
+      // Starters beyond ERA (Session 21, the owner's note 5; the stats are Claude's choice): K-BB% and FIP (13 HR + 3 BB - 2 K per
+      // inning, no hit-by-pitches in either; its constant is set below so the population's pooled FIP is its pooled ERA, as
+      // MLB's is set to the league's).
+      st.kbb = 100 * (x.acc.k - x.acc.bb) / x.acc.pa;
+      st.fipRaw = x.acc.outs ? 3 * (13 * x.acc.hr + 3 * x.acc.bb - 2 * x.acc.k) / x.acc.outs : NaN;
+      st.acc = x.acc;
       st.curve = x.acc.curve;
       st.zc = x.acc.zc;
       seasons.push(st);
+    }
+    if (kind === 'pitcher') {
+      const sum = (f) => seasons.reduce((t, st) => t + f(st.acc), 0);
+      const outs = sum((a) => a.outs), C = 27 * sum((a) => a.er) / outs - 3 * sum((a) => 13 * a.hr + 3 * a.bb - 2 * a.k) / outs;
+      for (const st of seasons) st.fip = st.fipRaw + C;
     }
     const rows = [];
     console.log('\nPopulation check, ' + kind + 's: ' + seasons.length + ' test player-seasons (250+ PA; ratings about 60 +- ' + POP_SD + ', r ' + POP_R + ', Raw Power-Contact ' + POP_PC + (kind === 'pitcher' ? ', stuff-Command ' + POP_SC + ', Aim lean ' + POP_AIM + ', shapes ' + POP_SHAPE : '') + '; tendencies 1:2:1) against real 2024-2026');
@@ -599,7 +610,11 @@ const REAL_STARTERS = {
     ['AVG against', 'avg', 3, [0.195, 0.225, 0.246, 0.263, 0.295]], ['SLG against', 'slg', 3, [0.318, 0.367, 0.404, 0.440, 0.510]],
     ['exit speed against', 'ev', 1, [86.9, 88.4, 89.3, 90.1, 91.2]], ['hard-hit % against', 'hard', 1, [33.2, 37.2, 40.0, 42.6, 46.5]],
     ['ground-ball %', 'gb', 1, [32.9, 37.8, 41.5, 45.3, 53.4]], ['whiff %', 'whiff', 1, [18.1, 21.6, 24.0, 27.3, 31.2]],
-    ['chase % against', 'chase', 1, [24.3, 27.1, 29.0, 31.1, 34.3]], ['zone %', 'zone', 1, [44.3, 47.3, 49.5, 51.4, 54.6]]]
+    ['chase % against', 'chase', 1, [24.3, 27.1, 29.0, 31.1, 34.3]], ['zone %', 'zone', 1, [44.3, 47.3, 49.5, 51.4, 54.6]],
+    // Session 21 (the owner's note 5: starters beyond ERA): the same 528 seasons from Savant's custom leaderboard (strikeouts, walks,
+    // home runs, innings); FIP without hit-by-pitches, its constant (3.16-3.24) set each season so the pitchers' (50+ innings) pooled
+    // FIP is their ERA. Innings per start are Baseball-Reference's (sp.innings_per_start, above).
+    ['K-BB%', 'kbb', 1, [7.0, 10.8, 13.6, 17.3, 23.2]], ['FIP', 'fip', 2, [2.85, 3.59, 4.05, 4.62, 5.40]]]
 };
 function startersReport(seasons, q) {
   const sp = seasons.filter((s) => Number.isFinite(s.pps)); // 10+ starts in the season

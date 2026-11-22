@@ -244,7 +244,8 @@
     // A ball hit under the center drifts the other way (step 1.5); one topped over it is pulled (Session 21: sprayTop).
     // A squared-up ball goes where the bat points (timing); a mishit squirts more (step 1.5: sprayBase).
     const noise = w.b.bat.sprayNoise * (S.sprayBase + (1 - S.sprayBase) * Math.min(1, Math.abs(u)));
-    const pull = S.pullAt0 - S.pathPull * path + S.sprayPerMs * tm - S.insidePull * inside + S.sprayLA * Math.max(0, lift) + S.sprayTop * Math.min(0, lift) + r.normal(0, noise);
+    const pull = S.pullAt0 - S.pathPull * path + S.sprayPerMs * tm - S.insidePull * inside + S.sprayLA * clamp(lift, 0, S.sprayCap) + S.sprayTop * clamp(lift, -S.sprayCap, 0) +
+      S.sprayAng * clamp(la - S.sprayMid, -30, 30) + r.normal(0, noise);
     const sp = w.bats === 'R' ? pull : -pull;
     // slice: degrees toward the opposite field; that ball's sidespin costs it some carry (B3.ball.flight, step 1.5).
     out.contact = { ev: Math.round(Math.max(20, ev) * 10) / 10, la: Math.round(clamp(la, -80, 89) * 10) / 10, sp: Math.round(sp * 10) / 10,

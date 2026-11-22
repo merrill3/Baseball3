@@ -299,7 +299,10 @@
     chaseGrade: true,  // an off-speed pitch's extra spread off the plate (TYPE.chase above 1) scales with its grade (Session 13)
     locLoss: 0.04,     // share of exit speed lost per foot from edgeFrom inside the edge outward (step 1.3; step 1.5,
                        // was 0.08)
-    chaseOff: 0,       // an off-center hit's loss (offLoss) grows by this share per foot outside the zone (Session 21)
+    chaseOff: 1.9,     // an off-center hit's loss (offLoss) grows by this share per foot outside the zone (Session 21, Claude's
+                       // default: a chased pitch is mostly met weakly, a squared-up one still hard; Statcast 2024, 54,043 pitches:
+                       // 82.5 / 78.8 / 74.3 mph at 0-0.2 / 0.2-0.4 / 0.4-0.7 ft off the zone, the engine's 86.3 / 85.8 / 82.6, now
+                       // about 86 / 80 / 74)
     collision: 0.23,   // exit speed = collision x pitch speed at the plate + (1 + collision) x bat speed, for a
                        // squared-up ball (step 1.5: Savant's 0.23 with bat speed in real units; step 1.4 had 0.12)
     contactAll: 1,     // Contact's reach (step 1.5 task 4): the location and movement parts of the *where* spread are
@@ -326,7 +329,8 @@
     timeLoss: 0.28,    // exit speed lost at missMs (scales with the square of the *when* error; step 1.5, was 0.45)
     lateLoss: 0.75,       // a late swing loses this share more than an early one (step 1.5: the bat isn't up to speed yet;
                        // Statcast's opposite-field balls come off slower than pulled ones)
-    evSd: 1,           // exit-speed noise, mph (step 1.5, was 2.5: a swing's own bat speed carries most of the spread)
+    evSd: 2.5,         // exit-speed noise, mph (step 1.5, was 2.5: a swing's own bat speed carries most of the spread; Session 21: 2.5
+                       // again, with chaseOff the exit speeds' 10th-90th percentiles 68 / 82 / 93 / 99 / 103.5 [69 / 80.5 / 91.5 / 99 / 104.5])
     attack: 17.5,      // launch angle of a dead-center hit at the middle of the zone, degrees (step 1.5, was 13.5; Session 12,
                        // 19.5: with one read per pitch fewer swings roll over an unread pitch)
     launchCurve: 1.5, // per square inch: the *where* error's launch angle grows as off x (1 + launchCurve x off^2), so
@@ -342,7 +346,11 @@
     sprayLA: 1.4,      // degrees toward the opposite field per degree of launch angle he gets from hitting under the
                        // ball's center (step 1.5: a ball hit under slices the other way; Statcast 2024: 27% of fly balls
                        // are pulled and 57% of pop-ups go the other way, against 49% of ground balls pulled)
+    // Session 21: three spray hooks for step 1.5 task 6's spray work, at no effect here (wider spray tried so far sent mishits foul)
     sprayTop: 0,       // degrees toward the pull side per degree of launch angle he loses hitting over the ball (Session 21)
+    sprayCap: 99,      // degrees of lift (either way) past which sprayLA and sprayTop add no more (Session 21)
+    sprayAng: 0,       // degrees toward the opposite field per degree of launch angle above sprayMid (toward the pull side below it,
+    sprayMid: 15,      // within 30 degrees either way; Session 21)
     twoStrike: [0.75, 2], // with two strikes a hitter shortens up (step 1.4; Session 12, was 0.64: MLB 2024 whiffs 25.9% of
                        // swings before two strikes and 24.5% with two): [share of his *where* spread, mph of bat
                        // speed he gives up (step 1.5; it was 4% of exit speed)]
@@ -402,13 +410,14 @@
     bounceUp: 0.42,    // share of the downward speed kept on a bounce
     bounceOn: 0.72,    // share of the forward speed kept on a bounce (step 1.5, was 0.78: hard grounders reach fielders
                        // as often as Statcast's do)
-    bounceFric: 1.1,   // friction on a bounce (Session 21, Claude's default): the forward speed lost is bounceFric x (1 + bounceUp) x
+    bounceFric: 1.07,  // friction on a bounce (Session 21, Claude's default): the forward speed lost is bounceFric x (1 + bounceUp) x
                        // the downward speed, at most down to bounceOn (the rolling limit), so a skimming grounder keeps its speed
                        // and a steep chop doesn't. Before, every bounce took bounceOn's share: real grounders at -10 to 0 degrees
                        // and 90-100 mph are hits 30-33% of the time (Statcast 2024), the engine's 6-9% on the same balls.
                        // Fitted with reach, glove and catchAt below on 9,374 real balls in play (12 Wednesdays of 2024, each
-                       // through this engine's flight and fielding with average fielders): hits .319 of them [.320], total
-                       // bases .508 [.512], the error by exit speed and launch angle half what it was
+                       // through this engine's flight and fielding with average fielders, ground balls' directions x 0.75 as
+                       // Savant's own pull shares say; tools/replay.js): hits .318 of them [.317], total bases .499 [.507], the
+                       // error by exit speed and launch angle about half what it was
     rolling: 4,        // ft/s of bounce below which the ball rolls (slowing at a steady rate)
     rollDecel: 9,      // ft/s per second a rolling ball slows (grass)
     wallBack: 0.2,     // share of speed a ball keeps bouncing off the wall
@@ -419,7 +428,7 @@
     wallReach: 10.5,   // feet: a leap at the wall
     fieldHeight: 3.5,  // feet: a bouncing ball this low can be fielded
     catchSd: 0.09,     // seconds: how sharply a catch's chance falls off with the margin
-    catchAt: 0.005,    // seconds of margin for an even chance at a running or diving catch (Session 21: was 0.05)
+    catchAt: 0.045,    // seconds of margin for an even chance at a running or diving catch (Session 21: was 0.05)
     diveLoss: 0.6,     // seconds a diving stop adds before the throw
     getUp: 1.0,        // seconds a fielder loses chasing a ball he dove for and missed
     gather: 0.25,      // seconds to pick up a ball in the outfield

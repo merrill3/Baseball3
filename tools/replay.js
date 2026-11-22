@@ -12,9 +12,10 @@
 // engine  the engine's own balls in play from games between rated test teams through the same fielding, then the same balls
 //         with each one's direction swapped for a real ball's of the same type (ground ball, line drive, fly ball, pop-up):
 //         what the engine's exit speeds and launch angles would give with MLB's spray
-// Spray from Statcast's hit coordinates: atan((hc_x - 125.42) / (198.27 - hc_y)), minus toward left field. (Some analysts
-// scale it by 0.75; for fly balls the plain angle gives Savant's own pull / center / opposite shares, for ground balls 0.75
-// comes closer. Kept plain: with 0.75 for ground balls the field part moves by about .005 of hits.)
+// Spray from Statcast's hit coordinates: atan((hc_x - 125.42) / (198.27 - hc_y)), minus toward left field, x 0.75 for ground
+// balls (under 10 degrees): for air balls the plain angle gives Savant's own pull / center / opposite shares (2024: line drives
+// 38.7 / 36.9 / 24.4, fly balls 27.0 / 37.0 / 35.9), for ground balls the plain angle gives 60.5 / 22.8 / 16.7 against Savant's
+// 48.9 / 38.6 / 12.4 and x 0.75 gives 52.8 / 33.9 / 13.3 (the fielding part moves by about .005 of hits between the two).
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -49,7 +50,7 @@ function readReal(dir) {
       if (r[ix.launch_speed] === '' || r[ix.launch_angle] === '' || r[ix.hc_x] === '') continue;
       balls.push({
         ev: +r[ix.launch_speed], la: +r[ix.launch_angle], stand: r[ix.stand], res: r[ix.events],
-        sp: Math.atan2(+r[ix.hc_x] - 125.42, 198.27 - +r[ix.hc_y]) * 180 / Math.PI,
+        sp: Math.atan2(+r[ix.hc_x] - 125.42, 198.27 - +r[ix.hc_y]) * 180 / Math.PI * (+r[ix.launch_angle] < 10 ? 0.75 : 1),
         dist: r[ix.hit_distance_sc] === '' ? null : +r[ix.hit_distance_sc]
       });
     }

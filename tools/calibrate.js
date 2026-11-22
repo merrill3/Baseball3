@@ -161,21 +161,31 @@ function merge(list) {
 
 function targetReport(c) {
   const tg = c.games * 2;
+  const att = c.sb + c.cs;
+  // Session 21 (step 1.5 task 6): the new league baseline (DESIGN.md section 7, the owner's choice of Session 8: in between real
+  // 2024-2026 MLB and the older targets; OBP compared without hit-by-pitches, which the game leaves out until after the release:
+  // the owner's choice of Session 21, the band .318-.325 less about 1.1% of PA). The rows the owner kept and asked to re-check
+  // against real 2024-2026 (chase, whiffs, pitches per PA, starters' workloads, errors) now carry bands around the real numbers
+  // in tools/lib/real.js (Claude's default): contact 74.7-74.9% of swings, 3.87-3.88 pitches per PA, 5.0-5.2 innings and 83-85
+  // pitches a start, 0.50-0.53 errors a team-game; chase 28.5% (Statcast 2024, the zone padded by the ball).
   const rows = [
-    ['Runs per team-game', c.runs / tg, 4.3, 4.6, 2],
-    ['Strikeout rate %', 100 * c.k / c.pa, 20, 22, 1],
-    ['League AVG', c.h / c.ab, 0.255, 0.264, 3],
-    ['League SLG', c.tb / c.ab, 0.43, 0.45, 3],
-    ['Doubles per team-game', c.d2 / tg, 1.4, null, 2],
-    ['Triples per team-game', c.d3 / tg, null, 0.2, 2],
-    ['Home runs per team-game', c.hr / tg, 1.4, 1.55, 2],
-    ['Walks % of PA', 100 * c.bb / c.pa, 7.5, 8.5, 1],
-    ['Chase rate %', 100 * c.swOut / c.out, 28, 32, 1],
-    ['Whiffs % of swings', 100 * c.whiff / c.sw, 24, 26, 1],
-    ['Pitches per PA', c.pitches / c.pa, 3.8, 3.9, 2],
-    ['Starter innings', c.spOuts / 3 / c.starts, 5.3, 5.8, 2],
-    ['Starter pitches', c.spPitches / c.starts, 85, 95, 1],
-    ['Errors per team-game', c.e / tg, 0.4, 0.6, 2]
+    ['Runs per team-game', c.runs / tg, 4.6, 4.7, 2],
+    ['League AVG', c.h / c.ab, 0.25, 0.255, 3],
+    ['League OBP (no HBP)', (c.h + c.bb) / (c.ab + c.bb + c.sf), 0.31, 0.317, 3],
+    ['League SLG', c.tb / c.ab, 0.415, 0.425, 3],
+    ['Home runs per team-game', c.hr / tg, 1.25, 1.35, 2],
+    ['Strikeout rate %', 100 * c.k / c.pa, 21.5, 23, 1],
+    ['Walks % of PA', 100 * c.bb / c.pa, 8, 9, 1],
+    ['Doubles per team-game', c.d2 / tg, 1.5, 1.8, 2],
+    ['Triples per team-game', c.d3 / tg, 0.1, 0.2, 2],
+    ['Steal attempts a team-game', att / tg, 0.8, 1.0, 2],
+    ['Steals safe %', 100 * c.sb / Math.max(1, att), 75, 81, 0],
+    ['Chase rate %', 100 * c.swOut / c.out, 27.5, 30, 1],
+    ['Whiffs % of swings', 100 * c.whiff / c.sw, 24.5, 26, 1],
+    ['Pitches per PA', c.pitches / c.pa, 3.83, 3.93, 2],
+    ['Starter innings', c.spOuts / 3 / c.starts, 5.0, 5.4, 2],
+    ['Starter pitches', c.spPitches / c.starts, 82, 88, 1],
+    ['Errors per team-game', c.e / tg, 0.45, 0.6, 2]
   ];
   const lines = ['Targets: ' + c.games + ' regular-season games between rated test teams (DESIGN.md section 7)', ''];
   for (const [name, v, lo, hi, d] of rows) {
@@ -184,9 +194,7 @@ function targetReport(c) {
     lines.push('  ' + name.padEnd(26) + v.toFixed(d).padStart(7) + '   ' + band.padEnd(14) + (ok ? 'ok' : 'MISS'));
   }
   const obp = (a) => a[2] / a[0], slg = (a) => a[3] / a[1];
-  const att = c.sb + c.cs;
   lines.push('');
-  lines.push('  Also: OBP ' + ((c.h + c.bb) / (c.ab + c.bb + c.sf)).toFixed(3) + '; steal attempts ' + (att / tg).toFixed(2) + ' a team-game, ' + (100 * c.sb / Math.max(1, att)).toFixed(0) + '% safe');
   lines.push('  Platoon edge: OBP ' + obp(c.plat.opp).toFixed(3) + ' / SLG ' + slg(c.plat.opp).toFixed(3) + ' against opposite-handed pitchers, ' +
     obp(c.plat.same).toFixed(3) + ' / ' + slg(c.plat.same).toFixed(3) + ' against same-handed');
   lines.push('  (Per-player targets, such as standouts, .300 hitters and the batting champion, need a league and full seasons: M2.)');
