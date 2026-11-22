@@ -47,6 +47,9 @@
     commandSd: 0.48,   // Command: scatter around the target, feet on each axis
     deception: 1,      // Deception: multiplier on the share of movement and speed change a hitter doesn't read
                        // (the mirror of Recognition; step 1.4, was taken off his recognition)
+    soft: 1,           // Deception (Session 19, owner's choice: the pitchers' contact skill): multiplier on the exit speed
+                       // a hitter loses to a mishit against him, off center or mistimed (above 1: he is squared up less;
+                       // the mirror of Timing's square)
     stamina: null,     // Stamina: pitches before fatigue sets in; null means the role's value in STAMINA
     grades: null,      // pitch grades: movement multiplier per type (1 average, 1.2 is 20% more break)
     shapes: null,      // pitch shapes: degrees taken off the launch angle per type (+ ground-ball tilt, - fly-ball tilt)
@@ -93,6 +96,7 @@
   //   'mul': placeholder x step^u   (spreads and noise: they shrink as the rating rises, never below 0)
   //   'add': placeholder + step x u (speeds, shares and offsets)
   //   'up':  1 - (1 - placeholder) x step^u (a share that nears 1: what is left shrinks by a fixed share)
+  // A fourth entry 'tens' makes u plain tens of points from 60 (after the curve), not the rating's step table (Session 19).
   // u is the rating's steps from 60, from its table in RATE.steps below (step 1.4), else tens of points.
   // Steps are Claude's defaults (step 1.3), aimed at +10 points for a whole lineup or staff being worth
   // about 0.3 runs per team-game; step 1.4's equal-value check tunes them.
@@ -138,7 +142,12 @@
     pit: {
       velo: ['velocity', 'add', 1], // a step is one mph (Session 13: the table below is the real ladder)
       commandSd: ['command', 'mul', 0.92], // Session 14: was 0.88 (the test population's walk, edge and chase spreads)
-      deception: ['deception', 'mul', 1 / 0.75] // the mirror of Recognition: the unread share grows by the same step
+      deception: ['deception', 'mul', 1 / 0.75], // the mirror of Recognition: the unread share grows by the same step
+      // Session 19 (owner's choice): Deception also carries the pitchers' contact skill, on its own gentle scale ('tens': tens
+      // of points after the curve, not Deception's step table, which is steep below 60), sized so the test population's exit
+      // speed and hard-hit % against spread as MLB's (Savant 2024-2025: exit speed against repeats year to year at r 0.54,
+      // about 1 mph per standard deviation, and goes with chase % against, not with whiffs)
+      soft: ['deception', 'mul', 1.079, 'tens']
     },
     grade: { step: 0.12, min: 0.3 }, // a pitch grade: movement multiplier 1 + step x u (at least min)
     // Step tables (step 1.4): for each rating, [points after the curve, steps from 60], straight lines

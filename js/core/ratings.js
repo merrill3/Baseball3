@@ -111,7 +111,7 @@
   }
 
   function hook(base, rule, points) {
-    const x = steps(rule[0], points);
+    const x = rule[3] === 'tens' ? u(points) : steps(rule[0], points);
     if (rule[1] === 'mul') return base * Math.pow(rule[2], x);
     if (rule[1] === 'up') return 1 - (1 - base) * Math.pow(rule[2], x); // a share that nears 1, never reaching it
     return base + rule[2] * x;

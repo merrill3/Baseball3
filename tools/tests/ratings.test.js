@@ -40,7 +40,7 @@ module.exports = function (t) {
       contact: { 'bat.contactSd': -1, 'bat.timingTop': 1 }, timing: { 'bat.timingSd': -1, 'bat.square': -1 }, // Session 11: Timing squares up; Contact handles velocity
       launch: { 'bat.launchK': -1, 'bat.launchSd': -1, 'bat.sprayNoise': -1 },
       rawPower: { 'bat.batSpeed': 1 }, recognition: { 'bat.recognition': 1, 'bat.breakRead': -1 }, discipline: { 'bat.judgeSd': -1, 'bat.judgeLean': -1 },
-      velocity: { 'pit.velo': 1 }, command: { 'pit.commandSd': -1 }, deception: { 'pit.deception': 1 }, stamina: { 'pit.stamina': 1 },
+      velocity: { 'pit.velo': 1 }, command: { 'pit.commandSd': -1 }, deception: { 'pit.deception': 1, 'pit.soft': 1 }, stamina: { 'pit.stamina': 1 },
       // Defense and running (step 1.4): Range a quicker first step and a better route, Hands fewer errors
       // and a quicker release, Arm more mph, Framing a wider edge, Speed sprint speed, Baserunning a quicker
       // read and jump and a smaller error in judging an extra base.
@@ -73,6 +73,8 @@ module.exports = function (t) {
     near(B3.ratings.inputs(hitter({ arm: 70 })).fld.armPlus, R.fld.armPlus[2] * st('arm', 70), 1e-12, 'arm step');
     near(B3.ratings.inputs(hitter({ speed: 50 })).run.speed, B3.tune.RUN.speed + R.run.speed[2] * st('speed', 50), 1e-12, 'speed step');
     near(B3.ratings.inputs(hitter({ recognition: 70 })).bat.recognition, 1 - (1 - B3.tune.BAT.recognition) * Math.pow(R.bat.recognition[2], st('recognition', 70)), 1e-12, 'recognition nears 1');
+    // Session 19: Deception's contact job steps by plain tens of points (after the curve), not by Deception's table.
+    for (const r of [30, 40, 70, 99]) near(B3.ratings.inputs(pitcher({ deception: r })).pit.soft, Math.pow(R.pit.soft[2], (B3.ratings.curve(r) - 60) / 10), 1e-12, 'soft at ' + r);
     // A table's steps: 60 is 0, they rise with the points, and straight lines run between rows and past the ends.
     for (const k in R.steps) {
       assert.strictEqual(st(k, 60), 0, k + ' at 60');

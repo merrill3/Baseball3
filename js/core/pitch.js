@@ -216,7 +216,9 @@
     const away = Math.max(0, B3.data.zoneEdge(pitch.x, pitch.z) + S.edgeFrom);
     // Off center (step 1.5): the loss grows with the *where* error to offPow, a little less under the ball than over it.
     // Timing squares it up (Session 11, owner's choice): bat.square scales both losses (1 for an average hitter).
-    const sq = w.b.bat.square * familiar(w).square; // and a hitter who has faced him already squares him up a little better
+    // and a hitter who has faced him already squares him up a little better; a deceptive pitcher is squared up less (Session 19,
+    // owner's choice: Deception carries the pitchers' contact skill, pit.soft)
+    const sq = w.b.bat.square * familiar(w).square * w.p.pit.soft;
     const lossOff = sq * S.offLoss * Math.pow(Math.abs(u), S.offPow) * (u < 0 ? S.offUnder : 1);
     const ev = top * (1 - lossOff) * (1 - sq * S.timeLoss * v * v * (v > 0 ? 1 + S.lateLoss : 1)) * (1 - S.locLoss * away) + r.normal(0, S.evSd);
     // Launch angle: over the ball drives it down; high pitches go up. Launch sets the band.

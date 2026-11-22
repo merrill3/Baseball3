@@ -180,6 +180,12 @@ module.exports = function (t) {
     assert.ok(evOf(sq(0.5, 30)) > evOf(sq(1.5, 30)) + 4, 'a hitter who keeps the barrel on it loses less to a late swing');
     assert.ok(evOf(sq(0.5, 0)) > evOf(sq(1.5, 0)) + 2, 'and less to an off-center hit');
     near(rate(sq(0.5, 30), (x) => x.r.r === 'S'), rate(sq(1.5, 30), (x) => x.r.r === 'S'), 1e-9, 'the same whiffs');
+    // Deception's contact job (Session 19, owner's choice): pit.soft scales the same loss from the pitcher's side.
+    const so = (soft, tm) => trial(setup({ pit: { soft } }), MID, tm);
+    assert.ok(evOf(so(0.7, 30)) > evOf(so(1.4, 30)) + 3, 'a deceptive pitcher is squared up less on a late swing');
+    assert.ok(evOf(so(0.7, 0)) > evOf(so(1.4, 0)) + 1.5, 'and on an off-center hit');
+    near(rate(so(0.7, 30), (x) => x.r.r === 'S'), rate(so(1.4, 30), (x) => x.r.r === 'S'), 1e-9, 'the same whiffs');
+    near(evOf(so(1.3, 0)), evOf(sq(1.3, 0)), 1e-9, 'his soft and the hitter\'s square multiply the same loss');
   });
 
   t.test('Raw Power sets exit speed at a cost in accuracy; Launch sets the launch-angle band and spray', () => {
