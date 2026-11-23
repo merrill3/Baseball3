@@ -161,10 +161,13 @@
     // Step tables (step 1.4): for each rating, [points after the curve, steps from 60], straight lines
     // between rows. Set by node tools/calibrate.js --part=fit so that +10 points are worth about the same
     // runs at every level and for every rating (the equal-value check); a rating without a table steps
-    // one per 10 points. Session 23 (step 1.5 task 7, the one calibration): Timing, Launch, Recognition, Discipline, Deception,
-    // the grades, Hands, Framing and Baserunning refitted after the new weak contact, the hook spin, the outfield and the aim
-    // (115,321 plate appearances a condition); not Raw Power and Velocity (real ladders), Contact and Command (the population),
-    // Speed, Arm and Range (real ladders; owner's choices, Sessions 14 and 23): their worth is reported.
+    // one per 10 points. Session 23 (step 1.5 task 7, the one calibration): Timing, Launch, Recognition, Discipline, Hands, Framing
+    // and Baserunning refitted after the new weak contact, the hook spin, the outfield and the aim (115,321 plate appearances a
+    // condition); not Raw Power and Velocity (real ladders), Contact and Command (the population), Speed, Arm and Range (real
+    // ladders; owner's choices, Sessions 14 and 23). The grades and Deception were refitted too and put back: refitted, the rated
+    // starters' K% came out 13.6 / 19.7 / 26.4 at the 5th / 50th / 95th percentiles [MLB 15.3 / 21.5 / 30.0] (kept: 15.6 / 22.2 /
+    // 29.0) and the league's strikeouts 20.5% [21.5-23]; realism wins (owner's choice, Session 8), so they stay set by the
+    // pitchers' population (Sessions 13 and 19) and their worth is reported.
     steps: {
       // Contact (step 1.5 task 4): step 1.4's table x 0.6 now that Contact scales the whole *where* spread (SWING.contactAll),
       // so the test population's whiff and zone-contact spreads match MLB's (the owner's ladder rule, Session 10).
@@ -182,8 +185,8 @@
       velocity: [[20, -12.1], [30, -6.59], [40, -3.7], [50, -1.5], [60, 0], [70, 1.5], [80, 3.5], [85, 4.2], [91.25, 4.9], [100, 6.0], [108.8, 7.0]],
       // Command (Session 14): step 1.4's rows below 60 x 0.75, so poor Command walks as MLB's worst do (with the 0.92 step).
       command: [[20, -2.488], [30, -1.881], [40, -1.274], [50, -0.653], [60, 0], [70, 0.92], [80, 1.899], [90, 2.952], [100, 4.098], [110, 5.368]],
-      deception: [[20, -3.175], [30, -2.068], [40, -1.24], [50, -0.569], [60, 0], [70, 0.498], [80, 0.943], [90, 1.347], [100, 1.718], [110, 2.062]],
-      grade: [[20, -2.784], [30, -1.926], [40, -1.203], [50, -0.569], [60, 0], [70, 0.52], [80, 1], [90, 1.448], [100, 1.869], [110, 2.267]],
+      deception: [[20, -7.939], [30, -4.465], [40, -2.294], [50, -0.937], [60, 0], [70, 0.739], [80, 1.358], [90, 1.896], [100, 2.376], [110, 2.812]],
+      grade: [[20, -7.141], [30, -4.387], [40, -2.666], [50, -1.304], [60, 0], [70, 1.461], [80, 2.408], [90, 3.128], [100, 3.831], [110, 4.534]],
       range: [[20, -2.101], [30, -1.611], [40, -1.099], [50, -0.563], [60, 0], [70, 0.593], [80, 1.22], [90, 1.884], [100, 2.591], [110, 3.347]],
       hands: [[20, -2.765], [30, -2.158], [40, -1.507], [50, -0.793], [60, 0], [70, 0.896], [80, 1.931], [90, 3.165], [100, 4.703], [110, 6.513]],
       // Arm (Session 20, the ladder rule): mph from his position's arm (POS), on the real ladder (Savant 2024-2026 arm strength,
