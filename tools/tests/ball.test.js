@@ -69,10 +69,14 @@ const isHit = (x) => HITS.indexOf(x.p.code) >= 0;
 const atPos = (POS, k) => { const o = {}; for (const pos in POS) o[pos] = { [k]: POS[pos] }; return o; };
 
 module.exports = function (t) {
-  t.test('flight: 100 mph at 28 degrees carries about 375 ft (step 1.5: fit to Statcast fly-ball distances and home runs); carry grows with exit speed', () => {
+  t.test('flight: 100 mph at 28 degrees carries about 383 ft (Session 23: Statcast 2024, 30 balls at 98.5-101.5 mph and 26-30 degrees within 15 degrees of center: 382.6 ft); carry grows with exit speed; a low pulled liner dives', () => {
     const B3 = loadCore();
     B3.tune.BALL.live = 1; // 2024's ball, the one fitted (Session 22: the league's ball is livelier, BALL.live)
-    near(B3.ball.flight({ ev: 100, la: 28, sp: 0 }).land.r, 375, 8, '100 mph at 28 degrees');
+    near(B3.ball.flight({ ev: 100, la: 28, sp: 0 }).land.r, 383, 8, '100 mph at 28 degrees');
+    // Hook spin (Session 23): a low liner pulled hard lands well short of the same ball to the opposite field; a high fly ball doesn't.
+    const fl = (la, pull) => B3.ball.flight({ ev: 95, la: la, sp: -pull, pull: pull }).land.r;
+    assert.ok(fl(14, 30) < fl(14, -20) - 25, 'a pulled 14-degree liner dives: ' + fl(14, 30).toFixed(0) + ' against ' + fl(14, -20).toFixed(0));
+    assert.ok(Math.abs(fl(32, 30) - fl(32, 0)) < 3, 'no hook at 32 degrees');
     const L = loadCore(); // the league's livelier ball (owner's choice, Session 22) carries it farther
     assert.ok(L.ball.flight({ ev: 100, la: 28, sp: 0 }).land.r > B3.ball.flight({ ev: 100, la: 28, sp: 0 }).land.r + 8, 'the league ball carries farther');
     let last = 0;

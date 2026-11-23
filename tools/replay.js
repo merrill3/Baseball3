@@ -71,7 +71,7 @@ function flightPart(B3, real) {
   let sq = 0, n = 0, hr = 0, ehr = 0;
   for (const b of real) {
     if (b.la < 10 || b.la >= 70 || b.ev < 70 || Math.abs(b.sp) > 45) continue;
-    const f = B3.ball.flight({ ev: b.ev, la: b.la, sp: b.sp, slice: Math.max(0, b.stand === 'R' ? b.sp : -b.sp) });
+    const f = B3.ball.flight({ ev: b.ev, la: b.la, sp: b.sp, pull: b.stand === 'R' ? -b.sp : b.sp });
     let i = 0; while (b.ev >= EV[i + 1]) i++;
     let j = 0; while (b.la >= LA[j + 1]) j++;
     const c = cells[i][j];
@@ -102,7 +102,7 @@ function field(B3, balls, reps) {
     const c = cells[i][j];
     for (let k = 0; k < reps; k++) {
       g.bases = [null, null, null]; g.outs = 0;
-      const play = B3.ball.inPlay(g, { ev: b.ev, la: b.la, sp: sp, slice: Math.max(0, sp) }, null);
+      const play = B3.ball.inPlay(g, { ev: b.ev, la: b.la, sp: sp, pull: -sp }, null);
       if (play.foul) continue;
       const e = TB[play.code] || 0, r = TB[b.res] || 0;
       for (const x of [c, t]) { x.n++; x.rh += r ? 1 : 0; x.eh += e ? 1 : 0; x.rtb += r; x.etb += e; }

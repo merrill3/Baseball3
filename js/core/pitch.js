@@ -5,7 +5,7 @@
 //   B3.pitch.fade(p, live)             a pitcher's fade this game, in rating points (B3.tune.PITCH.fade)
 //   B3.pitch.call(g, pitch)            a taken pitch: 'C' called strike or 'B' ball (Framing at the edges)
 //   B3.pitch.resolve(g, pitch, swing)  { r, ... }: B or C on a take; on a swing S (whiff), F (foul) or
-//                                      X (in play, with contact { ev, la, sp, slice }), and the swing's bat speed (bat)
+//                                      X (in play, with contact { ev, la, sp, pull }), and the swing's bat speed (bat)
 //   B3.pitch.cpuTiming(g, pitch)       a CPU hitter's *when* error in ms (Timing, Velocity, Recognition)
 //   B3.pitch.expect(g, pitch)          the *where* error's mean and spread, in inches (for tests and tools)
 //   B3.pitch.look(g, pitch)            where a CPU hitter thinks it will cross, for swing or take
@@ -231,7 +231,17 @@
     // 11% hit 95+).
     const outside = Math.max(0, B3.data.zoneEdge(pitch.x, pitch.z));
     const lossOff = Math.min(0.9, sq * S.offLoss * (1 + S.chaseOff * outside) * Math.pow(Math.abs(u), S.offPow) * (u < 0 ? S.offUnder : 1));
-    const ev = top * (1 - lossOff) * (1 - sq * S.timeLoss * v * v * (v > 0 ? 1 + S.lateLoss : 1)) * (1 - S.locLoss * away) + r.normal(0, S.evSd);
+    // Along the bat (Session 23, owner's choice: a new kind of weak contact): where on the barrel he meets the ball, inches from its
+    // sweet spot toward the handle (above 0: jammed) or the end (below 0). A pitch inside and a late swing jam him, a pitch away and
+    // an early swing catch the end; the rest is noise. It costs exit speed but not launch angle, so it makes soft line drives and
+    // bloopers as well as soft grounders and fly balls; Timing squares it up and Deception makes it worse (sq), as for the other
+    // mishits. Statcast 2024's bat tracking: with the bat square to the ball, exit speed peaks where the ball meets the bat 44-52
+    // inches from the batter and falls off both ways (B3.tune.SWING.bar).
+    const inside = w.bats === 'R' ? -pitch.x : pitch.x; // feet toward the batter
+    const B = S.bar;
+    const barErr = B.perFt * inside + B.perMs * tm + r.normal(0, B.sd);
+    const lossBar = Math.min(0.9, sq * B.loss * Math.pow(Math.abs(barErr) / 10, B.pow) * (barErr > 0 ? B.jam : 1));
+    const ev = top * (1 - lossOff) * (1 - lossBar) * (1 - sq * S.timeLoss * v * v * (v > 0 ? 1 + S.lateLoss : 1)) * (1 - S.locLoss * away) + r.normal(0, S.evSd);
     // Launch angle: over the ball drives it down; high pitches go up. Launch sets the band.
     // The pitch's shape tilts it: a ground-ball shape (above 0) lowers the launch angle (step 1.3: a tilt,
     // not a quality, so it adds no movement for the hitter to misread).
@@ -240,7 +250,6 @@
     const path = w.b.bat.swingPath || 0; // Swing path (Session 11): Lift raises his launch angle and pulls more
     const la = S.attack + S.pathLA * path + T().TYPE[pitch.type].lift - (pitch.shape || 0) + lift + S.heightLA * (pitch.z - 2.55) + r.normal(0, w.b.bat.launchSd);
     // Spray: worked out for the pull side (minus), then turned for the batter's side.
-    const inside = w.bats === 'R' ? -pitch.x : pitch.x; // feet toward the batter
     // A ball hit under the center drifts the other way (step 1.5); one topped over it is pulled (Session 21: sprayTop), as off a
     // tilted bat, up to sprayCap degrees of lift either way (Session 22: the spray fit, B3.tune.SWING).
     // A squared-up ball goes where the bat points (timing); a mishit squirts more (step 1.5: sprayBase).
@@ -248,9 +257,10 @@
     const pull = S.pullAt0 - S.pathPull * path + S.sprayPerMs * tm - S.insidePull * inside + S.sprayLA * clamp(lift, 0, S.sprayCap) + S.sprayTop * clamp(lift, -S.sprayCap, 0) +
       S.sprayAng * clamp(la - S.sprayMid, -30, 30) + r.normal(0, noise);
     const sp = w.bats === 'R' ? pull : -pull;
-    // slice: degrees toward the opposite field; that ball's sidespin costs it some carry (B3.ball.flight, step 1.5).
+    // pull: degrees toward his pull side (minus: the opposite field); a sliced ball's sidespin costs it some carry and a low pulled
+    // one's topspin makes it dive (B3.ball.flight; step 1.5 and Session 23; it was slice, the opposite-field part only).
     out.contact = { ev: Math.round(Math.max(20, ev) * 10) / 10, la: Math.round(clamp(la, -80, 89) * 10) / 10, sp: Math.round(sp * 10) / 10,
-      slice: Math.round(Math.max(0, pull) * 10) / 10 };
+      pull: Math.round(-pull * 10) / 10 };
     // A ground ball outside the lines is a foul; a ball in the air goes to B3.ball, which may catch it.
     out.r = Math.abs(sp) > S.foulLine && la < 10 ? 'F' : 'X';
     return out;

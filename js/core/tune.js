@@ -334,6 +334,17 @@
     lateLoss: 0.47,    // a late swing loses this share more than an early one (step 1.5: the bat isn't up to speed yet;
                        // Statcast's opposite-field balls come off slower than pulled ones; Session 22, was 0.75: the engine's
                        // opposite-field fly balls came off 9.7 mph slower than its pulled ones, MLB's 6.6, now about 8)
+    bar: {             // Along the bat (Session 23, owner's choice: a ball met off the wrong part of the bat, jammed or off the end,
+                       // set by the pitch's side-to-side location and the swing's timing plus noise; it costs exit speed, keeps the
+                       // launch angle; Timing makes it smaller and Deception larger). The error: inches from the barrel's sweet spot
+                       // toward the handle (jammed, above 0) ...
+      perFt: 0,        // ... per foot the pitch is inside (toward the batter)
+      perMs: 0,        // ... per ms the swing is late (early: toward the end)
+      sd: 6,           // ... and its noise, inches
+      loss: 0,         // share of exit speed lost 10 inches from the sweet spot (to the power pow), x jam when jammed
+      pow: 1.6,
+      jam: 1.1
+    },
     evSd: 2.5,         // exit-speed noise, mph (step 1.5, was 2.5: a swing's own bat speed carries most of the spread; Session 21: 2.5
                        // again, with chaseOff the exit speeds' 10th-90th percentiles 68 / 82 / 93 / 99 / 103.5 [69 / 80.5 / 91.5 / 99 / 104.5])
     attack: 15.8,      // launch angle of a dead-center hit at the middle of the zone, degrees (step 1.5, was 13.5; Session 12,
@@ -415,19 +426,26 @@
     // the gap to Statcast's distance falls from 30 to 23 ft rms, and the home runs (367 against MLB's 369) peak at 25-35 degrees
     // as MLB's do. Before, balls at 20-30 degrees fell 10-16 ft short and those at 35+ carried 20-60 ft too far (at 100-105 mph
     // and 35-40 degrees, 61% home runs against MLB's 26%), so high fly balls fell in and left the park too often.
-    drag: 0.00161,     // air drag per foot for 2024's ball (step 1.5: 0.00165; before that 0.0018)
+    drag: 0.00158,     // air drag per foot for 2024's ball (step 1.5: 0.00165; before that 0.0018; Session 21: 0.00161; Session 23: refitted
+                       // with the hook spin below, on the same air balls from 6 degrees: the distance gap by launch angle x direction
+                       // 18.7 -> 5.4 ft, home runs 369 [369])
     live: 0.95,        // the league's ball: its drag is drag x live (owner's choice, Session 22: a livelier ball, near 2019's, so the
                        // league scores 4.6-4.7 runs with more home runs and SLG than the bands; 1 is the 2024 ball the flight was
                        // fitted on, which tools/replay.js uses for real balls). Rated teams at 1 / 0.981 / 0.969 / 0.95 / 0.932:
                        // runs 3.89 / 4.15 / 4.35 / 4.67 / 5.00, AVG .234 / .239 / .242 / .248 / .254, home runs 1.14 / 1.29 / 1.43 /
                        // 1.62 / 1.81 a team-game
     dragRef: 140,      // ft/s (95 mph) at which the first flight's drag is `drag` ...
-    dragPow: 0.73,     // ... and it grows as (dragRef / speed) to this power below it, falls above it (step 1.5: 0.3): the drag
+    dragPow: 0.77,     // ... and it grows as (dragRef / speed) to this power below it, falls above it (step 1.5: 0.3): the drag
                        // crisis, so a high fly ball slows and dies near its peak
-    lift: 0.00117,     // backspin lift per foot on balls hit in the air (step 1.5: 0.00065, before that 0.0009)
-    sliceLift: 0.015,  // share of that lift lost per degree a ball goes toward the opposite field (step 1.5: it leaves with
+    lift: 0.00123,     // backspin lift per foot on balls hit in the air (step 1.5: 0.00065, before that 0.0009; Session 21: 0.00117)
+    sliceLift: 0.016,  // share of that lift lost per degree a ball goes toward the opposite field (step 1.5: it leaves with
                        // slice spin; Statcast 2024 fly balls carry 338 ft pulled, 326 to center, 285 the other way)
-    liftFull: 33,      // degrees of launch angle at which backspin (and lift) is full; less below it (Session 21: was 35)
+    hookLift: 0.025,   // Session 23 (hook spin, Claude's default): share of full lift taken off per degree a low ball goes toward the pull
+    hookFrom: 13,      // side past hookFrom degrees short of straightaway, ...
+    hookTo: 27,        // ... fading to none at hookTo degrees of launch angle (it may push the ball down: topspin). Real pulled line
+                       // drives come off a topped swing and dive: on Statcast 2024's air balls at 10-14 degrees pulled 30+, 183 ft [the
+                       // engine's had 234], at 18-22 degrees 9 home runs [27]; now 176 ft and 12
+    liftFull: 29,      // degrees of launch angle at which backspin (and lift) is full; less below it (Session 21: was 35)
     dt: 0.02,          // integration step in the air, seconds
     sample: 0.1,       // the ball's path is kept every this many seconds (fielding and the play script)
     startHeight: 3,    // feet: the ball's height at contact
