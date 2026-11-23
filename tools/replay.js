@@ -146,6 +146,7 @@ function main() {
   if (!dir) { console.log('usage: node tools/replay.js DIR [--part=flight,field,engine] [--games=600] [--reps=2] [--tweak=file.js]'); process.exit(1); }
   const parts = opt('part', 'flight,field,engine').split(',');
   const B3 = loadCore();
+  B3.tune.BALL.live = 1; // real 2024 balls with 2024's ball (the league's livelier ball, BALL.live, is the owner's choice of Session 22)
   const tweak = opt('tweak', null);
   if (tweak) require(path.resolve(tweak))(B3);
   const real = readReal(dir);

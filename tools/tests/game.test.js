@@ -50,10 +50,11 @@ const lastPA = (g) => [...g.log].reverse().find((e) => e.e === 'pa');
 const pas = (g, i, h) => g.log.filter((e) => e.e === 'pa' && e.i === i && e.h === h);
 
 module.exports = function (t) {
-  t.test('1,000 seeded games of every type end correctly with every invariant holding', () => {
-    const r = gametest.run(1000, 'unit');
+  t.test('1,500 seeded games of every type end correctly with every invariant holding', () => {
+    // Session 22: 1,500 (was 1,000): the mercy rule is rare (4 in these 1,500, none in their first 1,000 once the ball changed)
+    const r = gametest.run(1500, 'unit');
     assert.deepStrictEqual(r.problems.slice(0, 5), []);
-    assert.strictEqual(r.games, 1000);
+    assert.strictEqual(r.games, 1500);
     // Every rule path was exercised.
     for (const k of ['walk-off', 'walk-off home run', 'tie', 'mercy rule', 'extra innings, runner on second',
       'extra innings, no runner on second', 'home skips the last bottom half', 'caught stealing ends the inning',

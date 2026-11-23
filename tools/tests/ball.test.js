@@ -71,7 +71,10 @@ const atPos = (POS, k) => { const o = {}; for (const pos in POS) o[pos] = { [k]:
 module.exports = function (t) {
   t.test('flight: 100 mph at 28 degrees carries about 375 ft (step 1.5: fit to Statcast fly-ball distances and home runs); carry grows with exit speed', () => {
     const B3 = loadCore();
+    B3.tune.BALL.live = 1; // 2024's ball, the one fitted (Session 22: the league's ball is livelier, BALL.live)
     near(B3.ball.flight({ ev: 100, la: 28, sp: 0 }).land.r, 375, 8, '100 mph at 28 degrees');
+    const L = loadCore(); // the league's livelier ball (owner's choice, Session 22) carries it farther
+    assert.ok(L.ball.flight({ ev: 100, la: 28, sp: 0 }).land.r > B3.ball.flight({ ev: 100, la: 28, sp: 0 }).land.r + 8, 'the league ball carries farther');
     let last = 0;
     for (let ev = 70; ev <= 110; ev += 5) {
       const r = B3.ball.flight({ ev: ev, la: 28, sp: 20 }).land.r;
@@ -142,7 +145,9 @@ module.exports = function (t) {
     for (const x of plays(env2, fair().filter((c) => env2.B3.ball.flight(c).fair))) {
       if (!x.p.caught) continue;
       const at = x.p.meta.catchAt;
-      assert.ok(Math.abs(Math.atan2(at[0], at[1])) / D2R <= 45.01 && at[1] >= 0, 'a fair ball is caught in fair ground');
+      // Within 0.1 ft of the lines counts (Session 22: with the livelier ball a pop-up straight up was caught 0.3 inches behind
+      // the point of the plate).
+      assert.ok((Math.abs(at[0]) - at[1]) / Math.SQRT2 <= 0.1, 'a fair ball is caught in fair ground: ' + JSON.stringify(x.c) + ' at ' + JSON.stringify(at));
     }
   });
 

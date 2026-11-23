@@ -415,7 +415,12 @@
     // the gap to Statcast's distance falls from 30 to 23 ft rms, and the home runs (367 against MLB's 369) peak at 25-35 degrees
     // as MLB's do. Before, balls at 20-30 degrees fell 10-16 ft short and those at 35+ carried 20-60 ft too far (at 100-105 mph
     // and 35-40 degrees, 61% home runs against MLB's 26%), so high fly balls fell in and left the park too often.
-    drag: 0.00161,     // air drag per foot (step 1.5: 0.00165; before that 0.0018)
+    drag: 0.00161,     // air drag per foot for 2024's ball (step 1.5: 0.00165; before that 0.0018)
+    live: 0.95,        // the league's ball: its drag is drag x live (owner's choice, Session 22: a livelier ball, near 2019's, so the
+                       // league scores 4.6-4.7 runs with more home runs and SLG than the bands; 1 is the 2024 ball the flight was
+                       // fitted on, which tools/replay.js uses for real balls). Rated teams at 1 / 0.981 / 0.969 / 0.95 / 0.932:
+                       // runs 3.89 / 4.15 / 4.35 / 4.67 / 5.00, AVG .234 / .239 / .242 / .248 / .254, home runs 1.14 / 1.29 / 1.43 /
+                       // 1.62 / 1.81 a team-game
     dragRef: 140,      // ft/s (95 mph) at which the first flight's drag is `drag` ...
     dragPow: 0.73,     // ... and it grows as (dragRef / speed) to this power below it, falls above it (step 1.5: 0.3): the drag
                        // crisis, so a high fly ball slows and dies near its peak
