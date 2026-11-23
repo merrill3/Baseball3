@@ -27,8 +27,8 @@
                        // contact; step 1.5, real units, was 90.3 in the engine's own); each swing varies by SWING.batSd
     launchK: 15,       // Launch: degrees of launch angle per inch of *where* error near the bat's center (lower is a
                        // tighter band); it bends steeper toward the bat's edge (SWING.launchCurve; step 1.5, was 22)
-    launchSd: 13.9,    // Launch: extra launch-angle noise in degrees (the swing's own plane; step 1.5, was 15; Session 22, was 12:
-                       // the level fit, SWING.attack)
+    launchSd: 16,      // Launch: extra launch-angle noise in degrees (the swing's own plane; step 1.5, was 15; Session 22, was 12:
+                       // the level fit, SWING.attack; Session 23, was 13.9: with SWING.launchBase, less on squared-up balls)
     sprayNoise: 27,    // Launch: spray-direction noise in degrees (spray control), on a mishit at the glancing edge
                        // (SWING.sprayBase; step 1.5, was 20 on every ball; Session 22, was 29: the spray fit, SWING.pullAt0)
     recognition: 0.8,  // Recognition: the chance he picks up a pitch (its movement and speed change), 0 to 1; one read per
@@ -301,8 +301,8 @@
     veloSd: 2.5,       // the whole spread x (his fastball / PIT.velo)^veloSd (Session 13: Velocity brings whiffs, not weak
                        // contact; real per mph, the same pitcher year to year: whiff +1.65, K% +1.69, exit speed -0.16)
     chaseGrade: true,  // an off-speed pitch's extra spread off the plate (TYPE.chase above 1) scales with its grade (Session 13)
-    locLoss: 0.04,     // share of exit speed lost per foot from edgeFrom inside the edge outward (step 1.3; step 1.5,
-                       // was 0.08)
+    locLoss: 0,        // share of exit speed lost per foot from edgeFrom inside the edge outward (step 1.3; step 1.5,
+                       // was 0.08; Session 23, was 0.04: the bar's location part, SWING.bar, carries it)
     chaseOff: 1.9,     // an off-center hit's loss (offLoss) grows by this share per foot outside the zone (Session 21, Claude's
                        // default: a chased pitch is mostly met weakly, a squared-up one still hard; Statcast 2024, 54,043 pitches:
                        // 82.5 / 78.8 / 74.3 mph at 0-0.2 / 0.2-0.4 / 0.4-0.7 ft off the zone, the engine's 86.3 / 85.8 / 82.6, now
@@ -325,12 +325,12 @@
     batCap: 1.3,       // his hardest swing: batSd x this above his average (step 1.5: Raw Power is a ceiling; Statcast's
                        // hardest-hit balls stop near 110 mph for an average bat)
     plateShare: 0.9,   // pitch speed at the plate as a share of release speed
-    offLoss: 0.485,    // exit speed lost at the glancing edge (scales with the *where* error to offPow; step 1.5, was 0.42
-                       // with a square; Session 22, was 0.45: with foulBack's wider fair core)
+    offLoss: 0.37,     // exit speed lost at the glancing edge (scales with the *where* error to offPow; step 1.5, was 0.42
+                       // with a square; Session 22, was 0.45: with foulBack's wider fair core; Session 23, was 0.485: with SWING.bar)
     offPow: 2.5,       // the power: a near-center hit loses little, a mishit near the edge a lot (step 1.5)
-    offUnder: 0.89,    // share of that loss when the bat passes under the ball (step 1.5: Statcast's fly balls come off
+    offUnder: 0.855,   // share of that loss when the bat passes under the ball (step 1.5: Statcast's fly balls come off
                        // harder than its ground balls)
-    timeLoss: 0.28,    // exit speed lost at missMs (scales with the square of the *when* error; step 1.5, was 0.45)
+    timeLoss: 0.245,   // exit speed lost at missMs (scales with the square of the *when* error; step 1.5, was 0.45)
     lateLoss: 0.47,    // a late swing loses this share more than an early one (step 1.5: the bat isn't up to speed yet;
                        // Statcast's opposite-field balls come off slower than pulled ones; Session 22, was 0.75: the engine's
                        // opposite-field fly balls came off 9.7 mph slower than its pulled ones, MLB's 6.6, now about 8)
@@ -338,12 +338,19 @@
                        // set by the pitch's side-to-side location and the swing's timing plus noise; it costs exit speed, keeps the
                        // launch angle; Timing makes it smaller and Deception larger). The error: inches from the barrel's sweet spot
                        // toward the handle (jammed, above 0) ...
-      perFt: 0,        // ... per foot the pitch is inside (toward the batter)
-      perMs: 0,        // ... per ms the swing is late (early: toward the end)
-      sd: 6,           // ... and its noise, inches
-      loss: 0,         // share of exit speed lost 10 inches from the sweet spot (to the power pow), x jam when jammed
-      pow: 1.6,
-      jam: 1.1
+      perFt: 9.1,      // ... per foot the pitch is inside (toward the batter)
+      perMs: 0.235,    // ... per ms the swing is late (early: toward the end)
+      sd: 2.3,         // ... and its noise, inches
+      loss: 0.11,      // share of exit speed lost 10 inches from the sweet spot (to the power pow), x jam when jammed
+      pow: 1.8,
+      jam: 1.35
+      // Fitted (Session 23, two Nelder-Mead fits with offLoss, offUnder, timeLoss, locLoss, launchBase, BAT.launchSd and launchK)
+      // on rated test teams against the 12 Wednesdays of 2024: balls in play by exit speed x launch angle (64 cells), their worth at
+      // Statcast's expected BA and wOBA by exit speed x launch angle, squared-up efficiency (exit speed / (1.23 bat speed + 0.23
+      // pitch speed)) and the share under 80 mph by the pitch's side-to-side location, the share at 0.8 or more, exit speed's
+      // percentiles and by direction. Soft (under 85 mph) balls at 18-25 degrees 2.4% of balls in play [2.4], was 1.3; at 10-18
+      // degrees 2.4 [2.4], was 1.6; pitches 0.7+ ft inside under 80 mph about 47% [53], was 29; xBA / xwOBA on contact .316 / .367
+      // [.316 / .367], was .309 / .355 after the first fit
     },
     evSd: 2.5,         // exit-speed noise, mph (step 1.5, was 2.5: a swing's own bat speed carries most of the spread; Session 21: 2.5
                        // again, with chaseOff the exit speeds' 10th-90th percentiles 68 / 82 / 93 / 99 / 103.5 [69 / 80.5 / 91.5 / 99 / 104.5])
@@ -356,6 +363,9 @@
                        // degrees 44.6%, 10-25 22.3, 25-50 22.3, over 50 10.8; 10th / 50th / 90th percentiles -22 / 13 / 51): the
                        // engine's had 41.2 / 23.8 / 25.2 / 9.8, too few ground balls and too many fly balls, now 44.4 / 22.3 / 22.9 /
                        // 10.4
+    launchBase: 0.75,  // share of the hitter's launch noise (BAT.launchSd) on a dead-center hit, growing to all of it at the glancing
+                       // edge (Session 23, with SWING.bar: MLB 2024's best-squared balls leave at 10.4 degrees with a spread of 15.5,
+                       // the engine's had 14.7 / 18.8, so its hardest balls flew too high and too low)
     launchCurve: 1.5, // per square inch: the *where* error's launch angle grows as off x (1 + launchCurve x off^2), so
                        // a ball hit far under the center pops up and one far over it is chopped (step 1.5)
     heightLA: 13.5,      // degrees of launch angle per foot the pitch is above the middle of the zone (2.55 ft; step 1.5,

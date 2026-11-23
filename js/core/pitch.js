@@ -248,7 +248,10 @@
     // The *where* error's part bends steeper toward the bat's edge (step 1.5): pop-ups and chopped grounders.
     const lift = -w.b.bat.launchK * off * (1 + S.launchCurve * off * off); // degrees from hitting under (+) or over (-) the center
     const path = w.b.bat.swingPath || 0; // Swing path (Session 11): Lift raises his launch angle and pulls more
-    const la = S.attack + S.pathLA * path + T().TYPE[pitch.type].lift - (pitch.shape || 0) + lift + S.heightLA * (pitch.z - 2.55) + r.normal(0, w.b.bat.launchSd);
+    // A squared-up ball leaves near the swing's plane; a mishit's angle scatters more (Session 23: SWING.launchBase, the share of his
+    // launch noise on a dead-center hit, growing to all of it at the glancing edge, as the spray's sprayBase).
+    const lq = S.launchBase + (1 - S.launchBase) * Math.min(1, Math.abs(u));
+    const la = S.attack + S.pathLA * path + T().TYPE[pitch.type].lift - (pitch.shape || 0) + lift + S.heightLA * (pitch.z - 2.55) + r.normal(0, w.b.bat.launchSd * lq);
     // Spray: worked out for the pull side (minus), then turned for the batter's side.
     // A ball hit under the center drifts the other way (step 1.5); one topped over it is pulled (Session 21: sprayTop), as off a
     // tilted bat, up to sprayCap degrees of lift either way (Session 22: the spray fit, B3.tune.SWING).
