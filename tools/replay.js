@@ -12,10 +12,11 @@
 // engine  the engine's own balls in play from games between rated test teams through the same fielding, then the same balls
 //         with each one's direction swapped for a real ball's of the same type (ground ball, line drive, fly ball, pop-up):
 //         what the engine's exit speeds and launch angles would give with MLB's spray
-// Spray from Statcast's hit coordinates: atan((hc_x - 125.42) / (198.27 - hc_y)), minus toward left field, x 0.75 for ground
-// balls (under 10 degrees): for air balls the plain angle gives Savant's own pull / center / opposite shares (2024: line drives
-// 38.7 / 36.9 / 24.4, fly balls 27.0 / 37.0 / 35.9), for ground balls the plain angle gives 60.5 / 22.8 / 16.7 against Savant's
-// 48.9 / 38.6 / 12.4 and x 0.75 gives 52.8 / 33.9 / 13.3 (the fielding part moves by about .005 of hits between the two).
+// Spray from Statcast's hit coordinates: atan((hc_x - 125.42) / (198.27 - hc_y)), minus toward left field, x GBS for ground
+// balls (under 10 degrees). For air balls the plain angle gives Savant's own pull / center / opposite shares (2024: line drives
+// 38.7 / 36.9 / 24.4, fly balls 27.0 / 37.0 / 35.9). For ground balls Session 21 used 0.75 (Savant's pull shares, 48.9 / 38.6 /
+// 12.4); Session 23 found that squeeze wrong on who fielded MLB's grounders (Statcast's hit_location, which needs no coordinates):
+// replayed through the engine's fielders at 0.75 the pull-side corner infielder fields 15.9% of them [26.8], at 0.95 about 26%.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -23,6 +24,7 @@ const { loadCore } = require('./lib/load');
 const { averagePair, ratedPair } = require('./lib/testteams');
 
 const EVB = [0, 80, 90, 95, 100, 105, 200], LAB = [-90, -10, 0, 10, 20, 25, 30, 35, 40, 50, 90];
+const GBS = 0.95; // ground balls' recorded angles x this (Session 23; Session 21 used 0.75)
 const TB = { '1B': 1, '2B': 2, '3B': 3, HR: 4, single: 1, double: 2, triple: 3, home_run: 4 };
 
 function parseLine(s) {
@@ -50,7 +52,7 @@ function readReal(dir) {
       if (r[ix.launch_speed] === '' || r[ix.launch_angle] === '' || r[ix.hc_x] === '') continue;
       balls.push({
         ev: +r[ix.launch_speed], la: +r[ix.launch_angle], stand: r[ix.stand], res: r[ix.events],
-        sp: Math.atan2(+r[ix.hc_x] - 125.42, 198.27 - +r[ix.hc_y]) * 180 / Math.PI * (+r[ix.launch_angle] < 10 ? 0.75 : 1),
+        sp: Math.atan2(+r[ix.hc_x] - 125.42, 198.27 - +r[ix.hc_y]) * 180 / Math.PI * (+r[ix.launch_angle] < 10 ? GBS : 1),
         dist: r[ix.hit_distance_sc] === '' ? null : +r[ix.hit_distance_sc]
       });
     }

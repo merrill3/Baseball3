@@ -49,9 +49,15 @@
     pos: {
       P: [0, 56], C: [0, -3],
       '1B': polar(104, 37), '2B': polar(148, 14), SS: polar(148, -13), '3B': polar(104, -36),
-      LF: polar(290, -27), CF: polar(318, 0), RF: polar(290, 27)
+      LF: polar(282, -31), CF: polar(325, 0), RF: polar(282, 31)
     },
-    shade: { infield: 3, outfield: 4 } // degrees fielders shift toward a batter's pull side
+    // Degrees fielders shift toward a batter's pull side. Session 23 (Claude's default): the outfield refitted on Statcast 2024's
+    // air balls (10-50 degrees, not home runs, 12 Wednesdays), on hits and total bases by direction x distance, on who fielded them
+    // (hit_location) and on all balls' hits, total bases and doubles by exit speed x launch angle: the corners 31 degrees out at
+    // 282 ft and center field at 325 (were 27 at 290 and 318), shaded 2 degrees the other way (was 4 toward the pull side). Before,
+    // the opposite-field corner stood too near center (he fielded 35.6% of MLB's air balls against 28.3%) and left the line open.
+    // The infield keeps 3 (owner's choice, Session 23).
+    shade: { infield: 3, outfield: -2 }
   };
   // The fence's distance at a spray angle.
   function fenceAt(sp) {
