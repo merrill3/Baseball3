@@ -723,3 +723,16 @@ Branch `ccr-3701c2d7-53txjt` (from `ccr-27eee239-k4f1x0`); everything is committ
 Measuring: `node tools/calibrate.js --part=targets --seed=1` (about 10 s), `node tools/replay.js DIR` (about 20 s, with 2024's ball), `node tools/ratingstats.js --part=pop` (about 30 s), `node tools/runningdefense.js` (about 170 s), `node tools/plate.js 600` (about 60 s).
 
 **Prompt for the next session:** "Start Session 23 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from the branch `ccr-3701c2d7-53txjt` (not main: Sessions 6–22 are not merged). Read CLAUDE.md, then `state.md` (sections 37–38 first) and the "Stopped at:" line in docs/plan.md. Continue step 1.5: task 7, the one calibration, next (ask the two questions in section 38 first). Baseball1 is reference only; never change it."
+
+## 39. Session 23 (Nov 23, 2026; branch `ccr-85bd7c5f-5kx3lh`, started from `ccr-3701c2d7-53txjt`): step 1.5 task 7 (in progress)
+**Plan check:** Docs version 60; the prompt named no "Based on" version. Section 38 matched the code: 89 tests pass, `gametest.js 1000 7` checksum `a77c91bb`. Nothing stale. The working branch started at Session 5's end and was fast-forwarded to `ccr-3701c2d7-53txjt`. The owner's prompt added two issues from section 37's misses: the soft line drives and bloopers ("this needs a new kind of weak contact") and the direction errors in the fielding and flight.
+
+**The owner's choices (interview, four questions and a summary, confirmed):**
+1. The new weak contact: a ball met off the wrong part of the bat (jammed near the hands or off the end), set by the pitch's side-to-side location and the swing's timing plus noise (late on an inside pitch jams him, early on an outside pitch catches the end); it costs exit speed and keeps the launch angle. Timing makes it smaller and Deception larger, as for the other mishits. No new control in the game view.
+2. The infield: one bigger pull-side lean for every batter, sized on MLB's grounders; shading each hitter waits for M2.
+3. Speed and Arm stay on their real ladders (not refit; their worth reported), as Raw Power and Velocity (Session 14's choice).
+4. Range stays on Savant's outs-above-average ladder (not refit; its worth reported).
+
+**Claude's defaults (in the confirmed summary):** the order is physics first (the weak contact, the infield lean, a pulled ball's hook spin lifting less so low pulled liners dive, opposite-field fly balls checked and fixed the same way), then the ball's liveliness re-set to keep 4.6–4.7 runs (the owner's Session 22 choice), then task 7 (the step tables except Raw Power, Velocity, Contact, Command, Speed, Arm and Range; the full calibration; the Velocity recheck; the equal-value table; tests; docs; the chart page; one review agent).
+
+**Real data downloaded** (scratch, not kept): the same 12 Wednesdays of 2024 (Savant's pitch-level search).
