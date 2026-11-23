@@ -161,40 +161,43 @@
     // Step tables (step 1.4): for each rating, [points after the curve, steps from 60], straight lines
     // between rows. Set by node tools/calibrate.js --part=fit so that +10 points are worth about the same
     // runs at every level and for every rating (the equal-value check); a rating without a table steps
-    // one per 10 points.
+    // one per 10 points. Session 23 (step 1.5 task 7, the one calibration): Timing, Launch, Recognition, Discipline, Deception,
+    // the grades, Hands, Framing and Baserunning refitted after the new weak contact, the hook spin, the outfield and the aim
+    // (115,321 plate appearances a condition); not Raw Power and Velocity (real ladders), Contact and Command (the population),
+    // Speed, Arm and Range (real ladders; owner's choices, Sessions 14 and 23): their worth is reported.
     steps: {
       // Contact (step 1.5 task 4): step 1.4's table x 0.6 now that Contact scales the whole *where* spread (SWING.contactAll),
       // so the test population's whiff and zone-contact spreads match MLB's (the owner's ladder rule, Session 10).
       contact: [[20, -2.426], [30, -1.9], [40, -1.33], [50, -0.702], [60, 0], [70, 0.802], [80, 1.742], [90, 2.891], [100, 4.388], [110, 6.312]],
-      timing: [[20, -2.535], [30, -1.972], [40, -1.409], [50, -0.787], [60, 0], [70, 0.687], [80, 1.786], [90, 3.113], [100, 5.236], [110, 8.632]],
-      launch: [[20, -3.046], [30, -2.229], [40, -1.462], [50, -0.726], [60, 0], [70, 0.731], [80, 1.486], [90, 2.288], [100, 3.18], [110, 4.266]],
+      timing: [[20, -1.883], [30, -1.405], [40, -0.933], [50, -0.465], [60, 0], [70, 0.464], [80, 0.928], [90, 1.393], [100, 1.862], [110, 2.337]],
+      launch: [[20, -2.701], [30, -2.047], [40, -1.382], [50, -0.702], [60, 0], [70, 0.732], [80, 1.504], [90, 2.334], [100, 3.252], [110, 4.311]],
       // Raw Power (step 1.5): mph of average bat speed from 71.7, on the real ladder (Savant 2024-2026: the worst
       // player-season 62.4, 5th percentile 67.3, median 71.7, 95th 76.1, best 81.2), rows at the points after the curve.
       rawPower: [[20, -9.332], [30, -7.2], [40, -4.438], [50, -1.751], [60, 0], [70, 1.724], [80, 4.322], [85, 5.251], [91.25, 6.181], [100, 8.013], [108.8, 9.478]],
-      recognition: [[20, -2.382], [30, -1.85], [40, -1.369], [50, -0.746], [60, 0], [70, 0.946], [80, 2.287], [90, 4.433], [100, 7.866], [110, 13.358]],
-      discipline: [[20, -4.112], [30, -3.042], [40, -2.014], [50, -1.014], [60, 0], [70, 0.945], [80, 2.147], [90, 3.667], [100, 5.975], [110, 8.284]],
+      recognition: [[20, -1.675], [30, -1.38], [40, -1.017], [50, -0.593], [60, 0], [70, 0.91], [80, 2.366], [90, 4.696], [100, 8.423], [110, 14.387]],
+      discipline: [[20, -3.024], [30, -2.282], [40, -1.558], [50, -0.819], [60, 0], [70, 0.844], [80, 1.826], [90, 2.994], [100, 4.582], [110, 7.123]],
       // Velocity (Session 13): mph of four-seam speed from PIT.velo, on the real ladder (Savant 2024-2026, pitchers with 250+
       // batters faced, against their median 94.4: the worst season 82.3, 1st percentile 87.8, 5th 90.7, 25th 92.9, 75th 95.9,
       // 95th 97.9, 99th 99.3, best 101.4), rows at the points after the curve; the step 1.4 fit had 20 at 69 mph.
       velocity: [[20, -12.1], [30, -6.59], [40, -3.7], [50, -1.5], [60, 0], [70, 1.5], [80, 3.5], [85, 4.2], [91.25, 4.9], [100, 6.0], [108.8, 7.0]],
       // Command (Session 14): step 1.4's rows below 60 x 0.75, so poor Command walks as MLB's worst do (with the 0.92 step).
       command: [[20, -2.488], [30, -1.881], [40, -1.274], [50, -0.653], [60, 0], [70, 0.92], [80, 1.899], [90, 2.952], [100, 4.098], [110, 5.368]],
-      deception: [[20, -7.939], [30, -4.465], [40, -2.294], [50, -0.937], [60, 0], [70, 0.739], [80, 1.358], [90, 1.896], [100, 2.376], [110, 2.812]],
-      grade: [[20, -7.141], [30, -4.387], [40, -2.666], [50, -1.304], [60, 0], [70, 1.461], [80, 2.408], [90, 3.128], [100, 3.831], [110, 4.534]],
+      deception: [[20, -3.175], [30, -2.068], [40, -1.24], [50, -0.569], [60, 0], [70, 0.498], [80, 0.943], [90, 1.347], [100, 1.718], [110, 2.062]],
+      grade: [[20, -2.784], [30, -1.926], [40, -1.203], [50, -0.569], [60, 0], [70, 0.52], [80, 1], [90, 1.448], [100, 1.869], [110, 2.267]],
       range: [[20, -2.101], [30, -1.611], [40, -1.099], [50, -0.563], [60, 0], [70, 0.593], [80, 1.22], [90, 1.884], [100, 2.591], [110, 3.347]],
-      hands: [[20, -2.405], [30, -1.882], [40, -1.313], [50, -0.69], [60, 0], [70, 0.774], [80, 1.653], [90, 2.665], [100, 3.836], [110, 5.129]],
+      hands: [[20, -2.765], [30, -2.158], [40, -1.507], [50, -0.793], [60, 0], [70, 0.896], [80, 1.931], [90, 3.165], [100, 4.703], [110, 6.513]],
       // Arm (Session 20, the ladder rule): mph from his position's arm (POS), on the real ladder (Savant 2024-2026 arm strength,
       // the eight positions' ladders around their medians, averaged: the worst -9.9, 1st percentile -7.7, 5th -5.6, 25th -2.4,
       // 75th +2.5, 95th +6.3, 99th +8.8, the best +10.4), rows at the points after the curve. Was step 1.4's fit at 2.5 mph a
       // step (-4.0 mph at 20, -2.4 at 40, +4.8 at 80, +10.5 at 99).
       arm: [[20, -9.9], [30, -7.7], [40, -5.6], [50, -2.4], [60, 0], [70, 2.5], [80, 6.3], [85, 7.55], [91.25, 8.8], [100, 9.7], [108.8, 10.4]],
-      framing: [[20, -1.179], [30, -0.902], [40, -0.613], [50, -0.312], [60, 0], [70, 0.322], [80, 0.653], [90, 0.991], [100, 1.334], [110, 1.678]],
+      framing: [[20, -1.189], [30, -0.912], [40, -0.62], [50, -0.315], [60, 0], [70, 0.322], [80, 0.647], [90, 0.969], [100, 1.285], [110, 1.59]],
       // Speed (Session 20, the owner's Session 7-8 choices: a realistic range, each ft/s doing what it does in real baseball):
       // ft/s of sprint speed from RUN.speed, on the real ladder (Savant 2024-2026, 1,712 player-seasons with 10+ competitive
       // runs: the worst 22.1, 1st percentile 23.9, 5th 25.0, 25th 26.5, median 27.5, 75th 28.3, 95th 29.4, 99th 30.0, best
       // 30.5), rows at the points after the curve. Was step 1.4's fit at 0.8 ft/s a step (25.75 ft/s at 20, 28.6 at 99).
       speed: [[20, -5.4], [30, -3.6], [40, -2.5], [50, -1.0], [60, 0], [70, 0.8], [80, 1.9], [85, 2.2], [91.25, 2.5], [100, 2.78], [108.8, 3.0]],
-      baserunning: [[20, -5.57], [30, -3.415], [40, -2.068], [50, -0.985], [60, 0], [70, 0.952], [80, 1.917], [90, 2.949], [100, 4.152], [110, 6.043]]
+      baserunning: [[20, -5.002], [30, -3.609], [40, -2.34], [50, -1.147], [60, 0], [70, 1.122], [80, 2.235], [90, 3.355], [100, 4.499], [110, 5.685]]
     },
     shape: 8,          // degrees off the launch angle at shape +1 (ground-ball tilt); -1 is a fly-ball tilt (Session 19: was 4,
                        // with which a pitcher's every pitch at +1 or -1 gave a ground-ball % of only about 46.5 or 33.5 [MLB

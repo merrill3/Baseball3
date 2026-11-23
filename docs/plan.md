@@ -1,9 +1,9 @@
-**Docs version: 61** (2026-11-23): Session 23: step 1.5 task 7 started (plan.md Stopped at: the owner's four choices from the interview). Before that, 60: Session 22, task 6 done.
+**Docs version: 62** (2026-11-23): Session 23: DESIGN.md section 10 (the new weak contact, grounders' directions, the infield and outfield, hook spin), ARCHITECTURE.md (`tools/replay.js` scales grounders by 0.95), plan.md Stopped at. Before that, 61: the owner's choices from the interview.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 23 on branch `ccr-85bd7c5f-5kx3lh` (from Session 22's `ccr-3701c2d7-53txjt`; not merged; `main` is at Session 5's end). **Read `state.md` section 39 first.** Step 1.5 task 7 in progress. The owner's choices (interview done): a new weak contact (jammed or off the end, from location and timing, Timing and Deception), one bigger infield pull lean, Speed, Arm and Range kept on their real ladders. Claude's order: the weak contact, the infield lean and the hook spin first, then the ball's liveliness for 4.6–4.7 runs, then the refit and the full calibration.
+**Stopped at:** Session 23 on branch `ccr-85bd7c5f-5kx3lh` (from Session 22's `ccr-3701c2d7-53txjt`; not merged; `main` is at Session 5's end). **Read `state.md` section 39 first.** Step 1.5 task 7 in progress: the physics is done (the new weak contact, grounders' directions, the outfield, hook spin, the aim; owner's choices: the weak contact's design, the infield keeps 3 degrees, Speed, Arm and Range not refit), the step tables are refitted; next the full calibration's results, the Velocity recheck, the docs, the chart page and the review agent.
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 
