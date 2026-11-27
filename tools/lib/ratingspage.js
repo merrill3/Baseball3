@@ -124,9 +124,9 @@ function population(pop) {
     const p = pop[kind];
     if (!p) return '';
     const rows = p.rows.map((r) => popRow(r, digits(Math.min.apply(null, r.target), Math.max.apply(null, r.target)))).join('');
-    return `<h3>${title} <span class="count">${p.n} test player-seasons</span></h3><div class="tablebox"><table class="pop"><thead><tr><th scope="col">Stat</th><th scope="col"><span class="key real">Real</span> <span class="key eng">Engine</span></th><th scope="col">Engine 5th–95th (median)</th><th scope="col">Real 5th–95th (median)</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    return `<h3>${title} <span class="count">${p.n} player-seasons</span></h3><div class="tablebox"><table class="pop"><thead><tr><th scope="col">Stat</th><th scope="col"><span class="key real">Real</span> <span class="key eng">Engine</span></th><th scope="col">Engine 5th–95th (median)</th><th scope="col">Real 5th–95th (median)</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   };
-  return `<section><h2>Population check</h2><p class="lede">Layer 3: test players with mixed ratings (about 60 ± 12 per standard deviation, mildly correlated), each a 500-PA or 500-batter season against average teams. Thin bar: 5th to 95th percentile; thick bar: 25th to 75th; tick: median. Real: 2024–2026 regulars (250+ PA or batters faced).</p>
+  return `<section><h2>Population check</h2><p class="lede">Layer 3: players from the league's generator (<code>B3.players</code>: ratings about 60 ± 12 per standard deviation, linked as the owner chose), each in a lineup slot or a staff against average teams, seasons of 250+ plate appearances or batters faced. Thin bar: 5th to 95th percentile; thick bar: 25th to 75th; tick: median. Real: 2024–2026 regulars (250+ PA or batters faced).</p>
 ${block('hitter', 'Hitters')}${block('pitcher', 'Pitchers')}</section>`;
 }
 
@@ -236,7 +236,7 @@ td.left, th.left { text-align: left; }
 </style>
 <div class="wrap">
 <header class="head">
-  <span class="eyebrow">Diamond Dash · M1 step 1.5 · ${esc(info.date)}</span>
+  <span class="eyebrow">Diamond Dash · ratings against MLB 2024–2026 · ${esc(info.date)}</span>
   <h1>Rating Ladder Check</h1>
   <p class="lede">Each rating moved from 20 to 99 for a whole lineup or staff, everyone else at 60, against the real ladder from 2024–2026 player-seasons: 20 is the worst, 40 the 5th percentile, 60 the median, 80 the 95th, 99 the best (owner's choice, Session 8). Engine: ${esc(info.engine)}.</p>
   <div class="summary"><span class="legend"><span class="key eng">Engine</span><span class="key real">Real ladder</span></span>

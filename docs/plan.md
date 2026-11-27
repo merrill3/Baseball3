@@ -1,4 +1,4 @@
-**Docs version: 75** (2026-11-27): Session 30 (in progress): M2 step 2.1a task 4, balancing the pitching ratings: DESIGN.md section 10 ("Balancing the pitching ratings, built") and ARCHITECTURE.md (the task 4 block). Before that, 74: Session 29's add-on, task 4 planned; 73: Session 29: the overall and the Arsenal numbers.
+**Docs version: 76** (2026-11-27): Session 30 (in progress): M2 step 2.1a task 4, balancing the pitching ratings: DESIGN.md section 10 ("Balancing the pitching ratings, built"), section 7 ("After the pitching balance", with the new Rating Ladder Check page) and ARCHITECTURE.md (the task 4 block). Before that, 75: the same session's first docs commit; 74: Session 29's add-on, task 4 planned; 73: Session 29: the overall and the Arsenal numbers.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
