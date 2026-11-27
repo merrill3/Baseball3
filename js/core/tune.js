@@ -418,7 +418,7 @@
     twoStrike: [0.75, 2], // with two strikes a hitter shortens up (step 1.4; Session 12, was 0.64: MLB 2024 whiffs 25.9% of
                        // swings before two strikes and 24.5% with two): [share of his *where* spread, mph of bat
                        // speed he gives up (step 1.5; it was 4% of exit speed)]
-    shapeSd: [0.125, 0.015], // the shape's counterweight (step 1.4, owner's choice: value-neutral): share of the
+    shapeSd: [0.12, 0], // the shape's counterweight (step 1.4, owner's choice: value-neutral): share of the
                        // *where* spread taken off per unit of ground-ball shape (easier to square up), and
                        // added per unit of fly-ball shape (harder). Session 19, with the 8-degree shape: refitted (was
                        // [0.112, 0.09], which on Session 18's code cost +0.29 runs a team-game at +1 and saved 0.27 at -1); the
@@ -426,7 +426,8 @@
                        // balanced within about +-0.1 runs. Session 24 (step 1.5 task 7): refitted again (was [0.137, 0.065]:
                        // after Session 23's flight, a fly-ball shape at -1 saved 0.24 runs; a larger fly-ball share saves
                        // more, as a harder-to-square ball is weak contact): over seeds 1-3, +0.5 / -0.5 / +1 / -1 cost
-                       // +0.05 / +0.09 / -0.03 / -0.02 runs a team-game
+                       // +0.05 / +0.09 / -0.03 / -0.02 runs a team-game. Session 25 (with Velocity's fix, SWING.timeFoul): was
+                       // [0.125, 0.015], -1 saved 0.13 over seeds 1-3; now +0.06 / +0.09 / -0.00 / -0.07
     // Swing path (owner's choice, Session 11: a hitter's own shape; the sizes are Claude's defaults): per unit of
     // swingPath (+1 Lift, -1 Ground-ball), degrees added to his launch angle (real: the 15th and 85th percentiles of
     // hitters' average launch angle sit about 4.5 degrees from the median), degrees of spray toward his pull side
