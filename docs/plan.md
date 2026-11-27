@@ -1,9 +1,9 @@
-**Docs version: 69** (2026-11-27): Session 26: small decisions are Claude's own, without an interview (owner's choice; CLAUDE.md "Working rules", plan.md "How to use it", DESIGN.md "Labels"). Before that, 68: Session 25: Velocity's exit-speed fix and its calibration; the step 2.1 interview; merged with 67.
+**Docs version: 70** (2026-11-27): Session 26: M2 step 2.1a task 1, the rating-pair synergies, built and calibrated (DESIGN.md sections 7 and 10; ARCHITECTURE.md and README.md, `calibrate.js --part=synergy`); task 2's starting plan (Claude's defaults). Before that, 69: Session 26: small decisions are Claude's own, without an interview (owner's choice); 68: Session 25: Velocity's exit-speed fix; the step 2.1 interview.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 26 on branch `ccr-2a62105c-dk4iqf` (from `main`), in progress: the small-decisions rule is in the docs (owner's choice); next in this session, M2 step 2.1a task 1, the rating-pair synergies. Session 25's hand-off is `state.md` section 43.
+**Stopped at:** Session 26 on branch `ccr-2a62105c-dk4iqf` (from `main`), committed and pushed, **not merged** (merging needs the owner's OK): the small-decisions rule is in the docs (owner's choice), and M2 step 2.1a task 1, the rating-pair synergies, is done and calibrated. Next: task 2, player generation (its starting plan is under M2 below). See `state.md` section 45 for the prompt for Session 27.
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 
@@ -209,7 +209,7 @@ Tasks (commit and push after each):
 **Before M2: Velocity's exit-speed fix** (Session 25, Nov 27, 2026; owner's choice in Session 24 to fix it before M2; the mechanism and sizes are Claude's defaults, DESIGN.md section 10, "Velocity's exit speed"). Done: per mph of fastball, exit speed against −0.39 → −0.04 [+0.045] and hard-hit −0.81 → +0.02 [+0.15], whiff +0.94 [+0.93], K% +1.51 [+1.69] (seed 1; over three seeds −0.05 / −0.09 / +0.93 / +1.38); the full calibration rerun: runs 4.68, K 22.5% (DESIGN.md section 7); the shape's counterweight refitted; tests 89 pass, `gametest.js 1000 7` checksum `a424438e`.
 
 ### M2: League and season
-**Status:** in progress: the step 2.1 interview done (Session 25); step 2.1a next.
+**Status:** in progress: the step 2.1 interview done (Session 25); step 2.1a task 1 (the synergies) done in Session 26; task 2 next.
 **Goal:** A full 30-team league of generated players with an overall, rosters and a 162-game schedule (2.1), played as a season with standings, stats and leaders (2.2), rest, injuries, CPU roster moves and WAR (2.3), and saved (2.4).
 **Why now:** It is next in the owner's order. Everything after it (the UI, the game view, the offseason) runs on the league.
 
@@ -227,9 +227,17 @@ Tasks (commit and push after each):
 - Already decided before M2 (DESIGN.md sections 5, 6 and 10): the teams, names mix, schedule mix, rosters (26 active plus about 14 reserves), positions and moves, starting balance, the overall's scale, and how ratings are drawn (independent, Raw Power against Contact −0.3; pitchers' stuff against Command −0.2, chase-getters leaning Nibbler).
 
 **Tasks, step 2.1a** (Claude's defaults for the order; each task's details are planned at the session's plan check)
-1. [ ] The rating-pair synergies: built, capped, each one's worth measured (`tools/calibrate.js`), and the equal-value check rerun. Done when: each pair's payoff and the league's targets are reported.
+1. [x] The rating-pair synergies: built, capped, each one's worth measured (`tools/calibrate.js`), and the equal-value check rerun. Done when: each pair's payoff and the league's targets are reported. **Done in Session 26** (details Claude's defaults; DESIGN.md section 10, "Synergy between rating pairs", and section 7): `B3.tune.RATE.synergy`, k × (a − 60) × (b − 60) / 100 points to the pair's skill rating when both are above 60, inside the cap; a pair of 80s plays about 25% better than apart (physics included); the equal-value check unchanged; runs 4.68 → 4.63, AVG .249 and OBP .309 just under their bands (to be checked again with the generated league in task 2).
 2. [ ] Player generation (`js/core/`): ratings, tendencies, handedness, positions, arsenals with grades and shapes, ages and potential, names; specialist stars with real holes. Done when: a generated league's populations match the test population's checks (`ratingstats.js --part=pop`) and its stars are about as common as MLB's.
 3. [ ] The overall (by worth, position-weighted, the 20–99 scale: about 50 an average regular) and the Arsenal numbers. Done when: tests pass and a generated league's overall spread is reported.
+
+**Task 2's starting plan** (Claude's defaults from Session 26's plan check, not built; Session 27 may change any of them and reports what it did)
+- Files: `js/core/names.js` (`B3.names`: invented first and last name lists by origin, weighted mostly American, many Latin American, some Asian and others, owner's choice, Session 7) and `js/core/players.js` (`B3.players`: one hitter or pitcher from a seeded `B3.rng`, and a pool), loaded after `ratings.js`; `tools/tests/players.test.js`. No real names: a full name is built from two lists and a test checks a short list of famous real players' names never comes out (a complete real-name list isn't available offline: a known gap to report).
+- Ratings: 60 + 12.2 × z, as the test population that the ladders were fitted on (`tools/ratingstats.js` POP_SD); Raw Power against Contact −0.3; Command against the stuff (Velocity and grades) −0.2; chase-getters leaning Nibbler (POP_AIM 0.4); shapes as POP_SHAPE. One generator then feeds both the league and `ratingstats.js --part=pop`, so the checks measure the real thing.
+- Defense: a main position drawn to fill the league's needs, with Range, Hands and Arm leaning to what the position asks (shortstops and center fielders rangier, catchers with Framing); about 1 in 20 can play infield and outfield. Pitchers: roles (5 starters, 8 relievers and reserves), arsenal sizes from DESIGN.md section 4, relievers a little harder-throwing (as in the rated test teams).
+- Handedness about MLB's: batters about 58% right, 32% left, 10% switch; pitchers about 72% right.
+- Ages 21–40 about MLB's mix (median about 28); a hidden potential (above the current level for young players, at it from about 28, below it past about 32), the shown potential drawn from it with an error.
+- Checks: the generated pool through `ratingstats.js --part=pop`, and stars (70+ in a key rating, two or more 75+) counted against MLB's rough share, reported.
 
 **Tasks, step 2.1b**: teams, ballparks, rosters (26 + about 14), the starting balance, the schedule; planned at its plan check.
 

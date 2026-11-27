@@ -1,4 +1,4 @@
-# State (Nov 23, 2026): Session 22; read sections 37–38 first
+# State (Nov 27, 2026): Session 26; read sections 44–45 first
 
 Sections 1–5 are Session 6's hand-off (history). Session 7's answers are in section 6, its base-running work in section 7, its hand-off in section 8. Session 8's interview, data and tools are in section 9, its hand-off in section 10. Session 9's batted-ball work is in section 11, its hand-off in section 12. Session 10's decisions and work are in section 13, and the next steps in section 14. Session 11 (merge or split, then task 4) is in section 15, its hand-off in section 16. Session 12 is in sections 17–18, Session 13 in 19–20, Session 14 in 21–22, Session 15 in 23–24, Session 16 in 25–26, Session 17 in 27–28, Session 18 in 29–30, Session 19 in 31–32, Session 20 in 33–34, Session 21 in 35–36, Session 22 in 37–38.
 
@@ -798,3 +798,26 @@ Branch `claude/baseball3-session-25-ua8j3h`, committed, pushed and merged to `ma
 **Next:** M2 step 2.1a (docs/plan.md, "M2: League and season"). Task 1 first: the rating-pair synergies (Contact with Raw Power, Recognition with Discipline, Velocity with the put-away pitch, Speed with Baserunning, to try; Claude's default list). Open with the plan check, then a short interview on how each pair should play (one multiple-choice question at a time), build, measure each pair's worth with `calibrate.js`, and rerun the equal-value check. If the synergies take the session, generation (task 2) moves to Session 27.
 
 **Prompt for the next session:** "Start Session 26 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from `main` (Session 25 is merged). Read CLAUDE.md, then `state.md` sections 42–43 and the "Stopped at:" line in docs/plan.md. Start M2 step 2.1a with the rating-pair synergies (my choice in Session 25): plan check, a short interview, then build. Baseball1 is reference only; never change it."
+
+## 44. Session 26 (Nov 27, 2026; branch `ccr-2a62105c-dk4iqf`, started from `main`): small decisions are Claude's own; the rating-pair synergies
+**Plan check:** docs version 68; the prompt named no "Based on" version. Section 43 matched the code; the branch started at `main` (196dfad). The prompt overrode the docs: no interview; Claude makes small decisions itself and reports them; the docs changed to allow that.
+
+**The small-decisions rule** (owner's choice, Session 26): CLAUDE.md "Working rules" (what counts as small and as big; the end-of-session report lists Claude's own decisions), plan.md "How to use it", DESIGN.md "Labels". Docs version 69.
+
+**The rating-pair synergies** (M2 step 2.1a task 1; the details Claude's defaults; DESIGN.md section 10, "Synergy between rating pairs", and section 7):
+- Built: `B3.tune.RATE.synergy` (four rows) and `B3.ratings` (`effective` applies them inside each group's cap; `synergy(player)` lists the points). When both ratings are above 60 as rated, k × (a − 60) × (b − 60) / 100 points go to the receiving rating: Contact with Raw Power → Contact (k 0.4); Recognition with Discipline → both (1.8, shared); Velocity with the put-away pitch → the put-away grade (2.0); Speed with Baserunning → Baserunning (0.6). Bat speed, fastball mph and sprint speed never receive.
+- Measured (`calibrate.js --part=synergy`, new, in the default parts): the physics alone already gave 16% (Contact with Raw Power), 5%, 2% and 19% (Speed with Baserunning) more at 80 and 80 than apart; with the synergies all four are about 25% (+0.50, +0.32, +0.40, +0.27 runs per team-game for a lineup or staff).
+- Full `calibrate.js` (607 s): runs 4.63 (was 4.68), AVG .249, OBP .309 (each .001 under its band), SLG .432, home runs 1.56, K 22.6%, BB 8.0%; equal value, defense, tendencies and shape identical to Session 25's (one rating moved at a time, so no pair fires).
+- Population (`ratingstats.js --part=pop`, with and without the synergies): hitters barely move; starters' K% 15.6–30.8 [15.3–30.0], ERA 2.77–6.20 [2.66–6.08], median 4.40 [4.08] (was 2.94–6.40, 4.50).
+- Tests: 90 pass (one new; two old cap tests moved off synergy pairs); `gametest.js 1000 7` checksum `98c72376` (was `a424438e`: the rated test teams now get synergies); boot check passes.
+- Task 2's starting plan (player generation; Claude's defaults) is in plan.md under M2.
+
+## 45. Hand-off for Session 27
+Branch `ccr-2a62105c-dk4iqf`, committed and pushed, **not merged to `main`** (the owner's OK is needed). Docs version 70. Tests: 90 pass; `gametest.js 1000 7` checksum `98c72376`; boot check passes.
+
+**Waiting on the owner:** keep or change the decisions in section 44 (the list is in the session's report); the OK to merge this branch to `main`.
+
+**Next:** M2 step 2.1a task 2, player generation (plan.md "Task 2's starting plan"), then task 3, the overall and the Arsenal numbers. Recheck AVG and OBP (just under their bands) with the generated league.
+
+**Prompt for the next session:** "Start Session 27 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from `main` (merge Session 26's branch `ccr-2a62105c-dk4iqf` first if I haven't). Read CLAUDE.md, then `state.md` sections 44–45 and the "Stopped at:" line in docs/plan.md. Build M2 step 2.1a task 2, player generation, from the starting plan in docs/plan.md; make the small decisions yourself and list them in the report. Baseball1 is reference only; never change it."
+
