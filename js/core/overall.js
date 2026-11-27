@@ -93,15 +93,21 @@
   const ARSENAL = {
     twoStrike: 1.5,
     kinds: [0.637, 0.071, 0.292],
-    scale: 1,
-    types: { FF: 0, SI: 0, FC: 0, SL: 0, CU: 0, CH: 0, FS: 0 },
+    // Session 29's fit (60 generated arsenals, 121 replayed conditions): whole arsenals r 0.991, rms 0.105 runs (grades alone
+    // r 0.79: the types alone spread 0.34 runs, the grades 0.72).
+    scale: 0.937,
+    types: { FF: -1.136, SI: -0.141, FC: 0.028, SL: 0.967, CU: 1.445, CH: 0.71, FS: 1.155 },
     groups: { fastball: ['FF', 'SI', 'FC'], breaking: ['SL', 'CU'], offspeed: ['CH', 'FS'] }
   };
 
   // The league's average players (tools/overall.js --part=base: the mean of a large generated league, B3.players): a
   // regular's runs a team-game at each position, and a starter's runs for a whole staff of him, both against an all-60
-  // player. Each is the overall's 50, so an average regular at his position and an average starter are 50.
-  const BASE = null;
+  // player. Each is the overall's 50, so an average regular at his position and an average starter are 50. Session 29: 4,000
+  // organizations (standard errors about 0.002 runs a hitter, 0.006 a staff: a fifth of an overall point or less). A
+  // position's mean carries its leans (a center fielder's Speed 74 is worth +0.04 runs a game, a catcher's Speed 50 and Raw
+  // Power 57 cost about as much): that is the positional adjustment. The starter's +0.57 is the average generated arsenal's
+  // worth (a pitcher throws his better pitches more, and the grades' table is steeper above 60 than below).
+  const BASE = { hit: { C: -0.0508, '1B': 0.0012, '2B': -0.0158, '3B': -0.0045, SS: -0.0069, LF: 0.0038, CF: 0.0405, RF: 0.0153, DH: 0.0026 }, pit: 0.5666 };
 
   const HIT = ['contact', 'timing', 'launch', 'rawPower', 'recognition', 'discipline'];
   const PIT = ['velocity', 'command', 'deception'];

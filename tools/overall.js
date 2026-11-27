@@ -15,7 +15,7 @@
 //   arsenal  the Arsenal formula against replays: --n generated pitchers' arsenals, each swapped in for every pitcher of
 //            the staffs, with its own grades and with every grade at 60 (its grades' worth is the difference); prints the
 //            share of pitches by count kind and how well the formula's runs match, for a few put-away weights.
-//   base     the league's average players: a large generated league's (1,000 organizations unless --orgs) mean runs for
+//   base     the league's average players: a large generated league's (4,000 organizations unless --orgs) mean runs for
 //            regulars at each position and for starters; prints the BASE table (the overall's 50). Rerun it after the
 //            worth table, the Arsenal's fit or the generator changes.
 //   check    the overall against replays: --n generated regulars (one away lineup slot each: his running and hitting minus
@@ -342,7 +342,7 @@ function check(o, next) {
 function base(o, next) {
   const B3 = loadCore();
   if (o.tweak) require(o.tweak)(B3);
-  const O = B3.overall, orgs = o.orgs === 30 ? 1000 : o.orgs;
+  const O = B3.overall, orgs = o.orgs === 30 ? 4000 : o.orgs;
   const rng = B3.rng.create('overall base:' + o.seed), ctx = B3.players.context();
   const by = {}, sp = [];
   for (let i = 0; i < orgs; i++) {
@@ -356,7 +356,8 @@ function base(o, next) {
   console.log('Base: ' + orgs + ' generated organizations (seed ' + o.seed + '): mean runs against an all-60 player (standard error)');
   console.log('  regulars (a team-game in his slot): ' + B3.data.LINEUP_POS.map((pos) => pos + ' ' + fmt(hit[pos], 4) + ' (' + se(by[pos]).toFixed(4) + ')').join(', '));
   console.log('  starters (a whole staff of him): ' + fmt(mean(sp), 4) + ' (' + se(sp).toFixed(4) + ')');
-  console.log('  const BASE = { hit: ' + JSON.stringify(hit).replace(/"([A-Z][A-Z0-9]?)":/g, (m, k) => (/^[0-9]/.test(k) ? "'" + k + "': " : k + ': ')).replace(/,/g, ', ') + ', pit: ' + r4(mean(sp)) + ' };');
+  const key = (k) => (/^[0-9]/.test(k) ? "'" + k + "'" : k);
+  console.log('  const BASE = { hit: { ' + Object.keys(hit).map((k) => key(k) + ': ' + hit[k]).join(', ') + ' }, pit: ' + r4(mean(sp)) + ' };');
   next();
 }
 
