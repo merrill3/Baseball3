@@ -2,7 +2,7 @@
 
 A browser baseball game for friends to play on a phone or computer: bat and pitch against a CPU team, or run one of 30 teams through 162-game seasons, a postseason and an offseason. "Diamond Dash" is the working title. The repo is Baseball3, a fresh build that takes its plans (not its code) from the earlier Baseball1.
 
-**Status:** the headless game engine (M1) is built and calibrated: the rules and the game loop work in Node, with real pitches, swings, fielding and running, every rating (hitting, pitching, defense and running), and CPU choices built on them. There is nothing to play on screen yet, and opening the page shows a title screen only. The roadmap is in `docs/plan.md`.
+**Status:** the headless game engine (M1) is built and calibrated: the rules and the game loop work in Node, with real pitches, swings, fielding and running, every rating (hitting, pitching, defense and running), and CPU choices built on them. M2 (the league) has begun: generated players with names, ages and potential, and an overall rating and Arsenal numbers for each. There is nothing to play on screen yet, and opening the page shows a title screen only. The roadmap is in `docs/plan.md`.
 
 ## Open it
 Open `index.html` in a browser. There's no build step and nothing to install, and it works straight from disk (`file://`). Later it will be published on GitHub Pages.
@@ -19,6 +19,7 @@ Saves (from M2) stay in your browser under Baseball3's own names, separate from 
 - `node tools/plate.js 400`: plate discipline by pitch group (fastballs, off-speed), zone and count against MLB 2024: swing, whiff and foul %, the pitch mix, zone shares; add conditions such as `recognition=40 recognition=80`. A few seconds; it checks nothing.
 - `node tools/ratingstats.js`: each rating from 20 to 99 against real 2024–2026 players (its own stat, each unit's effect, and a population of generated players against real regulars, with how common stars are); `--html=page.html` writes a chart page. About 2 minutes (`--part=pop` alone about 40 s); it checks nothing.
 - `node tools/genleague.js`: a generated league of 1,200 players: ratings by tier, hands, ages, potential, countries and names, arsenals, tendencies, and sample players. Instant; it checks nothing.
+- `node tools/overall.js`: a generated league's overall ratings (by tier, position and role), the Arsenal numbers and the best ten players. Instant; `--part=worth` re-measures what each rating is worth (about 14 minutes) and `--part=check` checks the overall against the game's own replays (about 6 minutes). It checks nothing.
 - `node tools/runningdefense.js`: running and defense against real players (Speed's and Baserunning's running by level, Range's outs above average, Framing's strike rate); about 150 s. `node tools/running.js` prints extra bases taken against 2024's rates.
 - `node tools/replay.js DIR`: real 2024 batted balls (Statcast days downloaded into `DIR`, the curl line is at the top of the file) through the engine's flight and fielding (with 2024's ball; the league's is livelier), and the engine's own balls with real directions; about 20 s. It checks nothing.
 - `node tools/calibrate.js`: the calibration report: the target table (DESIGN.md section 7), the equal-value check for every rating, defense and running at their key spots, the tendencies, the pitch shape and the rating pairs' payoffs. About 10 minutes; `--part=targets` (about a minute) or `--part=speed` run one part.
@@ -37,6 +38,7 @@ js/core/              game logic, no DOM (Node-testable)
   names.js            invented player names (never a real MLB player's)
   realnames.js        real MLB names the lists could build, as hashes (generated)
   players.js          player generation: ratings, positions, hands, arsenals, tendencies, ages, potential
+  overall.js          the overall rating and the Arsenal numbers (each rating by its measured worth)
   pitch.js            pitches, the two-error swing and contact
   ball.js             balls in play: flight, fielders, throws, runners, steals, tag-ups, the play script
   manager.js          the CPU's choices: swing or take, the pitch, pitching changes
@@ -54,6 +56,7 @@ tools/batted.js       prints the league's batted balls against Statcast
 tools/plate.js        prints plate discipline by pitch group, zone and count against MLB 2024
 tools/calibrate.js    the calibration report; fits the rating step tables
 tools/genleague.js    prints a generated league's make-up
+tools/overall.js      measures what each rating is worth, checks the overall, prints a league's overalls
 tools/realnames.js    builds js/core/realnames.js (real MLB names, as hashes) from the Chadwick Bureau register
 tools/lib/value.js    paired plate-appearance replays (the precise value measure)
 tools/lib/load.js     loads js/core/ into Node in index.html order

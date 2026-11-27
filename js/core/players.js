@@ -12,7 +12,8 @@
 //   B3.players.pitcher(rng, ctx, opts)    one pitcher. opts: role ('SP', 'CL', 'SU', 'MR', 'LR'; default 'SP'), tier,
 //                                         level (points added to Velocity, Command, Deception and his grades), age
 //   B3.players.squad(rng, ctx, opts)      one organization's 40 players: { regulars (9, one per LINEUP_POS), bench (4),
-//                                         starters (5), relievers (8: CL, SU, SU, MR x 4, LR), reserves (14: 7
+//                                         starters (5), relievers (8: CL, SU, SU, MR x 4, LR; the short relievers' roles
+//                                         by their overall, B3.overall, from Session 29), reserves (14: 7
 //                                         hitters, 7 pitchers) }. opts.level shifts every player (step 2.1b's balance)
 //   B3.players.GEN                        the numbers below (tools may change them for experiments)
 // rng is a B3.rng generator; the same seed gives the same players.
@@ -250,6 +251,13 @@
     for (const pos of BENCH) out.bench.push(hitter(rng, ctx, { pos: pos, tier: 'bench', level: level }));
     for (let i = 0; i < 5; i++) out.starters.push(pitcher(rng, ctx, { role: 'SP', level: level }));
     for (const role of PEN) out.relievers.push(pitcher(rng, ctx, { role: role, level: level }));
+    // Session 29 (the overall, task 3): the short relievers' roles go by quality, the best overall the closer, the next two
+    // the setup men (the roles don't change how a reliever is drawn, so the draws are as before).
+    if (B3.overall && B3.overall.WORTH) {
+      const pen = out.relievers.slice(0, PEN.length - 1).map((p, i) => ({ p: p, o: B3.overall.of(p), i: i }));
+      pen.sort((a, b) => b.o - a.o || a.i - b.i);
+      pen.forEach((x, i) => { x.p.role = PEN[i]; out.relievers[i] = x.p; });
+    }
     for (const pos of RESERVE_POS) out.reserves.push(hitter(rng, ctx, { pos: pos, tier: 'reserve', level: level }));
     for (const role of RESERVE_ROLES) out.reserves.push(pitcher(rng, ctx, { role: role, tier: 'reserve', level: level }));
     return out;

@@ -80,6 +80,22 @@ function setFrom(c) {
     }
     if (c.tend) p.tendencies[c.tend[0]] = c.tend[1];
     if (c.shape !== undefined) for (const t in p.arsenal) p.arsenal[t].shape = c.shape;
+    // Session 29 (tools/overall.js): a pitcher's whole arsenal swapped in ({ pitches, arsenal }), or a whole generated
+    // player's ratings, tendencies and arsenal (a pitcher keeps the slot's Stamina: the replays keep each pitcher's pitch
+    // count, so Stamina's worth isn't measured here).
+    if (c.arsenal) { p.pitches = c.arsenal.pitches.slice(); p.arsenal = JSON.parse(JSON.stringify(c.arsenal.arsenal)); }
+    if (c.player) {
+      const q = c.player;
+      if (kind === 'hitter') {
+        p.ratings = Object.assign({}, q.ratings);
+        if (pos !== 'C') delete p.ratings.framing;
+      } else {
+        p.ratings = Object.assign({}, q.ratings, { stamina: p.ratings.stamina });
+        p.pitches = q.pitches.slice();
+        p.arsenal = JSON.parse(JSON.stringify(q.arsenal));
+      }
+      p.tendencies = Object.assign({}, q.tendencies);
+    }
   };
 }
 
@@ -608,4 +624,4 @@ function main() {
 if (process.argv[2] === '--worker') worker();
 else if (require.main === module) main();
 
-module.exports = { TARGET, BAND, setFrom, targets, targetReport, merge, diff };
+module.exports = { TARGET, BAND, setFrom, targets, targetReport, merge, diff, pool };
