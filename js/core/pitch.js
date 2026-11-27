@@ -212,7 +212,10 @@
     // longer moves his BABIP (with this pitch's speed a slow thrower's glancing hits stayed fair as pop-ups and topped balls).
     const typical = T().PIT.velo * B3.data.PITCH[pitch.type].v;
     const fair = radius * S.foulBack * Math.pow(S.foulRef / (typical + S.foulSpeedShare * (pitch.speed - typical)), S.foulPow);
-    if (Math.abs(off) > fair) { out.r = 'F'; return out; }
+    // A mistimed swing that still reaches the ball meets it at an angle, so more of it is fouled away (Session 25, owner's choice: fix
+    // Velocity's exit-speed miss): the fair core narrows by timeFoul x the square of the *when* error's share of missMs. A harder
+    // thrower's late swings end as fouls and strikeouts more than as weak balls in play, as in MLB.
+    if (Math.abs(off) > fair * Math.max(0, 1 - S.timeFoul * v * v)) { out.r = 'F'; return out; }
     // Exit speed: bat speed and pitch speed (Savant's most a swing can give), less for an off-center hit and for bad timing.
     const u = off / fair;
     // A faster bat also meets the ball a little off the barrel's sweet spot more often (step 1.5, owner's choice, Session 10:

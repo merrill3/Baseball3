@@ -290,10 +290,11 @@
 
   const SWING = {
     radius: 2.75,      // bat radius plus ball radius, inches: a bigger *where* error misses
-    foulBack: 0.495,   // share of radius past which contact is a glancing foul (tipped back; step 1.5, was 0.52: about
+    foulBack: 0.545,   // share of radius past which contact is a glancing foul (tipped back; step 1.5, was 0.52: about
                        // half of all bat contact is foul, as in MLB; Session 12, 0.45; Session 22, was 0.42: with the wider
                        // spray more fouls come from balls hit outside the lines, so fewer are tipped back; 0.445 in the spray
-                       // fit, 0.463 in the level fit; Session 23, 0.465 in the spray refit, 0.495 for strikeouts 22.7% and 3.89 pitches per PA on the target table), for a pitch at foulRef mph ...
+                       // fit, 0.463 in the level fit; Session 23, 0.465 in the spray refit, 0.495 for strikeouts 22.7% and 3.89 pitches per PA on the target table;
+                       // Session 25, was 0.495: with timeFoul's fouls, for strikeouts and pitches per PA again), for a pitch at foulRef mph ...
     foulRef: 88,       // ... and it narrows as (foulRef / pitch speed)^foulPow (step 1.5 task 4: a faster pitch is fouled
     foulPow: 2.5,      // back more often; MLB 2024: 43% of swings at fastballs are fouls, 32% at off-speed pitches)
     foulSpeedShare: 0, // share of this pitch's own speed in that (Session 13; the rest is the type's typical speed, PIT.velo x
@@ -302,6 +303,12 @@
     missMs: 80,        // a *when* error past this many ms misses the ball
     timeRadius: 0.7,   // share of the bat's reach (radius) lost at missMs; scales with the square of the *when*
                        // error (step 1.3: so velocity and Timing move whiffs, not only exit speed)
+    timeFoul: 1.5,     // share of the fair core (foulBack) lost at missMs, with the square of the *when* error: a mistimed swing that
+                       // reaches the ball is fouled away more often (Session 25, owner's choice to fix Velocity's exit-speed miss; Claude's
+                       // default for the mechanism). Per mph of fastball the engine's exit speed against fell 0.39 mph and hard-hit % 0.81
+                       // points (MLB +0.05 / +0.15): a harder thrower's late swings were weak balls in play, through the bar's timing part
+                       // (about 0.28 mph) and timeLoss (about 0.21). With this, TIMING.sdPow 3 and SWING.bar refitted: -0.05 / -0.09 on
+                       // three seeds' average, whiff +0.93 [+0.93], K% +1.38 (was 1.36) [+1.69]
     // Location: pitches far from the middle are harder to square up (inches of extra spread per foot).
     edgeFrom: 0.8,     // feet inside the zone's edge from which location starts to matter (step 1.4: from near the
                        // middle, so a pitch down the middle is the easiest to hit; it was 0.4)
@@ -347,9 +354,12 @@
                        // set by the pitch's side-to-side location and the swing's timing plus noise; it costs exit speed, keeps the
                        // launch angle; Timing makes it smaller and Deception larger). The error: inches from the barrel's sweet spot
                        // toward the handle (jammed, above 0) ...
-      perFt: 9.1,      // ... per foot the pitch is inside (toward the batter)
-      perMs: 0.235,    // ... per ms the swing is late (early: toward the end)
-      sd: 2.3,         // ... and its noise, inches
+      perFt: 11,       // ... per foot the pitch is inside (toward the batter; Session 25, was 9.1: with the larger noise, so pitches 0.7+ ft
+                       // inside are still met under 80 mph about 45% of the time [53], as before)
+      perMs: 0.18,     // ... per ms the swing is late (early: toward the end; Session 25, was 0.235: a harder thrower's later swings
+                       // jammed him too much, so his exit speed against fell where MLB's doesn't)
+      sd: 4.1,         // ... and its noise, inches (Session 25, was 2.3: it keeps the soft contact that the timing part and timeFoul's
+                       // fouls took away; rated teams' exit speed 88.9 [89.2], grounders under 80 mph 10.8% of balls in play, was 11.4)
       loss: 0.11,      // share of exit speed lost 10 inches from the sweet spot (to the power pow), x jam when jammed
       pow: 1.8,
       jam: 1.35
@@ -430,7 +440,8 @@
 
   const TIMING = {
     refMph: 92,        // timingSd is the spread at this pitch speed
-    sdPow: 6,          // the spread grows as (speed / refMph) to this power (step 1.4; was +60% per 10 mph, floored)
+    sdPow: 3,          // the spread grows as (speed / refMph) to this power (step 1.4; was +60% per 10 mph, floored; Session 25, was 6:
+                       // Velocity's whiffs come from SWING.veloSd, and a harder thrower's wider timing spread made weak contact, not whiffs)
     latePerMph: 6,     // ms late per mph well above the hitter's timingTop (Velocity attacks Timing; Session 13, was 8: with
                        // SWING.veloSd carrying Velocity's whiffs, less of it goes into late, weak contact)
     lateSoft: 4,       // mph over which lateness eases in around timingTop (step 1.4: a soft step, so every
