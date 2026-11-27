@@ -129,6 +129,16 @@ How the code is organized and the rules every file follows. Decisions about what
 | `js/core/players.js` | (extended) `squad` gives the short relievers' roles by their overall (the best the closer, the next two the setup men) |
 | `tools/calibrate.js` | (extended) a condition can swap in a whole arsenal (`arsenal`) or a whole generated player (`player`); `pool` is exported for `tools/overall.js` |
 
+**Built (M2 step 2.1a task 4: balancing the pitching ratings, Session 30)**: no new files
+
+| File | Purpose |
+|---|---|
+| `js/core/ratings.js` | (extended) `gradeMult(type, points)`: a pitch's movement multiplier from its grade's points after the curve, with its type's own step (`B3.tune.TYPE[type].gradeStep`, 1 when unset); `gradeUnits(type, g)`: a multiplier back to the grade table's steps. `inputs`, `B3.manager`'s pitch choice, `B3.pitch`'s fade and `B3.overall.weights` all go through them |
+| `js/core/tune.js` | (changed numbers) `RATE.steps.grade` refitted; `TYPE` SL, CU, CH, FS get `gradeStep` and `gradeSd: [0.5, 0]`; `PITCH.fade.grade` 0.0123; `SWING.foulSpeedShare` 1; `BAT.contactSd` 1.22 (DESIGN.md section 10, "Balancing the pitching ratings, built") |
+| `tools/realdata.js`, `tools/lib/realbuild.js` | (extended) `--attack-urls DIR` lists the pitch-level Statcast days (a Wednesday a month, April to September of 2024 and 2025) and `--attack DIR` writes only `real.attack` into `tools/lib/real.js`: contact by Savant attack zone (heart, shadow inside and outside the zone, chase, waste; pitches, swings, whiffs, fouls, exit speed, hard-hit, sweet-spot, barrels, xwOBA and wOBA on contact; league totals, no names). A full `--build` keeps it |
+| `tools/ratingstats.js` | (extended) counts balls in play by attack zone (exit speed, hard-hit %, wOBA on contact over the heart and on the edge: `heartEV`, `edgeEV`, `heartHard`, `edgeHard`, `heartWcon`, `edgeWcon` and the gaps); Command's sweep prints them against `real.attack` |
+| `tools/lib/value.js` | (extended) `measure`'s counts add swings, whiffs, fouls, balls in play, exit speed and hard-hit balls, so per-mph effects can be read from the paired replays |
+
 - M2 league, in `js/core/`: `teams.js` (the 30 teams), `players.js` (generation built in step 2.1a; the overall, `overall.js`, in task 3), `league.js`, `schedule.js`, `season.js`, `stats.js`, `staff.js` (rotation, bullpen rest, injuries), `war.js`, `save.js` (save format, version, upgrade steps). In `js/ui/`: `storage.js` (IndexedDB). Tools: `tools/seasontest.js`.
 
 ## The engine (M1; step 1.1 built the rules and the loop)
