@@ -85,7 +85,7 @@
     const x = a.x + r.normal(0, sd), z = a.z + r.normal(0, sd);
     const speed = Math.round((fastball(w.p, d) * type.v + r.normal(0, P.speedSd)) * 10) / 10;
     const rated = w.p.pit.grades[a.type] === undefined ? 1 : w.p.pit.grades[a.type];
-    const grade = Math.max(T().RATE.grade.min, rated - P.fade.grade * d);
+    const grade = Math.max(T().RATE.grade.min, rated - P.fade.grade * (T().TYPE[a.type].gradeStep || 1) * d); // per type (Session 30)
     const mirror = w.throws === 'L' ? -1 : 1;
     // Does the hitter pick this pitch up? (step 1.5 task 4: one read per pitch, his read share being the chance.) The same
     // read sets his swing choice (look), his timing (cpuTiming) and where his bat goes (expect), so a breaking ball he chases

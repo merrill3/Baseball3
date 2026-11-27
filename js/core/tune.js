@@ -16,9 +16,11 @@
 
   // Hitting (DESIGN.md section 10: each input names the rating whose job it is).
   const BAT = {
-    contactSd: 1.18,   // Contact: spread of the *where* error, inches between bat and ball centers (Session 22, was 1.33: the
+    contactSd: 1.22,   // Contact: spread of the *where* error, inches between bat and ball centers (Session 22, was 1.33: the
                        // level fit, SWING.attack; rated teams' whiffs 26.2 -> 25.5% of swings [MLB 2024 25.3]; Session 28, was
-                       // 1.26: the level fit on the generated league, whose wider spread had whiffs at 26.7% and strikeouts 23.6%)
+                       // 1.26: the level fit on the generated league, whose wider spread had whiffs at 26.7% and strikeouts 23.6%;
+                       // Session 30, was 1.18: the level again after the pitching balance, which took the generated league to 4.72
+                       // runs, K 22.4%, whiffs 25.4%; now 4.68, 22.7%, 25.7% over four seeds)
     timingSd: 20,      // Timing: spread of a CPU hitter's *when* error at 92 mph, in ms
     square: 1,         // Timing (Session 11, owner's choice: Timing's job is squaring up): multiplier on the exit speed he
                        // loses to a mishit, off center or mistimed (below 1: he keeps the barrel on the ball)
@@ -204,10 +206,16 @@
       // Command (Session 14): step 1.4's rows below 60 x 0.75, so poor Command walks as MLB's worst do (with the 0.92 step).
       command: [[20, -2.488], [30, -1.881], [40, -1.274], [50, -0.653], [60, 0], [70, 0.92], [80, 1.899], [90, 2.952], [100, 4.098], [110, 5.368]],
       deception: [[20, -7.939], [30, -4.465], [40, -2.294], [50, -0.937], [60, 0], [70, 0.739], [80, 1.358], [90, 1.896], [100, 2.376], [110, 2.812]],
-      // The grades (Session 28): the rows above 60 x 0.95, with the put-away synergy's k 1.0, so the generated starters' K% and whiff %
-      // tops come back toward MLB's (x 0.9 trimmed them more but halved the aces, K% 27+ with BB% 6.5 or less: 2.9% [MLB 5.9]).
-      // Was [70, 1.461], [80, 2.408], [90, 3.128], [100, 3.831], [110, 4.534].
-      grade: [[20, -7.141], [30, -4.387], [40, -2.666], [50, -1.304], [60, 0], [70, 1.388], [80, 2.288], [90, 2.972], [100, 3.639], [110, 4.307]],
+      // The grades (Session 30, M2 step 2.1a task 4, the owner's balancing of the pitching ratings; the sizes Claude's defaults): refitted
+      // on whiff % against the table's steps (the slider, change-up and curve averaged; every pitch of a staff at one step, 1,600
+      // games a step) so each +10 adds about the same whiffs: from 40 to 80 the distances from the engine's own average are 0.8 of
+      // MLB's at the population's percentiles (60 +- 12.2 per standard deviation, so 50 and 70 are the 20.5th and 79.5th, between
+      // the real ladder's 25th / 75th and 5th / 95th; 0.8 keeps the pitchers' population on MLB's spreads, which carry a season's
+      // noise and the other skills), and below 40 and above 80 they follow MLB's ladder step for step. With TYPE's gradeStep (each
+      // type's own ladder) and the off-speed pitches' gradeSd below average. Was (Session 28) [[20, -7.141], [30, -4.387],
+      // [40, -2.666], [50, -1.304], [60, 0], [70, 1.388], [80, 2.288], [90, 2.972], [100, 3.639], [110, 4.307]]: steep from 60 to 70
+      // (slider 31.6 to 39.1 [MLB 33.9 to 39.3]), flat from 70 to 80 and at both ends.
+      grade: [[20, -2.892], [30, -2.541], [40, -1.733], [50, -0.901], [60, 0], [70, 1.147], [80, 2.108], [90, 2.934], [100, 4.037], [110, 5.14]],
       range: [[20, -2.101], [30, -1.611], [40, -1.099], [50, -0.563], [60, 0], [70, 0.593], [80, 1.22], [90, 1.884], [100, 2.591], [110, 3.347]],
       hands: [[20, -2.765], [30, -2.158], [40, -1.507], [50, -0.793], [60, 0], [70, 0.896], [80, 1.931], [90, 3.165], [100, 4.703], [110, 6.513]],
       // Arm (Session 20, the ladder rule): mph from his position's arm (POS), on the real ladder (Savant 2024-2026 arm strength,
@@ -258,7 +266,9 @@
     // max (Session 20, Claude's default): the fade stops growing at this many points (about 15 mph off his fastball), so a
     // pitcher a player leaves in long past his Stamina stays a pitcher (without it a reliever at eight times his pitches threw
     // at minus 300,000 mph and walked every batter; the CPU's pitching changes almost never let a pitcher get that far)
-    fade: { points: 3, power: 2, past: 40, velo: 0.15, command: 0.00656, grade: 0.0166, max: 100 },
+    // Session 30: grade 0.0123 (was 0.0166), the new grade table's 50-70 rows (x the type's gradeStep in B3.pitch), so a point of fade
+    // is still a grade point.
+    fade: { points: 3, power: 2, past: 40, velo: 0.15, command: 0.00656, grade: 0.0123, max: 100 },
     // Familiarity (Session 17, the owner's Session 16 choice: an order penalty, the same for every pitcher): each time a
     // hitter has already faced this pitcher in the game he plays as if his Recognition and Timing were `points` higher. Per
     // point (the ratings' slopes at 60): the share of pitches he doesn't pick up x unread (RATE.bat.recognition's 0.6 over
@@ -290,9 +300,15 @@
     //   breaking  an off-speed pitch: Recognition's breakRead scales its bite (Session 12)
     //   foolTime  the grade also scales the timing error when he doesn't read it (Session 13: a change-up's or splitter's
     //             grade is its speed change as much as its movement; a curve's is its drop)
+    //   gradeStep (Session 30, M2 step 2.1a task 4; Claude's default) the grade's movement multiplier is 1 + RATE.grade.step x this x
+    //             the grade table's steps (1 when unset): fitted on each type's whiff % against the table's steps so its ladder
+    //             climbs as MLB's for that type does (the change-up's most, the curve's least: MLB 2024-2026 from the 5th to the 95th
+    //             percentile 18.1 to 46.4 and 20.5 to 44.5; the slider 20.0 to 47.5)
     //   gradeSd   the whole *where* spread x the grade^gradeSd (Session 19: a four-seamer's ride or a sinker's sink beats the
     //             bat; MLB 2024-2026, four-seam whiff % across pitchers 12.7 to 32.0 at the 5th and 95th percentiles, velocity
-    //             explaining r 0.34 of it)
+    //             explaining r 0.34 of it). Session 30: the off-speed pitches below an average grade too ([0.5, 0]): a flat
+    //             breaking ball or change-up is easier to put the bat on, so the ladder keeps falling below 40 (it read as one level,
+    //             about 19% whiffs, from 20 to 40 [MLB 12-20]: below a grade of about 40 every pitch was read and fooled no one)
     // Session 12 (step 1.5 task 4, with one read per pitch): fastballs' bite +0.15, off-speed pitches' bite x 0.4 and
     // surprise 0.15 (an unread pitch now carries the whole surprise, a read one none), so the whiffs by type and zone
     // follow MLB's. Session 13 (the grades' reach): the curve's surprise 0.085 (was 0.15: its drop against a fastball is
@@ -300,10 +316,10 @@
     FF: { bite: 0.65, surprise: 0.12, lift: 6, miss: 21.9, chase: 0.7, gradeSd: [0.3, 0.8] },
     SI: { bite: 0.15, surprise: 0.12, lift: -6, miss: 13.5, chase: 0.7, gradeSd: [0.15, 0.3] },
     FC: { bite: 1.05, surprise: 0.12, lift: 1, miss: 23.7, chase: 0.7 },
-    SL: { bite: 0.64, surprise: 0.15, lift: 0, miss: 33.8, chase: 2.3, breaking: true },
-    CU: { bite: 0.52, surprise: 0.085, lift: -1, miss: 33.0, chase: 2.3, breaking: true },
-    CH: { bite: 0.6, surprise: 0.15, lift: -4, miss: 31.9, chase: 2.3, breaking: true, foolTime: true },
-    FS: { bite: 0.6, surprise: 0.15, lift: -8, miss: 35.1, chase: 2.3, breaking: true, foolTime: true }
+    SL: { bite: 0.64, surprise: 0.15, lift: 0, miss: 33.8, chase: 2.3, breaking: true, gradeSd: [0.5, 0], gradeStep: 0.957 },
+    CU: { bite: 0.52, surprise: 0.085, lift: -1, miss: 33.0, chase: 2.3, breaking: true, gradeSd: [0.5, 0], gradeStep: 0.869 },
+    CH: { bite: 0.6, surprise: 0.15, lift: -4, miss: 31.9, chase: 2.3, breaking: true, foolTime: true, gradeSd: [0.5, 0], gradeStep: 1.174 },
+    FS: { bite: 0.6, surprise: 0.15, lift: -8, miss: 35.1, chase: 2.3, breaking: true, foolTime: true, gradeSd: [0.5, 0], gradeStep: 0.974 }
   };
 
   const SWING = {
@@ -315,9 +331,15 @@
                        // Session 25, was 0.495: with timeFoul's fouls, for strikeouts and pitches per PA again), for a pitch at foulRef mph ...
     foulRef: 88,       // ... and it narrows as (foulRef / pitch speed)^foulPow (step 1.5 task 4: a faster pitch is fouled
     foulPow: 2.5,      // back more often; MLB 2024: 43% of swings at fastballs are fouls, 32% at off-speed pitches)
-    foulSpeedShare: 0, // share of this pitch's own speed in that (Session 13; the rest is the type's typical speed, PIT.velo x
-                       // its share): 0 keeps the fastball/off-speed split without tying a pitcher's velocity to his BABIP (with
-                       // 1, from 50 to 20 Velocity his BABIP fell .290 to .258 and pop-ups rose 9.5 to 15.2%)
+    foulSpeedShare: 1, // share of this pitch's own speed in that (Session 13; the rest is the type's typical speed, PIT.velo x
+                       // its share). Session 13 set 0, so the fastball/off-speed split stayed without tying a pitcher's velocity to
+                       // his BABIP (with 1 then, from 50 to 20 Velocity his BABIP fell .290 to .258 and pop-ups rose 9.5 to 15.2%).
+                       // Session 30 (M2 step 2.1a task 4, the owner's Velocity top-up; Claude's default for the lever): 1 again, now
+                       // that Session 25's timeFoul carries Velocity's late swings: a harder thrower's glancing contact goes back
+                       // more, so per mph of fastball K% +1.70 [MLB the same pitcher year to year +1.69] with whiffs +0.99 [across
+                       // pitchers +0.93] (paired replays, 116,000 PA; was +1.28 and +1.00). The cost: fouls per swing +1.0 per mph
+                       // [MLB about +0.05 across pitchers: 249 pitchers, 12 days of Statcast 2024-2025], exit speed against -0.06
+                       // [across pitchers +0.045, year to year -0.16]
     missMs: 80,        // a *when* error past this many ms misses the ball
     timeRadius: 0.7,   // share of the bat's reach (radius) lost at missMs; scales with the square of the *when*
                        // error (step 1.3: so velocity and Timing move whiffs, not only exit speed)

@@ -6,6 +6,9 @@
 //   node tools/realdata.js --build DIR       reads the downloads in DIR and writes tools/lib/real.js
 //   node tools/realdata.js --batted DIR      only the league batted-ball tables (real.js's `batted`), from
 //                                            the bbt_* and grid_* downloads; the rest of real.js is kept
+//   node tools/realdata.js --attack-urls DIR prints "file<TAB>url" lines for the pitch-level days of `attack`
+//   node tools/realdata.js --attack DIR      only contact by attack zone (real.js's `attack`, Session 30), from
+//                                            the pitches_* downloads (every pitch of 12 days); the rest of real.js is kept
 // Sources: Baseball Savant (Statcast leaderboards and grouped searches) and Baseball-Reference, seasons
 // 2024-2026 (Claude's default, confirmed by the owner in Session 8). The downloads are third-party data:
 // they stay outside the repo (keep DIR in a scratch folder); only the summary in tools/lib/real.js is kept.
@@ -100,6 +103,15 @@ function battedSources() {
   return out;
 }
 
+// Contact by attack zone (Session 30, M2 step 2.1a task 4, Command's edge %): every pitch of a Wednesday a month, April to
+// September of 2024 and 2025 (pitch-level Statcast searches; about 53,000 pitches). Only league totals are kept.
+const ATTACK_DAYS = ['2024-04-17', '2024-05-15', '2024-06-12', '2024-07-10', '2024-08-14', '2024-09-11',
+  '2025-04-16', '2025-05-14', '2025-06-11', '2025-07-09', '2025-08-13', '2025-09-10'];
+function attackSources(dir) {
+  return ATTACK_DAYS.map((d) => [path.join(dir, `pitches_${d}.csv`),
+    `${SAV}/statcast_search/csv?all=true&hfGT=R%7C&game_date_gt=${d}&game_date_lt=${d}&type=details&player_type=pitcher`]);
+}
+
 function main() {
   const [mode, dir] = process.argv.slice(2);
   if (mode === '--urls' && dir) {
@@ -108,7 +120,12 @@ function main() {
   }
   if (mode === '--build' && dir) return require('./lib/realbuild')(dir, sources(dir));
   if (mode === '--batted' && dir) return require('./lib/realbuild').battedOnly(dir, BB_TYPES, EV_BANDS, SPRAY);
-  process.stderr.write('usage: node tools/realdata.js --urls DIR | --build DIR | --batted DIR\n');
+  if (mode === '--attack-urls' && dir) {
+    for (const [f, u] of attackSources(dir)) process.stdout.write(f + '\t' + u + '\n');
+    return;
+  }
+  if (mode === '--attack' && dir) return require('./lib/realbuild').attackOnly(attackSources(dir).map((x) => x[0]), ATTACK_DAYS);
+  process.stderr.write('usage: node tools/realdata.js --urls DIR | --build DIR | --batted DIR | --attack-urls DIR | --attack DIR\n');
   process.exit(1);
 }
 

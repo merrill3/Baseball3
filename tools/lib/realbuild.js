@@ -324,7 +324,8 @@ module.exports = function build(dir, sources) {
     pct: pct,
     slope: slope,
     notes: notes,
-    batted: batted(dir, BB_TYPES, EV_BANDS, SPRAY, missing)
+    batted: batted(dir, BB_TYPES, EV_BANDS, SPRAY, missing),
+    attack: previous().attack || null // Session 30: from its own downloads (--attack), kept through a full build
   };
   write(out);
   console.log('wrote tools/lib/real.js: ' + Object.keys(pct).length + ' spreads, ' + Object.keys(slope).length + ' slopes; missing: ' + (missing.join(', ') || 'none'));
@@ -392,5 +393,63 @@ function battedOnly(dir, types, bands, spray) {
   console.log('wrote tools/lib/real.js: batted-ball tables for ' + Object.keys(out.batted.types).join(', ') + ' and the 2024 grid');
 }
 
+function previous() {
+  const file = path.join(__dirname, 'real.js');
+  try { delete require.cache[require.resolve(file)]; return require(file); } catch (e) { return {}; }
+}
+
+// Contact by Savant's attack zone (Session 30, M2 step 2.1a task 4): every pitch of the given days. Zones as Session 14 read
+// them: the strike zone (17 in wide, the batter's own top and bottom) padded by the ball's radius on every side; u, the
+// larger of the distances from its middle across and up or down as a share of its half-width and half-height: heart up
+// to 0.67, shadow (edge) to 1.33 (shadowIn inside the zone, shadowOut outside), chase to 2, waste beyond. Per zone: pitches,
+// swings, whiffs (swinging strikes and foul tips) and fouls; on balls in play exit speed, hard-hit (95+ mph), sweet-spot
+// (8-32 degrees) and barrel shares, xwOBA and wOBA on contact (Savant's estimated and actual values). Bunts left out.
+function attackOnly(files, days) {
+  const R = 1.45 / 12, acc = {}; // the ball's radius, feet
+  const row = (k) => acc[k] || (acc[k] = { n: 0, sw: 0, whiff: 0, foul: 0, bip: 0, evN: 0, ev: 0, hard: 0, sweet: 0, barrel: 0, xwN: 0, xw: 0, wN: 0, w: 0 });
+  for (const f of files) {
+    const rows = parseCSV(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, ''));
+    for (const c of rows) {
+      if (c.game_type !== 'R') continue;
+      const x = num(c.plate_x), z = num(c.plate_z), top = num(c.sz_top), bot = num(c.sz_bot);
+      if (![x, z, top, bot].every(Number.isFinite)) continue;
+      const d = c.description || '';
+      if (/bunt/.test(d)) continue;
+      const hw = 17 / 24 + R, zt = top + R, zb = bot - R, hh = (zt - zb) / 2;
+      const u = Math.max(Math.abs(x) / hw, Math.abs(z - (zt + zb) / 2) / hh);
+      const zone = u <= 0.67 ? 'heart' : u <= 1.33 ? (u <= 1 ? 'shadowIn' : 'shadowOut') : u <= 2 ? 'chase' : 'waste';
+      const swing = /swinging_strike|foul|hit_into_play/.test(d);
+      for (const k of [zone, zone.startsWith('shadow') ? 'shadow' : null, 'all']) {
+        if (!k) continue;
+        const a = row(k);
+        a.n++;
+        if (!swing) continue;
+        a.sw++;
+        if (/swinging_strike/.test(d) || d === 'foul_tip') a.whiff++;
+        else if (d === 'foul') a.foul++;
+        if (d !== 'hit_into_play') continue;
+        a.bip++;
+        const ev = num(c.launch_speed), la = num(c.launch_angle), xw = num(c.estimated_woba_using_speedangle), w = num(c.woba_value);
+        if (Number.isFinite(ev)) { a.evN++; a.ev += ev; if (ev >= 95) a.hard++; if (la >= 8 && la <= 32) a.sweet++; if (c.launch_speed_angle === '6') a.barrel++; }
+        if (Number.isFinite(xw)) { a.xwN++; a.xw += xw; }
+        if (Number.isFinite(w)) { a.wN++; a.w += w; }
+      }
+    }
+  }
+  const pc = (x, y) => (y ? Math.round(1000 * x / y) / 10 : null);
+  const zones = {};
+  for (const k in acc) {
+    const a = acc[k];
+    zones[k] = { share: pc(a.n, acc.all.n), swing: pc(a.sw, a.n), whiff: pc(a.whiff, a.sw), foul: pc(a.foul, a.sw), bip: a.bip,
+      ev: r3(a.ev / a.evN), hard: pc(a.hard, a.evN), sweet: pc(a.sweet, a.evN), barrel: pc(a.barrel, a.evN), xwobacon: r3(a.xw / a.xwN), wobacon: r3(a.w / a.wN) };
+  }
+  const out = Object.assign({}, previous());
+  out.attack = { days: days, pitches: acc.all.n, zones: zones,
+    note: 'Statcast regular season, every pitch of the listed days (bunts left out); Savant attack zones from the zone padded by the ball\'s radius (heart to 0.67 of the half-size, shadow to 1.33, chase to 2, waste beyond; shadowIn / shadowOut inside or outside the zone). whiff and foul are per swing; ev, hard (95+ mph), sweet (8-32 degrees), barrel, xwobacon and wobacon on balls in play.' };
+  write(out);
+  console.log('wrote tools/lib/real.js: contact by attack zone from ' + acc.all.n + ' pitches (' + days.length + ' days)');
+}
+
 module.exports.parseCSV = parseCSV;
+module.exports.attackOnly = attackOnly;
 module.exports.battedOnly = battedOnly;

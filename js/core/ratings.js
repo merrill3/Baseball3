@@ -199,7 +199,7 @@
       pit.grades = {}; pit.shapes = {};
       const arsenal = player.arsenal || {};
       for (const type of pitches) {
-        pit.grades[type] = Math.max(rate.grade.min, 1 + rate.grade.step * steps('grade', e.grades[type]));
+        pit.grades[type] = gradeMult(type, e.grades[type]);
         const shape = has(arsenal, type) && has(arsenal[type], 'shape') ? arsenal[type].shape : 0;
         if (typeof shape !== 'number' || !(shape >= -1 && shape <= 1)) fail((player.id || 'player') + ' ' + type + ' shape must be from -1 to 1, not ' + shape);
         pit.shapes[type] = rate.shape * shape;
@@ -207,6 +207,18 @@
       pit.putAway = e.putAway; // chosen from the grades as rated (before the curve and the cap)
     }
     return { bat: bat, pit: pit, fld: fld, run: run };
+  }
+
+  // A pitch's movement multiplier g (1 average) from its grade's points after the curve: 1 + RATE.grade.step x the type's
+  // gradeStep (Session 30, M2 step 2.1a task 4: each type's whiff % climbs as its own real ladder does; 1 when unset) x the
+  // steps from the grade table, at least RATE.grade.min. gradeUnits(type, g) turns a multiplier back into the table's steps.
+  function gradeMult(type, points) {
+    const rate = R(), T = B3.tune.TYPE[type];
+    return Math.max(rate.grade.min, 1 + rate.grade.step * ((T && T.gradeStep) || 1) * steps('grade', points));
+  }
+  function gradeUnits(type, g) {
+    const T = B3.tune.TYPE[type];
+    return (g - 1) / (R().grade.step * ((T && T.gradeStep) || 1));
   }
 
   // The put-away pitch: his best-graded type. On a tie, the type that misses the most bats in MLB (B3.tune.TYPE's miss;
@@ -231,6 +243,8 @@
     curve: curve,
     steps: steps,
     stamina: stamina,
+    gradeMult: gradeMult,
+    gradeUnits: gradeUnits,
     putAway: putAway
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -94,7 +94,7 @@ module.exports = function (t) {
     near(avg(fresh.map((x) => x.p.speed)) - avg(late.map((x) => x.p.speed)), F.velo * d, 0.1, 'speed lost');
     near(sd(late.map((x) => x.p.x)) / sd(fresh.map((x) => x.p.x)), Math.exp(F.command * d), 0.06, 'scatter growth');
     const sl = tired.B3.pitch.throw(tired.g, { type: 'SL', x: 0, z: 2.5 });
-    near(sl.grade, 1 - F.grade * d, 1e-9, 'the slider flattens (a lower grade)');
+    near(sl.grade, 1 - F.grade * tired.B3.tune.TYPE.SL.gradeStep * d, 1e-9, 'the slider flattens (a lower grade, at its type\'s step: Session 30)');
   });
 
   t.test('familiarity (Session 17): a hitter who has faced this pitcher already reads him, times him and squares him up a little better', () => {
@@ -274,7 +274,13 @@ module.exports = function (t) {
       near(sdAt(type, 0.7, false) / sdAt(type, 0.7, true), Math.pow(0.7, k[0]), 1e-9, type + ' below average');
       assert.ok(k[1] > k[0], type + ': an elite one stands out more than a flat one falls behind');
     }
-    assert.strictEqual(TY.SL.gradeSd, undefined, 'off-speed pitches keep their own grade effects');
+    // Session 30: an off-speed pitch below an average grade is easier to put the bat on too; above average it keeps its own grade effects.
+    for (const type of ['SL', 'CU', 'CH', 'FS']) {
+      const k = TY[type].gradeSd;
+      assert.strictEqual(k[1], 0, type + ': nothing extra above average');
+      near(sdAt(type, 1.3, false), sdAt(type, 1.3, true), 1e-12, type + ' above average');
+      near(sdAt(type, 0.7, false) / sdAt(type, 0.7, true), Math.pow(0.7, k[0]), 1e-9, type + ' below average');
+    }
     const whiff = (grade) => rate(trial(setup({ pit: { grades: { FF: grade } } }), MID, 'cpu'), (x) => x.r.r === 'S');
     assert.ok(whiff(1.35) > whiff(0.7) + 0.04, 'a riding four-seamer misses more bats: ' + whiff(1.35).toFixed(3) + ' against ' + whiff(0.7).toFixed(3));
   });

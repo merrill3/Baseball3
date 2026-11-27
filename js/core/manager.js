@@ -88,10 +88,9 @@
     pitch: function (d, g) {
       const P = C().pitch, r = g.rng, Z = B3.data.ZONE;
       const pit = g.teams[d.side].inp[d.pitcher].pit;
-      const step = B3.tune.RATE.grade.step;
       const w = d.pitches.map((t) => {
         const m = pit.grades[t] === undefined ? 1 : pit.grades[t];
-        let x = (P.use[t] || 1) * Math.exp(P.gradeUse * (m - 1) / step);
+        let x = (P.use[t] || 1) * Math.exp(P.gradeUse * B3.ratings.gradeUnits(t, m)); // tens of grade points (Session 30: per type)
         if (fast(t) && d.balls - d.strikes >= 2) x *= P.behind;
         if (d.strikes === 2 && t === pit.putAway) x *= P.putAway;
         return x;

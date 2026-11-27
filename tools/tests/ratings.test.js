@@ -185,9 +185,11 @@ module.exports = function (t) {
   t.test('the arsenal: grades scale movement, shapes add drop, the put-away pitch is the best grade', () => {
     const B3 = loadCore();
     const p = B3.ratings.inputs(pitcher({}, { arsenal: { FF: { grade: 50, shape: -0.5 }, SL: { grade: 80 }, CH: { grade: 70, shape: 1 } } }));
-    const gs = (r) => B3.ratings.steps('grade', r) * B3.tune.RATE.grade.step;
-    near(p.pit.grades.FF, 1 + gs(50), 1e-12, 'FF grade');
-    near(p.pit.grades.SL, 1 + gs(80), 1e-12, 'SL grade');
+    // Session 30: each type's own step (TYPE.gradeStep, 1 when unset, as for the four-seamer)
+    const gs = (r, t) => B3.ratings.steps('grade', r) * B3.tune.RATE.grade.step * (B3.tune.TYPE[t].gradeStep || 1);
+    near(p.pit.grades.FF, 1 + gs(50, 'FF'), 1e-12, 'FF grade');
+    near(p.pit.grades.SL, 1 + gs(80, 'SL'), 1e-12, 'SL grade');
+    near(B3.ratings.gradeUnits('CH', p.pit.grades.CH), B3.ratings.steps('grade', 70), 1e-12, 'gradeUnits turns a multiplier back into the table\'s steps');
     assert.strictEqual(p.pit.grades.CU, 1, 'a pitch with no grade is average');
     assert.strictEqual(p.pit.shapes.FF, -0.5 * B3.tune.RATE.shape);
     assert.strictEqual(p.pit.shapes.CH, B3.tune.RATE.shape);

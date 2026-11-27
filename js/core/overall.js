@@ -140,13 +140,13 @@
   function weights(p, twoStrike, e) {
     if (!isPitcher(p)) return {};
     e = e || B3.ratings.effective(p);
-    const P = B3.tune.CPU.pitch, G = B3.tune.RATE.grade, A = ARSENAL;
+    const P = B3.tune.CPU.pitch, A = ARSENAL;
     const ts = twoStrike === undefined ? A.twoStrike : twoStrike;
     const mult = {};
-    for (const t of p.pitches) mult[t] = Math.max(G.min, 1 + G.step * B3.ratings.steps('grade', e.grades[t]));
+    for (const t of p.pitches) mult[t] = B3.ratings.gradeMult(t, e.grades[t]);
     const share = (kind) => {
       const x = p.pitches.map((t) => {
-        let v = (P.use[t] || 1) * Math.exp(P.gradeUse * (mult[t] - 1) / G.step);
+        let v = (P.use[t] || 1) * Math.exp(P.gradeUse * B3.ratings.gradeUnits(t, mult[t]));
         if (kind === 1 && FAST[t]) v *= P.behind;
         if (kind === 2 && t === e.putAway) v *= P.putAway;
         return v;

@@ -47,7 +47,10 @@ const RATINGS = {
   velocity: { kind: 'pitcher', own: [['fbSpeed', 'pit.ff_avg_speed', 1]],
     units: [['fbSpeed', 'k', 'dvelo.k_percent'], ['fbSpeed', 'whiff', 'velo.whiff_percent'], ['fbSpeed', 'ev', 'velo.exit_velocity_avg'], ['fbSpeed', 'hard', 'velo.hard_hit_percent']] },
   // Command's own stats: walk % and edge % (owner's choice, Session 14: meatball % follows zone %, so it moved to Aim).
-  command: { kind: 'pitcher', own: [['bb', 'pit.bb_percent', -1], ['edge', 'pit.edge_percent', 1]] },
+  // Session 30 (M2 step 2.1a task 4): with contact over the heart and on the edge (real: tools/lib/real.js's attack, league totals).
+  command: { kind: 'pitcher', own: [['bb', 'pit.bb_percent', -1], ['edge', 'pit.edge_percent', 1]],
+    extra: [['heart EV', 'heartEV', 1, 'heart.ev'], ['edge EV', 'edgeEV', 1, 'shadow.ev'], ['heart hard%', 'heartHard', 1, 'heart.hard'], ['edge hard%', 'edgeHard', 1, 'shadow.hard'],
+      ['heart wOBAcon', 'heartWcon', 3, 'heart.wobacon'], ['edge wOBAcon', 'edgeWcon', 3, 'shadow.wobacon']] },
   deception: { kind: 'pitcher', own: [['chase', 'pit.oz_swing_percent', 1]] },
   grades: { kind: 'pitcher', own: [['whiffSL', 'type.SL.whiff', 1], ['whiffCH', 'type.CH.whiff', 1], ['whiffCU', 'type.CU.whiff', 1]] },
   speed: { kind: 'hitter', own: [['sprint', 'run.sprint_speed', 1], ['hpTo1b', 'run.hp_to_1b', -1]] },
@@ -84,7 +87,7 @@ function newAcc() {
     n: 0, zone: 0, sw: 0, zsw: 0, osw: 0, out: 0, contact: 0, zcontact: 0, ocontact: 0, whiff: 0, foul: 0,
     heart: 0, shadow: 0, chaseZ: 0, waste: 0, meat: 0, shTake: 0, shCalled: 0,
     fbN: 0, fbV: 0, offSw: 0, offWhiff: 0, offOut: 0, offOutSw: 0, fbOut: 0, fbOutSw: 0, sw95: 0, whiff95: 0,
-    bySw: {}, byWhiff: {}, paBy: {}, curve: {}, zc: {},
+    bySw: {}, byWhiff: {}, paBy: {}, curve: {}, zc: {}, azc: {},
     bip: 0, evSum: 0, evs: [], laSum: 0, laSq: 0, hard: 0, barrel: 0, sweet: 0, gb: 0, ld: 0, fb: 0, pu: 0, starts: 0, spPitches: 0, spOuts: 0,
     pull: 0, straight: 0, oppo: 0, squared: 0, blast: 0, fast: 0, batSpeedSum: 0, swings: 0 };
 }
@@ -97,6 +100,8 @@ function barrel(ev, la) {
   return la >= lo && la <= hi;
 }
 
+// wOBA weights for a ball in play's result (2024's, as the stars' check; outs, errors and fielder's choices 0).
+const WOBA = { '1B': 0.88, '2B': 1.25, '3B': 1.59, HR: 2.05 };
 // Savant's attack zones, from the strike zone's half-width and half-height: heart inside 67%, shadow
 // 67-133%, chase 133-200%, waste beyond. Meatball: the middle ninth of the zone (Claude's reading).
 function attack(B3, x, z) {
@@ -111,6 +116,7 @@ function addGame(B3, g, side, accFor) {
   const S = B3.tune.SWING;
   const bt = g.teams[side], pt = g.teams[1 - side];
   let last = null; // the type of the last pitch (the one a plate appearance ends on)
+  let lastAz = null; // Session 30: the attack zone of a ball put in play, for its result (wOBA on contact by zone)
   for (const e of g.log) {
     if (e.h !== side) continue;
     if (e.e === 'pitch') last = e.t;
@@ -124,6 +130,8 @@ function addGame(B3, g, side, accFor) {
       if (r === 'K') a.k++; else if (r === 'BB') a.bb++; else if (r === 'SF') a.sf++;
       if (r === '1B') a.h1++; else if (r === '2B') a.h2++; else if (r === '3B') a.h3++; else if (r === 'HR') a.hr++;
       if (r !== 'BB' && r !== 'SF') a.ab++;
+      if (lastAz) a.azc['w' + lastAz] = (a.azc['w' + lastAz] || 0) + (WOBA[r] || 0);
+      lastAz = null;
       continue;
     }
     if (e.e !== 'pitch') continue;
@@ -165,6 +173,14 @@ function addGame(B3, g, side, accFor) {
     if (!inZ && FB[e.t]) a.fbOutSw++;
     if (e.v >= 95) { a.sw95++; if (e.r === 'S') a.whiff95++; }
     if (e.r === 'X' && e.ev !== undefined) {
+      // Contact by attack zone (Session 30): balls in play, exit speed, hard-hit; shadow split inside and outside the zone.
+      const zk = az.zone === 'shadow' ? (inZ ? 'shadowIn' : 'shadowOut') : az.zone;
+      for (const k of az.zone === 'shadow' ? [zk, 'shadow'] : [zk]) {
+        a.azc['n' + k] = (a.azc['n' + k] || 0) + 1;
+        a.azc['e' + k] = (a.azc['e' + k] || 0) + e.ev;
+        if (e.ev >= 95) a.azc['h' + k] = (a.azc['h' + k] || 0) + 1;
+      }
+      lastAz = az.zone === 'shadow' ? 'shadow' : zk;
       a.bip++;
       a.evSum += e.ev; a.evs.push(e.ev);
       a.laSum += e.la; a.laSq += e.la * e.la;
@@ -404,6 +420,11 @@ function stats(a) {
     pull: pc(a.pull, a.bip), straight: pc(a.straight, a.bip), oppo: pc(a.oppo, a.bip),
     squared: pc(a.squared, a.contact), blast: pc(a.blast, a.contact), fast: pc(a.fast, a.swings), batSpeed: a.batSpeedSum / a.swings
   };
+  // Contact by attack zone (Session 30): exit speed, hard-hit % and wOBA on contact over the heart and on the edge (shadow).
+  const az = (k, z) => (a.azc['n' + z] ? (k === 'e' ? a.azc['e' + z] / a.azc['n' + z] : k === 'w' ? (a.azc['w' + z] || 0) / a.azc['n' + z] : pc(a.azc[k + z] || 0, a.azc['n' + z])) : NaN);
+  Object.assign(out, { heartEV: az('e', 'heart'), edgeEV: az('e', 'shadow'), heartHard: az('h', 'heart'), edgeHard: az('h', 'shadow'),
+    heartWcon: az('w', 'heart'), edgeWcon: az('w', 'shadow') });
+  out.edgeGapEV = out.heartEV - out.edgeEV; out.edgeGapHard = out.heartHard - out.edgeHard; out.edgeGapWcon = out.heartWcon - out.edgeWcon;
   // Whiff % by pitch type, when 50+ plate appearances end on the type (as Savant's arsenal table).
   for (const t of ['FF', 'SI', 'FC', 'SL', 'CU', 'CH', 'FS']) out['whiff' + t] = (a.paBy[t] || 0) >= 50 ? pc(a.byWhiff[t] || 0, a.bySw[t]) : NaN;
   return out;
@@ -845,6 +866,10 @@ function main() {
       if (jobs.some((j) => j.cond && j.cond.k === k)) {
         for (const [lab, key, d] of [['whiff%', 'whiff', 1], ['whiff 95+', 'whiff95', 1], ['squared-up%', 'squared', 1], ['K%', 'k', 1], ['BB%', 'bb', 1], ['AVG', 'avg', 3], ['SLG', 'slg', 3], ['EV', 'ev', 1], ['hard%', 'hard', 1], ['runs', 'runs', 2]]) {
           console.log('  ' + lab.padEnd(16) + LEVELS.map((L) => fmt(rows[L][key], d).padStart(7)).join(''));
+        }
+        for (const [lab, key, d, rk] of R.extra || []) {
+          const [zn, st] = rk.split('.'), rv = real.attack && real.attack.zones[zn] ? real.attack.zones[zn][st] : NaN;
+          console.log('  ' + lab.padEnd(16) + LEVELS.map((L) => fmt(rows[L][key], d).padStart(7)).join('') + '   [MLB ' + fmt(rv, d) + ']');
         }
       }
       const units = R.units || (R.unit ? [R.unit] : []);

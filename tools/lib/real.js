@@ -3734,5 +3734,116 @@ module.exports = {
     }
    }
   }
+ },
+ "attack": {
+  "days": [
+   "2024-04-17",
+   "2024-05-15",
+   "2024-06-12",
+   "2024-07-10",
+   "2024-08-14",
+   "2024-09-11",
+   "2025-04-16",
+   "2025-05-14",
+   "2025-06-11",
+   "2025-07-09",
+   "2025-08-13",
+   "2025-09-10"
+  ],
+  "pitches": 52916,
+  "zones": {
+   "waste": {
+    "share": 8,
+    "swing": 5.3,
+    "whiff": 85.9,
+    "foul": 8.8,
+    "bip": 12,
+    "ev": 47.818,
+    "hard": 0,
+    "sweet": 45.5,
+    "barrel": 0,
+    "xwobacon": 0.134,
+    "wobacon": 0.317
+   },
+   "all": {
+    "share": 100,
+    "swing": 48.1,
+    "whiff": 25.3,
+    "foul": 37.7,
+    "bip": 9420,
+    "ev": 88.772,
+    "hard": 40.7,
+    "sweet": 34.6,
+    "barrel": 8.3,
+    "xwobacon": 0.37,
+    "wobacon": 0.379
+   },
+   "shadowOut": {
+    "share": 19.9,
+    "swing": 43.3,
+    "whiff": 34.2,
+    "foul": 38,
+    "bip": 1264,
+    "ev": 82.097,
+    "hard": 22.5,
+    "sweet": 30.8,
+    "barrel": 3.3,
+    "xwobacon": 0.289,
+    "wobacon": 0.314
+   },
+   "shadow": {
+    "share": 42.6,
+    "swing": 52.7,
+    "whiff": 26.8,
+    "foul": 39,
+    "bip": 4071,
+    "ev": 85.934,
+    "hard": 32,
+    "sweet": 32.8,
+    "barrel": 5.2,
+    "xwobacon": 0.325,
+    "wobacon": 0.335
+   },
+   "shadowIn": {
+    "share": 22.7,
+    "swing": 61,
+    "whiff": 22.2,
+    "foul": 39.6,
+    "bip": 2807,
+    "ev": 87.662,
+    "hard": 36.3,
+    "sweet": 33.7,
+    "barrel": 6,
+    "xwobacon": 0.341,
+    "wobacon": 0.345
+   },
+   "chase": {
+    "share": 21.8,
+    "swing": 23.6,
+    "whiff": 57.4,
+    "foul": 27,
+    "bip": 424,
+    "ev": 74.571,
+    "hard": 11.9,
+    "sweet": 27.3,
+    "barrel": 1.4,
+    "xwobacon": 0.26,
+    "wobacon": 0.292
+   },
+   "heart": {
+    "share": 27.6,
+    "swing": 72.9,
+    "whiff": 14.2,
+    "foul": 39.6,
+    "bip": 4913,
+    "ev": 92.434,
+    "hard": 50.4,
+    "sweet": 36.7,
+    "barrel": 11.4,
+    "xwobacon": 0.418,
+    "wobacon": 0.422
+   }
+  },
+  "note": "Statcast regular season, every pitch of the listed days (bunts left out); Savant attack zones from the zone padded by the ball's radius (heart to 0.67 of the half-size, shadow to 1.33, chase to 2, waste beyond; shadowIn / shadowOut inside or outside the zone). whiff and foul are per swing; ev, hard (95+ mph), sweet (8-32 degrees), barrel, xwobacon and wobacon on balls in play."
  }
 };
