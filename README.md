@@ -17,7 +17,8 @@ Saves (from M2) stay in your browser under Baseball3's own names, separate from 
 - `node tools/worth.js 1000`: "10 points are worth": what +10 points of each rating does to runs and to its own stats (add `--styles` for the tendencies, `--pairs` for pairs of ratings). It checks nothing and takes a few minutes.
 - `node tools/batted.js 1000`: the league's batted balls against Statcast (exit speed, launch angle, the batted-ball mix, spray, squared-up contact, and what each type and exit-speed band becomes). It checks nothing.
 - `node tools/plate.js 400`: plate discipline by pitch group (fastballs, off-speed), zone and count against MLB 2024: swing, whiff and foul %, the pitch mix, zone shares; add conditions such as `recognition=40 recognition=80`. A few seconds; it checks nothing.
-- `node tools/ratingstats.js`: each rating from 20 to 99 against real 2024–2026 players (its own stat, each unit's effect, and a test population against real regulars); `--html=page.html` writes a chart page. About 2 minutes; it checks nothing.
+- `node tools/ratingstats.js`: each rating from 20 to 99 against real 2024–2026 players (its own stat, each unit's effect, and a population of generated players against real regulars, with how common stars are); `--html=page.html` writes a chart page. About 2 minutes (`--part=pop` alone about 40 s); it checks nothing.
+- `node tools/genleague.js`: a generated league of 1,200 players: ratings by tier, hands, ages, potential, countries and names, arsenals, tendencies, and sample players. Instant; it checks nothing.
 - `node tools/runningdefense.js`: running and defense against real players (Speed's and Baserunning's running by level, Range's outs above average, Framing's strike rate); about 150 s. `node tools/running.js` prints extra bases taken against 2024's rates.
 - `node tools/replay.js DIR`: real 2024 batted balls (Statcast days downloaded into `DIR`, the curl line is at the top of the file) through the engine's flight and fielding (with 2024's ball; the league's is livelier), and the engine's own balls with real directions; about 20 s. It checks nothing.
 - `node tools/calibrate.js`: the calibration report: the target table (DESIGN.md section 7), the equal-value check for every rating, defense and running at their key spots, the tendencies, the pitch shape and the rating pairs' payoffs. About 10 minutes; `--part=targets` (about a minute) or `--part=speed` run one part.
@@ -33,6 +34,9 @@ js/core/              game logic, no DOM (Node-testable)
   data.js             positions, pitch types with speed and movement, the strike zone
   tune.js             every engine setting, the placeholder values of the rating hooks, the rating scales, the CPU's numbers
   ratings.js          ratings into the physics' inputs (the steep curve, the pair synergies, the cap, Stamina, the arsenal, tendencies)
+  names.js            invented player names (never a real MLB player's)
+  realnames.js        real MLB names the lists could build, as hashes (generated)
+  players.js          player generation: ratings, positions, hands, arsenals, tendencies, ages, potential
   pitch.js            pitches, the two-error swing and contact
   ball.js             balls in play: flight, fielders, throws, runners, steals, tag-ups, the play script
   manager.js          the CPU's choices: swing or take, the pitch, pitching changes
@@ -49,6 +53,8 @@ tools/worth.js        prints what 10 rating points are worth (and the stats each
 tools/batted.js       prints the league's batted balls against Statcast
 tools/plate.js        prints plate discipline by pitch group, zone and count against MLB 2024
 tools/calibrate.js    the calibration report; fits the rating step tables
+tools/genleague.js    prints a generated league's make-up
+tools/realnames.js    builds js/core/realnames.js (real MLB names, as hashes) from the Chadwick Bureau register
 tools/lib/value.js    paired plate-appearance replays (the precise value measure)
 tools/lib/load.js     loads js/core/ into Node in index.html order
 tools/lib/            test teams and the game checker

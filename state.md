@@ -821,3 +821,30 @@ Branch `ccr-2a62105c-dk4iqf`, committed and pushed, **not merged to `main`** (th
 
 **Prompt for the next session:** "Start Session 27 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from `main` (merge Session 26's branch `ccr-2a62105c-dk4iqf` first if I haven't). Read CLAUDE.md, then `state.md` sections 44–45 and the "Stopped at:" line in docs/plan.md. Build M2 step 2.1a task 2, player generation, from the starting plan in docs/plan.md; make the small decisions yourself and list them in the report. Baseball1 is reference only; never change it."
 
+
+## 46. Session 27 (Nov 27, 2026; branch `ccr-bdcd4368-eeb0p6`, started from `main`): player generation and names
+**Plan check:** docs version 70; the prompt named no "Based on" version. `main` did not yet hold Session 26's branch: it was fast-forwarded to `ccr-2a62105c-dk4iqf` (5e06768) and pushed, as the prompt asked, and this branch started there. Section 45 matched the code. Baseline: 90 tests pass; `gametest.js 1000 7` checksum `98c72376`; `ratingstats.js --part=pop` 44 s. Changes to Session 26's starting plan, each Claude's default: names checked against every real MLB player (the Chadwick Bureau register was reachable), not a short list; Range, Hands and Arm don't lean by position (they are graded against the player's own position), so Raw Power and Speed lean instead; stars counted by stats, not ratings.
+
+**The owner's notes during the session:** at least about 500 last names (Baseball1's felt monotonous); Spanish and Asian names integrated too, with bigger lists; keep making small decisions alone.
+
+**Built** (M2 step 2.1a task 2; every number Claude's default; DESIGN.md sections 5, 6, 7 and 10):
+- `js/core/names.js`: nine groups (American 63%, Latin American 27%, Japanese, Korean, Taiwanese, Dutch-Caribbean, Italian, German, Brazilian); 619 American, 293 Latin American, 101 Japanese, 47 Korean, 45 Taiwanese last names (1,173 distinct); American players with Latin American (1 in 8) or Asian (1 in 30) last names. A league of 1,200 has about 730 last names.
+- `js/core/realnames.js` (`tools/realnames.js DIR`, from the register's 16 people files in a scratch folder): hashes of the 5,111 real MLB names (of 23,803 MLB players) the lists can build, under used, given and nick first names; no plain names in the repo. `pick()` draws again on a match or a name in use.
+- `js/core/players.js` (`B3.players`): `context`, `hitter`, `pitcher`, `squad` (40 by tier: 9 regulars, 4 bench, 5 starters, 8 relievers, 14 reserves); all numbers in `B3.players.GEN`.
+- `ratingstats.js --part=pop` draws generated players (`--pop=test` for the old population) and prints stars; `calibrate.js` targets use generated teams (`--teams=rated` for the old); `tools/genleague.js` prints a league's make-up; `tools/lib/testteams.js` `generated`, `generatedPair`.
+- Tests: 98 pass (8 new in `players.test.js`; three planted bugs caught: no Raw Power-Contact link, no reliever Velocity, the real-name check off).
+
+**Measured:**
+- Populations (160 teams of each, generated against the test population): within about a point at the spreads' ends; generated slightly wider on starters' K% (p95 33.3 against 32.0 [MLB starters 30.0]), whiff (36.1 against 34.3 [31.2]) and ground-ball % (55.2 against 53.4 [53.4]). A first run at the default 40 teams had shown starters' K% p95 34.0 against 30.6 and Velocity's K% slope 0.34 against 0.23: sampling noise (700 seasons each: 32.7 against 32.0, 0.263 against 0.269 [MLB about 0.25]). The default pop check's tails are noisy at about 240 pitcher seasons.
+- Stars (seasons beyond MLB's top-5% and top-1% gaps from the median): hitters' wOBA 9.7% / 2.4% [5 / 1] (test population 10.3% / 3.1%); starters' ERA 9.5%, FIP 11.7%, K% 9.8% [5 each] (8.3%, 8.8%, 6.0%); aces 5.2% [5.9]. Without the synergies 9.9%, without the synergies and the steep curve 9.7%, with the draw at ± 11 9.0% / 1.9%: the excess is the engine's AVG and SLG tops (AVG p95 .316 [.295], SLG .579 [.517]), not generation.
+- Targets with generated teams (3,000 games): runs 4.45, AVG .246, OBP .304, SLG .424, home runs 1.52, K 23.6%, BB 7.8%, whiffs 26.7%, chase 30.1% (rated teams on the same run: 4.63, .249, .309, 22.6%, 8.0%, 25.8%). Each part alone: ± 10 spread 4.59 runs, ± 11 4.56, relievers' Velocity +0 4.48, no Velocity-put-away synergy 4.47.
+- `gametest.js 1000 7` checksum unchanged (`98c72376`; it plays rated test teams).
+
+## 47. Hand-off for Session 28
+Branch `ccr-bdcd4368-eeb0p6`, committed and pushed, **not merged to `main`** (the owner's OK is needed). Docs version 71. Tests: 98 pass; `gametest.js 1000 7` checksum `98c72376`; boot check passes.
+
+**Waiting on the owner:** keep or change Session 27's decisions (the list is in the session's report); the OK to merge this branch to `main`; whether task 2b (the calibration on the generated league) comes before task 3 (Claude's default) or after.
+
+**Next:** M2 step 2.1a task 2b (docs/plan.md): calibrate on the generated league, the league's bands with generated teams and the stars' share, within the realism rules; then the full `calibrate.js`. Then task 3, the overall and the Arsenal numbers.
+
+**Prompt for the next session:** "Start Session 28 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from `main` (merge Session 27's branch `ccr-bdcd4368-eeb0p6` first if I haven't). Read CLAUDE.md, then `state.md` sections 46–47 and the "Stopped at:" line in docs/plan.md. Do M2 step 2.1a task 2b, the calibration on the generated league, from docs/plan.md; make the small decisions yourself and list them in the report. Baseball1 is reference only; never change it."
