@@ -5,7 +5,7 @@ Every product decision for Baseball3, with who made it. So far the rules, the ga
 **Labels**
 - **Owner's choice:** the owner decided it.
 - **Confirmed Nov 20, 2026:** Claude proposed it in `docs/proposal.md` (section 2, rows 1–64, and section 3) and the owner confirmed the whole list. These count as owner's choices. Numbers in brackets, like [12], are the proposal's row numbers.
-- **Claude's default:** Claude picked it and the owner hasn't confirmed it. Easy to change.
+- **Claude's default:** Claude picked it and the owner hasn't confirmed it. Easy to change. From Session 26 Claude makes small decisions on its own without an interview (owner's choice; CLAUDE.md "Working rules" says which are small) and lists them in each session's report.
 - **Suggested:** came from a design discussion and is not decided.
 
 Baseball1 (merrill3/Baseball1, also called "Diamond Dash") is the reference. Its plans were the main input; its code is not copied.

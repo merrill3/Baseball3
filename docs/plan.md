@@ -1,9 +1,9 @@
-**Docs version: 68** (2026-11-27): Session 25: Velocity's exit-speed fix and its calibration (DESIGN.md sections 7 and 10); the step 2.1 interview (owner's choices: DESIGN.md sections 5, 6 and 10; M2's plan here, step 2.1 split in two); merged with 67. Before that, 67: Session 24: parallel agents allowed (owner's choice; CLAUDE.md, plan.md, the proposal annotated); 66: step 1.5 merged to `main`.
+**Docs version: 69** (2026-11-27): Session 26: small decisions are Claude's own, without an interview (owner's choice; CLAUDE.md "Working rules", plan.md "How to use it", DESIGN.md "Labels"). Before that, 68: Session 25: Velocity's exit-speed fix and its calibration; the step 2.1 interview; merged with 67.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 25 on branch `claude/baseball3-session-25-ua8j3h` (from `main`), merged to `main` with the owner's OK: Velocity's exit-speed fix done and calibrated, and the step 2.1 interview done (M2's plan below: step 2.1 split into 2.1a and 2.1b). Next: M2 step 2.1a, starting with the rating-pair synergies (owner's choice). See `state.md` section 43 for the prompt for Session 26.
+**Stopped at:** Session 26 on branch `ccr-2a62105c-dk4iqf` (from `main`), in progress: the small-decisions rule is in the docs (owner's choice); next in this session, M2 step 2.1a task 1, the rating-pair synergies. Session 25's hand-off is `state.md` section 43.
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 
@@ -13,6 +13,7 @@ This file is the hand-off between the owner's planning chats and the coding sess
 - Every milestone opens with a plan check against the code (Claude's default, carried from Baseball1).
 - Milestones that span more than one session end with one independent review agent. Parallel agents are allowed (owner's choice, Session 24; it replaces the earlier "no parallel building agents"): a session may split a job among sub-agents that work at the same time. Claude's defaults with it: use them when the work splits cleanly (they spend usage faster); give each agent its own files or its own worktree; have each commit often so a stop loses nothing; Claude reviews and tests the combined result before it counts as done.
 - Label every decision **owner's choice** or **Claude's default**.
+- **Small decisions are Claude's own** (owner's choice, Session 26; CLAUDE.md "Working rules" defines small and big): no interview for them; each is labeled Claude's default and listed in the session's report. Interviews and plan-check questions are only for big decisions. Where a step below says "a short interview" on details, Claude decides them instead.
 - When a milestone finishes, update DESIGN.md (decisions) and ARCHITECTURE.md (files and APIs) too.
 
 ---
