@@ -16,8 +16,9 @@
 
   // Hitting (DESIGN.md section 10: each input names the rating whose job it is).
   const BAT = {
-    contactSd: 1.26,   // Contact: spread of the *where* error, inches between bat and ball centers (Session 22, was 1.33: the
-                       // level fit, SWING.attack; rated teams' whiffs 26.2 -> 25.5% of swings [MLB 2024 25.3])
+    contactSd: 1.18,   // Contact: spread of the *where* error, inches between bat and ball centers (Session 22, was 1.33: the
+                       // level fit, SWING.attack; rated teams' whiffs 26.2 -> 25.5% of swings [MLB 2024 25.3]; Session 28, was
+                       // 1.26: the level fit on the generated league, whose wider spread had whiffs at 26.7% and strikeouts 23.6%)
     timingSd: 20,      // Timing: spread of a CPU hitter's *when* error at 92 mph, in ms
     square: 1,         // Timing (Session 11, owner's choice: Timing's job is squaring up): multiplier on the exit speed he
                        // loses to a mishit, off center or mistimed (below 1: he keeps the barrel on the ball)
@@ -120,10 +121,13 @@
     // inside the group's cap above. Claude's defaults: the four pairs from Session 25's summary; a rating whose own stat is a
     // raw physical measure (bat speed, fastball mph, sprint speed) never receives points, so the partner skill takes them;
     // k sized with tools/calibrate.js --part=synergy (the pair's payoff at 80 and 80, physics included).
+    // Session 28 (the calibration on the generated league): Velocity with the put-away pitch k 1.0 (was 2.0): it stretched the
+    // generated starters' strikeout tail past MLB's (K% 95th percentile 33.3 [MLB starters 30.0]; 9.8% of starters as far above
+    // the median as MLB's top 5%); the hitters' pairs keep their sizes (they don't move the hitters' stars).
     synergy: [
       { pair: ['contact', 'rawPower'], to: ['contact'], k: 0.4 },
       { pair: ['recognition', 'discipline'], to: ['recognition', 'discipline'], k: 1.8 },
-      { pair: ['velocity', 'putAway'], to: ['putAway'], k: 2.0 },
+      { pair: ['velocity', 'putAway'], to: ['putAway'], k: 1.0 },
       { pair: ['speed', 'baserunning'], to: ['baserunning'], k: 0.6 }
     ],
     bat: {
@@ -200,7 +204,10 @@
       // Command (Session 14): step 1.4's rows below 60 x 0.75, so poor Command walks as MLB's worst do (with the 0.92 step).
       command: [[20, -2.488], [30, -1.881], [40, -1.274], [50, -0.653], [60, 0], [70, 0.92], [80, 1.899], [90, 2.952], [100, 4.098], [110, 5.368]],
       deception: [[20, -7.939], [30, -4.465], [40, -2.294], [50, -0.937], [60, 0], [70, 0.739], [80, 1.358], [90, 1.896], [100, 2.376], [110, 2.812]],
-      grade: [[20, -7.141], [30, -4.387], [40, -2.666], [50, -1.304], [60, 0], [70, 1.461], [80, 2.408], [90, 3.128], [100, 3.831], [110, 4.534]],
+      // The grades (Session 28): the rows above 60 x 0.95, with the put-away synergy's k 1.0, so the generated starters' K% and whiff %
+      // tops come back toward MLB's (x 0.9 trimmed them more but halved the aces, K% 27+ with BB% 6.5 or less: 2.9% [MLB 5.9]).
+      // Was [70, 1.461], [80, 2.408], [90, 3.128], [100, 3.831], [110, 4.534].
+      grade: [[20, -7.141], [30, -4.387], [40, -2.666], [50, -1.304], [60, 0], [70, 1.388], [80, 2.288], [90, 2.972], [100, 3.639], [110, 4.307]],
       range: [[20, -2.101], [30, -1.611], [40, -1.099], [50, -0.563], [60, 0], [70, 0.593], [80, 1.22], [90, 1.884], [100, 2.591], [110, 3.347]],
       hands: [[20, -2.765], [30, -2.158], [40, -1.507], [50, -0.793], [60, 0], [70, 0.896], [80, 1.931], [90, 3.165], [100, 4.703], [110, 6.513]],
       // Arm (Session 20, the ladder rule): mph from his position's arm (POS), on the real ladder (Savant 2024-2026 arm strength,
@@ -612,7 +619,9 @@
     // green light more often (MLB's attempts rise steeply with sprint speed while their success stays about flat).
     // Fitted: a lineup at Speed 40 / 80 tries 0.23 / 2.47 times as many steals as an average one [MLB, per time on first: 0.21 /
     // 2.3; attempts 2.0% of times on first under 25.5 ft/s, 12.8% at 27.5-28.5, 26.3% past 29.5].
-    steal: { min: [0.68, 0.78], full: [0.85, 0.92], rate: [0.09, 0.05], twoOut: 0.6, judge: 0.8, green: 0.42 },
+    // Session 28: rate x 0.93 (was 0.09 / 0.05): the generated league's Speed leans by position sent more runners (1.04 attempts
+    // a team-game [0.8-1]).
+    steal: { min: [0.68, 0.78], full: [0.85, 0.92], rate: [0.084, 0.047], twoOut: 0.6, judge: 0.8, green: 0.42 },
     // Tag-ups (step 1.4): the lead runner goes when he judges his chance (B3.ball.tagupOdds, plus his own
     // Baserunning error) is at least this, from second or from third.
     tagup: { need: { 2: 0.8, 3: 0.6 } },
@@ -663,7 +672,9 @@
       // first pitch 50.3 and 3-0 72.0). Was [[0.53, 0.42, 0.21], [0.62, 0.52, 0.32], [0.73, 0.67, 0.47], [0.82, 0.8, 0.72]].
       // Session 18: two strikes +0.047 / +0.038 / +0.02 / +0.015 (was 0.219 / 0.317 / 0.484 / 0.673), so zone % by count stays
       // MLB's with the buried put-aways (bury, below: they no longer stray into the zone as nearer targets did).
-      zone: [[0.6, 0.437, 0.266], [0.634, 0.529, 0.355], [0.68, 0.661, 0.504], [0.73, 0.69, 0.688]],
+      // Session 28: every count -0.012 (the level fit on the generated league: its pitchers' zone % was 50.4 [MLB 49.4] and its
+      // walks 7.8% [8-9]).
+      zone: [[0.588, 0.425, 0.254], [0.622, 0.517, 0.343], [0.668, 0.649, 0.492], [0.718, 0.678, 0.676]],
       // Targets in the zone added by Aim, by balls and strikes, per step (Attacker +1, Nibbler -1; none with three balls).
       // Session 16 (was one number per style, all 0): fitted so Attacker and Nibbler sit as far from Balanced, count by count, as
       // MLB's top and bottom thirds of pitchers by the zone % their walks don't explain (2024-2025, 566 pitcher-seasons with 250+

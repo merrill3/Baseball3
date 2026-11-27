@@ -603,12 +603,46 @@ function popReport(res, real) {
       console.log('  ' + y + ' per point of ' + xs.map((x, i) => x + ' ' + fmt(f.beta[i], 3) + ' [' + fmt(rb[i], 3) + ']').join(', ') + '; R2 ' + fmt(f.r2, 2) + ' [' + fmt(rr2, 2) + ']');
     }
     rep.stars = Object.assign(rep.stars || {}, starsReport(kind, seasons, real, q));
+    rep.joint = Object.assign(rep.joint || {}, { [kind]: jointReport(kind === 'hitter' ? 'hitter' : 'starter', kind === 'hitter' ? seasons : seasons.filter((s2) => Number.isFinite(s2.pps))) });
     if (kind === 'hitter') rep.curves = curveReport(seasons);
     if (kind === 'pitcher') rep.aim = aimReport(seasons);
     if (kind === 'pitcher') rep.starters = startersReport(seasons, q);
     rep[kind] = { n: seasons.length, rows: rows, corr: cs };
   }
   return rep;
+}
+
+// How the stats go together (Session 28, the calibration on the generated league; Claude's default): each stat's spread with
+// the sampling noise taken out (the variance of a season of this many plate appearances, as a binomial for the rates and about
+// 0.27 per plate appearance for wOBA), as a multiple of MLB's measured the same way, and the correlations that set how the
+// parts add up, against MLB 2024-2026 (Savant's custom leaderboard: 951 hitter-seasons with 250+ PA; 528 starter-seasons with
+// 250+ batters faced and 10+ starts). MLB's hitters' parts come in trade-offs (strikeouts with walks and power, contact
+// against power), so their wOBA spreads much less than independent parts would.
+const REAL_JOINT = {
+  hitter: { sd: { woba: 0.0234, k: 5.646, bb: 2.560, avg: 0.0180, iso: 0.0458, babip: 0.0195 },
+    corr: [['k', 'bb', 0.17], ['k', 'iso', 0.32], ['k', 'babip', 0.11], ['k', 'woba', -0.08], ['bb', 'iso', 0.32], ['bb', 'woba', 0.46],
+      ['babip', 'iso', 0.06], ['zContact', 'iso', -0.39], ['zContact', 'woba', -0.04], ['zContact', 'ev', -0.43], ['zContact', 'chase', -0.01],
+      ['chase', 'k', -0.03], ['ev', 'bb', 0.32]] },
+  starter: { sd: { k: 4.269, bb: 1.679, hrPa: 0.589 }, hrMean: 3.207,
+    corr: [['k', 'bb', 0.02], ['k', 'hrPa', -0.29], ['bb', 'hrPa', -0.06], ['k', 'fip', -0.69], ['bb', 'fip', 0.29], ['hrPa', 'fip', 0.81]] }
+};
+const NOISE = { woba: () => 0.27, k: (s) => s.k * (100 - s.k), bb: (s) => s.bb * (100 - s.bb), hrPa: (s) => s.hrPa * (100 - s.hrPa),
+  avg: (s) => s.avg * (1 - s.avg) / 0.89, iso: () => 0.21 / 0.89, babip: (s) => s.babip * (1 - s.babip) / 0.62 };
+function jointReport(kind, seasons) {
+  const R = REAL_JOINT[kind], list = seasons.filter((s) => Object.keys(R.sd).every((k) => Number.isFinite(s[k])));
+  if (list.length < 20) return null;
+  const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  const sd = {};
+  for (const k in R.sd) {
+    const m = mean(list.map((s) => s[k])), tv = mean(list.map((s) => (s[k] - m) * (s[k] - m))), nv = mean(list.map((s) => NOISE[k](s) / s.pa));
+    sd[k] = Math.sqrt(Math.max(0, tv - nv)) / R.sd[k];
+    if (k === 'hrPa') sd.hrPaLevel = sd[k] / (m / R.hrMean); // against MLB's relative to the level (the livelier ball)
+  }
+  const cs = R.corr.map(([a, b, rv]) => ({ a: a, b: b, engine: corr(list.map((s) => s[a]), list.map((s) => s[b])), real: rv }));
+  console.log('  how the stats go together (' + kind + 's): spread without the sampling noise, x MLB\'s: ' + Object.keys(R.sd).map((k) => k + ' ' + fmt(sd[k], 2)).join(', ') +
+    (sd.hrPaLevel ? ' (home runs against the level ' + fmt(sd.hrPaLevel, 2) + ')' : ''));
+  console.log('  correlations (engine [MLB]): ' + cs.map((c) => c.a + '-' + c.b + ' ' + fmt(c.engine, 2) + ' [' + c.real + ']').join(', '));
+  return { sd: sd, corr: cs };
 }
 
 // Stars (Session 27, M2 step 2.1a task 2; Claude's default): how many player-seasons stand out by as much as MLB's top 5%
@@ -641,12 +675,21 @@ function starsReport(kind, seasons, real, q) {
     const sp = seasons.filter((s) => Number.isFinite(s.pps));
     const R = {}; for (const [, key, , v] of REAL_STARTERS.rows) R[key] = v;
     const era = tail(sp, 'era', R.era[0], null, R.era[2], false), fip = tail(sp, 'fip', R.fip[0], null, R.fip[2], false), k = tail(sp, 'k', R.k[4], null, R.k[2], true);
+    // Session 28: ERA and FIP also against the gap scaled to the league's level (MLB's best 5% sit 35% and 30% below their median):
+    // the livelier ball (owner's choice, Session 22) gives about 27% more home runs than MLB's, which widens FIP's and ERA's
+    // spreads in runs without making the best starters stand out more.
+    const scaled = (key, r5, r50) => { const xs = sp.map((s) => s[key]).filter(Number.isFinite), med = q(xs, 0.5); return pc(xs.filter((x) => x <= med * r5 / r50).length, xs.length); };
+    era.p5scaled = scaled('era', R.era[0], R.era[2]); fip.p5scaled = scaled('fip', R.fip[0], R.fip[2]);
     const aces = pc(sp.filter((s) => s.k >= 27 && s.bb <= 6.5).length, sp.length);
+    // Session 28: the aces' bars moved by the engine's K% and BB% medians against MLB starters' (21.5 and 7.7), so the league's
+    // level (the owner's livelier ball, the walk band) doesn't count as fewer or more aces.
+    const kMed = q(sp.map((s) => s.k), 0.5), bbMed = q(sp.map((s) => s.bb), 0.5);
+    const acesLevel = pc(sp.filter((s) => s.k >= 27 + kMed - R.k[2] && s.bb <= 6.5 + bbMed - R.bb[2]).length, sp.length);
     const top = sp.slice().sort((a, b) => a.fip - b.fip).slice(0, Math.max(1, Math.round(sp.length / 20)));
     const h = holes(top, ['velocity', 'command', 'deception']);
-    console.log('  stars (starters): as far below the median as MLB\'s best 5%: ERA ' + fmt(era.p5, 1) + '%, FIP ' + fmt(fip.p5, 1) + '%; K% as far above: ' + fmt(k.p5, 1) +
-      '% [5 each]; aces (K% 27+, BB% 6.5 or less) ' + fmt(aces, 1) + '% [5.9]; the top 5% by FIP (' + h.n + '): ' + fmt(h.hole, 0) + '% with Velocity, Command or Deception 45 or lower');
-    out.pitcher = { era: era, fip: fip, k: k, aces: aces, top: h };
+    console.log('  stars (starters): as far below the median as MLB\'s best 5%: ERA ' + fmt(era.p5, 1) + '%, FIP ' + fmt(fip.p5, 1) + '% (scaled to the level: ' + fmt(era.p5scaled, 1) + '%, ' + fmt(fip.p5scaled, 1) + '%); K% as far above: ' + fmt(k.p5, 1) +
+      '% [5 each]; aces (K% 27+, BB% 6.5 or less) ' + fmt(aces, 1) + '% (at the league\'s level ' + fmt(acesLevel, 1) + '%) [5.9]; the top 5% by FIP (' + h.n + '): ' + fmt(h.hole, 0) + '% with Velocity, Command or Deception 45 or lower');
+    out.pitcher = { era: era, fip: fip, k: k, aces: aces, acesLevel: acesLevel, top: h };
   }
   return out;
 }
