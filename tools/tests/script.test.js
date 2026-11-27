@@ -8,8 +8,10 @@ const { loadCore } = require('../lib/load');
 const { pair } = require('../lib/testteams');
 
 const MPH = 5280 / 3600;
-// Positions are rounded to 0.1 ft and times to 0.01 s, so short steps get a little slack.
-const SLACK_FT = 0.35;
+// Positions are rounded to 0.1 ft and times to 0.01 s, so short steps get a little slack: SLACK_FT for the positions, and one
+// time step (a step's true length can be up to TIME_S longer than its rounded one; Session 30: a 104-mph grounder reached the
+// wall 0.005 s after the last sample, so both read 3.90 s and the 0.4 ft between them looked instant).
+const SLACK_FT = 0.35, TIME_S = 0.01;
 
 // Plays from seeded games where the CPU steals often and always tags up, so the rare paths come up
 // (runners going on the pitch, doubled off, thrown out tagging). Each record keeps what the checks
@@ -75,7 +77,7 @@ function problems(B3, rec) {
       const a = track[k - 1], b = track[k], dt = b[0] - a[0];
       if (dt < 0) { bad(name + ': time goes back at ' + b[0]); continue; }
       const d = name === 'ball' ? d3(a.slice(1), b.slice(1)) : d2(a.slice(1), b.slice(1));
-      if (d > top * dt + SLACK_FT) bad(name + ': ' + d.toFixed(1) + ' ft in ' + dt.toFixed(2) + ' s at ' + a[0] + ' (top ' + top.toFixed(1) + ' ft/s)');
+      if (d > top * (dt + TIME_S) + SLACK_FT) bad(name + ': ' + d.toFixed(1) + ' ft in ' + dt.toFixed(2) + ' s at ' + a[0] + ' (top ' + top.toFixed(1) + ' ft/s)');
     }
     if (track[track.length - 1][0] > S.t + 1e-9) bad(name + ': a point after the script ends');
   };

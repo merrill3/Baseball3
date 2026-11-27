@@ -19,8 +19,8 @@
     contactSd: 1.22,   // Contact: spread of the *where* error, inches between bat and ball centers (Session 22, was 1.33: the
                        // level fit, SWING.attack; rated teams' whiffs 26.2 -> 25.5% of swings [MLB 2024 25.3]; Session 28, was
                        // 1.26: the level fit on the generated league, whose wider spread had whiffs at 26.7% and strikeouts 23.6%;
-                       // Session 30, was 1.18: the level again after the pitching balance, which took the generated league to 4.72
-                       // runs, K 22.4%, whiffs 25.4%; now 4.68, 22.7%, 25.7% over four seeds)
+                       // Session 30, was 1.18: the level again after the pitching balance (the grades), which took the generated
+                       // league to about 4.72 runs, K 22.4%, whiffs 25.4%; now 4.69, 22.7%, 25.8% over four seeds)
     timingSd: 20,      // Timing: spread of a CPU hitter's *when* error at 92 mph, in ms
     square: 1,         // Timing (Session 11, owner's choice: Timing's job is squaring up): multiplier on the exit speed he
                        // loses to a mishit, off center or mistimed (below 1: he keeps the barrel on the ball)
@@ -331,15 +331,15 @@
                        // Session 25, was 0.495: with timeFoul's fouls, for strikeouts and pitches per PA again), for a pitch at foulRef mph ...
     foulRef: 88,       // ... and it narrows as (foulRef / pitch speed)^foulPow (step 1.5 task 4: a faster pitch is fouled
     foulPow: 2.5,      // back more often; MLB 2024: 43% of swings at fastballs are fouls, 32% at off-speed pitches)
-    foulSpeedShare: 1, // share of this pitch's own speed in that (Session 13; the rest is the type's typical speed, PIT.velo x
-                       // its share). Session 13 set 0, so the fastball/off-speed split stayed without tying a pitcher's velocity to
-                       // his BABIP (with 1 then, from 50 to 20 Velocity his BABIP fell .290 to .258 and pop-ups rose 9.5 to 15.2%).
-                       // Session 30 (M2 step 2.1a task 4, the owner's Velocity top-up; Claude's default for the lever): 1 again, now
-                       // that Session 25's timeFoul carries Velocity's late swings: a harder thrower's glancing contact goes back
-                       // more, so per mph of fastball K% +1.70 [MLB the same pitcher year to year +1.69] with whiffs +0.99 [across
-                       // pitchers +0.93] (paired replays, 116,000 PA; was +1.28 and +1.00). The cost: fouls per swing +1.0 per mph
-                       // [MLB about +0.05 across pitchers: 249 pitchers, 12 days of Statcast 2024-2025], exit speed against -0.06
-                       // [across pitchers +0.045, year to year -0.16]
+    foulSpeedShare: 0, // share of this pitch's own speed in that (Session 13; the rest is the type's typical speed, PIT.velo x
+                       // its share): 0 keeps the fastball/off-speed split without tying a pitcher's velocity to his BABIP (with
+                       // 1, from 50 to 20 Velocity his BABIP fell .290 to .258 and pop-ups rose 9.5 to 15.2%).
+                       // Session 30 (M2 step 2.1a task 4, the owner's Velocity top-up, stopped under the owner's rule): 1 gave per mph
+                       // of fastball K% +1.70 [MLB the same pitcher year to year +1.69] with whiffs +0.99 [across pitchers +0.93]
+                       // (paired replays, 116,000 PA; with 0, +1.28 and +1.00) and BABIP stayed flat, but fouls rose 1.0 per swing per
+                       // mph [MLB about +0.05 across 249 pitchers], and the generated starters' strikeouts spread past MLB's: K% as far
+                       // above the median as MLB's top 5%, 9.4% of starters (0.5: 8.6%; 0: 7.5%) [5], the population's K% 13.2-32.5
+                       // [15.6-31.7]. MLB's K per mph across pitchers is +0.99, and the population is across pitchers.
     missMs: 80,        // a *when* error past this many ms misses the ball
     timeRadius: 0.7,   // share of the bat's reach (radius) lost at missMs; scales with the square of the *when*
                        // error (step 1.3: so velocity and Timing move whiffs, not only exit speed)
