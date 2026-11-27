@@ -178,7 +178,7 @@ Each step below is one session (one Claude Code session in a usage window). Size
 10. **Free agency you can't solve at a glance:** no exact asking price, and CPU teams compete. In Baseball1 an offer was accepted the moment it reached the price, and a refusal told you the price.
 11. **Exact clinch and elimination math** (Baseball1's marks came a few days late).
 12. **Graphics stay simple until after the release.**
-13. **No parallel building agents.** I write and read every line; one review agent ends each multi-session milestone (owner's choice).
+13. **No parallel building agents.** I write and read every line; one review agent ends each multi-session milestone (owner's choice). *(Relaxed in Session 24, owner's choice: parallel agents are allowed; see CLAUDE.md.)*
 
 **After the release** (from Baseball1's longplan; not planned in detail, re-planned after friends' feedback): first-update fixes; deeper stats and stat pages (batted-ball and swing data); clutch; deeper pitching (new pitches, spin, a fastball rework); graphics editor tools and then wiring them in; one development system with training and coaches; deeper injuries; playing by hand (stealing rework, a decision on balk, hit by pitch and bunt); teams (map, logos, history; real cities only after a rule decision); revenue budgets and luxury tax; hidden information ("fog"); deeper trades and free agency (CPU offers, strategies, picks and cash, bidding wars, an auto front office); minor leagues; a deeper draft and scouting; franchise difficulty; rewards; realism (archetypes, a baseball study). **Parked** (your choices in the longplan): owner-manager system, multiplayer, Korea and Japan, more postseason effects, fun modes. App version: not planned.
 
@@ -225,7 +225,7 @@ Recorded here so a new session can resume from this file. These are the owner's 
 
 **Working rules** (every session; owner's choices)
 - Work on a branch. Commit and push after every task. Keep the "Stopped at:" line current, because the owner rests for hours between sessions.
-- One coding session at a time. Merge to main only with the owner's OK. Milestones that span more than one session end with one independent review agent; no parallel building agents.
+- One coding session at a time. Merge to main only with the owner's OK. Milestones that span more than one session end with one independent review agent; no parallel building agents. *(Relaxed in Session 24: parallel agents are allowed.)*
 - Label every decision "owner's choice" or "Claude's default". Never present Claude's defaults as the owner's choices.
 - Once docs/plan.md exists: in any commit that changes CLAUDE.md, README.md, DESIGN.md, ARCHITECTURE.md or docs/plan.md, add 1 to the Docs version and update its date and note.
 - Don't build past the current milestone or step.
