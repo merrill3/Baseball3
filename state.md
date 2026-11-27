@@ -770,7 +770,7 @@ Branch `ccr-3e670162-0wcenc` (from `ccr-85bd7c5f-5kx3lh`); everything is committ
 **The owner's choices at the end of Session 24:**
 1. Merge step 1.5 to `main` now (done).
 2. Fix Velocity's exit-speed miss before M2: per mph of fastball the engine's exit speed against falls 0.39 mph and hard-hit % 0.81 points, where MLB's barely move (+0.05 / +0.15, `velo.exit_velocity_avg` and `velo.hard_hit_percent` in `tools/lib/real.js`). The cause to check first: Session 23's jammed contact (`SWING.bar`'s 0.235 inches a ms late, with a faster pitch making the swing later); Session 13 had it at −0.13 / −0.40. Keep whiff +0.98 [+0.93] and K% per mph, then rerun `node tools/calibrate.js` and the Velocity sweep (`node tools/ratingstats.js --only=velocity`), and republish the chart page to https://claude.ai/artifact/TQxy1moKJjkhBaivEHMEpv (publish the regenerated page with that `url`; it was published from Session 24).
-3. Keep the three old chart pages, marked stale (Session 24 added a stale banner pointing to the new link where it could).
+3. Keep the three old chart pages, marked stale. Not done yet: a page from an earlier session can be changed only after reading all of it (about 45,000 tokens a page, about 135,000 for the three), and comments can't be started from here; Claude asked the owner whether it's worth that usage. The new page's link is the current one (state.md section 40).
 
 **Then:** M2 step 2.1 (teams and players; interview first, one multiple-choice question at a time).
 
