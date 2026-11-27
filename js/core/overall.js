@@ -92,11 +92,13 @@
   // generated arsenals (tools/overall.js --part=arsenal), since the pitch type stays the main driver (DESIGN.md section 10).
   const ARSENAL = {
     twoStrike: 1.5,
-    kinds: [0.637, 0.071, 0.292],
+    kinds: [0.631, 0.071, 0.297],
     // Session 29's fit (60 generated arsenals, 121 replayed conditions): whole arsenals r 0.991, rms 0.105 runs (grades alone
-    // r 0.79: the types alone spread 0.34 runs, the grades 0.72).
-    scale: 0.937,
-    types: { FF: -1.136, SI: -0.141, FC: 0.028, SL: 0.967, CU: 1.445, CH: 0.71, FS: 1.155 },
+    // r 0.79: the types alone spread 0.34 runs, the grades 0.72); was scale 0.937, types FF -1.136, SI -0.141, FC 0.028,
+    // SL 0.967, CU 1.445, CH 0.71, FS 1.155. Session 30's, after the pitching balance (the same 60 arsenals): r 0.981, rms
+    // 0.145 (grades alone r 0.80; the grades spread 0.63 runs, the types 0.35).
+    scale: 0.882,
+    types: { FF: -1.164, SI: -0.293, FC: 0.177, SL: 0.907, CU: 1.411, CH: 0.802, FS: 1.06 },
     groups: { fastball: ['FF', 'SI', 'FC'], breaking: ['SL', 'CU'], offspeed: ['CH', 'FS'] }
   };
 
@@ -106,8 +108,10 @@
   // organizations (standard errors about 0.002 runs a hitter, 0.006 a staff: a fifth of an overall point or less). A
   // position's mean carries its leans (a center fielder's Speed 74 is worth +0.04 runs a game, a catcher's Speed 50 and Raw
   // Power 57 cost about as much): that is the positional adjustment. The starter's +0.57 is the average generated arsenal's
-  // worth (a pitcher throws his better pitches more, and the grades' table is steeper above 60 than below).
-  const BASE = { hit: { C: -0.0508, '1B': 0.0012, '2B': -0.0158, '3B': -0.0045, SS: -0.0069, LF: 0.0038, CF: 0.0405, RF: 0.0153, DH: 0.0026 }, pit: 0.5666 };
+  // worth (a pitcher throws his better pitches more, and the grades' table is steeper above 60 than below). Session 30, after the
+  // pitching balance (the same 4,000 organizations): the starter's +0.42 (was +0.57: the grades' table is less steep above 60
+  // and the fit's scale smaller); the regulars' within about 0.01 runs of Session 29's.
+  const BASE = { hit: { C: -0.0513, '1B': 0.004, '2B': -0.0136, '3B': -0.003, SS: -0.0074, LF: 0.0082, CF: 0.0517, RF: 0.0188, DH: 0.0076 }, pit: 0.4167 };
 
   const HIT = ['contact', 'timing', 'launch', 'rawPower', 'recognition', 'discipline'];
   const PIT = ['velocity', 'command', 'deception'];
