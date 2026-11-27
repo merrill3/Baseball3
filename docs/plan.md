@@ -1,9 +1,9 @@
-**Docs version: 63** (2026-11-23): Session 23 stopped (usage): plan.md Stopped at. Before that, 62: DESIGN.md section 10 (the weak contact, directions, fielders, hook spin).
+**Docs version: 64** (2026-11-27): Session 24: DESIGN.md section 7, starters' ERA keeps MLB's shape (owner's choice); plan.md Stopped at. Before that, 63: Session 23 stopped (usage).
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 23 on branch `ccr-85bd7c5f-5kx3lh` (from `ccr-3701c2d7-53txjt`; not merged; `main` is at Session 5's end), stopped early (the owner's usage). **Read `state.md` section 39 first**, its end especially: the owner's question about the starters' median ERA (about 3.9) comes first. Step 1.5 task 7 in progress: physics done (new weak contact, grounders' directions, outfield, hook spin, aim), hitting step tables refitted, grades and Deception kept; left: rerun the full calibration and tests, the Velocity recheck, the docs, the chart page, the review agent. Start Session 24 with: "Start Session 24 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from the branch `ccr-85bd7c5f-5kx3lh` (not main: Sessions 6–23 are not merged). Read CLAUDE.md, then `state.md` section 39 first and the "Stopped at:" line in docs/plan.md. First answer my question about lowering the starters' median ERA to about 3.9, then finish step 1.5 task 7. Baseball1 is reference only; never change it."
+**Stopped at:** Session 24 on branch `ccr-3e670162-0wcenc` (from `ccr-85bd7c5f-5kx3lh`; not merged; `main` is at Session 5's end). The owner's ERA question is answered (owner's choice: starters' ERA keeps MLB's shape; DESIGN.md section 7). Step 1.5 task 7 in progress: left the full calibration, the Velocity recheck and equal-value tables, the docs, the chart page, the review agent. See `state.md` section 40.
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 

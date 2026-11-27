@@ -625,7 +625,14 @@ function startersReport(seasons, q) {
     rows.push({ label: lab, key: key, engine: e, target: real });
     console.log('  ' + lab.padEnd(22) + e.map((x) => fmt(x, d).padStart(7)).join('') + '  |' + real.map((x) => fmt(x, d).padStart(7)).join(''));
   }
-  return { n: sp.length, rows: rows };
+  // Session 24 (the owner's question: the median against the average): the ERA's mean over seasons and its innings-weighted pool,
+  // against MLB's (Savant 2024-2026, the same 528 seasons: median 4.08, mean 4.18, pooled 4.06; the league's ERA 4.12, all pitchers).
+  const eras = sp.map((s) => s.era).filter(Number.isFinite);
+  const er = sp.reduce((t, s) => t + s.acc.er, 0), outs = sp.reduce((t, s) => t + s.acc.outs, 0);
+  const all = seasons.reduce((t, s) => [t[0] + s.acc.er, t[1] + s.acc.outs], [0, 0]);
+  const era = { median: q(eras, 0.5), mean: eras.reduce((t, x) => t + x, 0) / eras.length, pooled: 27 * er / outs, league: 27 * all[0] / all[1] };
+  console.log('  ERA median / mean / pooled (innings-weighted) / every pitcher pooled ' + [era.median, era.mean, era.pooled, era.league].map((x) => fmt(x, 2)).join(' / ') + '  | MLB 4.08 / 4.18 / 4.06 / 4.12');
+  return { n: sp.length, rows: rows, era: era };
 }
 
 // The Aim level by count (Session 16): MLB 2024-2025 (Statcast searches grouped by pitcher, by count and in the zone; 566
