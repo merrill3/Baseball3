@@ -91,10 +91,16 @@ module.exports = function (t) {
     // pitches 0.4 ft or more inside the zone).
     const mid = { type: 'FF', x: 0, z: 2.55 };
     const frozen = S.take[0][2]; // Session 22: 0.009 (was 0.02)
+    assert.ok(frozen > 0, 'frozen takes at 0-2');
     const withTakes = swings(env, mid, 0, 2, 20000);
+    // Session 24 (the review): the tuned share (about 0.009 of swings) is smaller than this test's noise, so the mechanism is
+    // checked with a share of 0.2 (it takes that share of the swings he would make)
+    S.take[0][2] = 0.2;
+    const big = swings(env, mid, 0, 2, 20000);
     S.take[0][2] = 0;
     const without = swings(env, mid, 0, 2, 20000);
-    near(without - withTakes, frozen * without, 0.01, 'frozen takes at 0-2');
+    S.take[0][2] = frozen;
+    near(without - big, 0.2 * without, 0.012, 'frozen takes at 0-2 (a share of 0.2)');
     assert.ok(withTakes > 0.9, 'he still swings at nearly every two-strike pitch down the middle');
   });
 

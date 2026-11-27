@@ -19,7 +19,7 @@ function contacts() {
   const B3 = loadCore();
   const out = [];
   const inPlay = B3.ball.inPlay;
-  B3.ball.inPlay = function (g, c, steal) { out.push({ ev: c.ev, la: c.la, sp: c.sp }); return inPlay(g, c, steal); };
+  B3.ball.inPlay = function (g, c, steal) { out.push({ ev: c.ev, la: c.la, sp: c.sp, pull: c.pull }); return inPlay(g, c, steal); }; // Session 24: with pull (the hook and slice)
   for (let n = 0; n < 120; n++) B3.game.sim(Object.assign(pair(), { type: 'regular', rng: B3.rng.create('ball contacts ' + n) }));
   CONTACTS = out;
   return out;

@@ -236,8 +236,12 @@ const FIT_LEVELS = [20, 30, 40, 50, 70, 80, 90, 99];
 // test population spreads as MLB's players do (owner's choice, Session 14): Contact's (Session 10) and Command's (Session 14). Nor
 // Speed's (sprint speed), Arm's (arm strength) and Range's (outs above average), on their real ladders from Session 20 (owner's
 // choices, Session 23): their worth is reported. Nor the grades' and Deception's, set by the pitchers' population (Sessions 13
-// and 19; refitted in Session 23 they narrowed the rated starters' K% to 13.6-26.4 [MLB 15.3-30.0], so realism wins).
-const LADDER = { rawPower: true, velocity: true, contact: true, command: true, speed: true, arm: true, range: true, grade: true, deception: true };
+// and 19; refitted in Session 23 they narrowed the rated starters' K% to 13.6-26.4 [MLB 15.3-30.0], so realism wins). Nor
+// Recognition's and Discipline's (Session 24): refitted in Session 23 they narrowed both the ratings' own ladders and the test
+// population's spreads (chase % 40->80 9.6 points [MLB 19.2], the population's p5-p95 14.9 [19.2]; off-speed whiff 11.3 [25.2],
+// 21.5 [25.2]), so Session 22's tables stay.
+const LADDER = { rawPower: true, velocity: true, contact: true, command: true, speed: true, arm: true, range: true, grade: true, deception: true,
+  recognition: true, discipline: true };
 const FIT = [
   ...HIT.map((k) => ({ key: k, read: 'hit', slope: TARGET, conds: (L) => [ratingCond(k, L)] })),
   ...['velocity', 'command', 'deception'].map((k) => ({ key: k, read: 'pit', slope: TARGET, conds: (L) => [ratingCond(k, L)] })),

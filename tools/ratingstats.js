@@ -310,18 +310,24 @@ function measurePop(B3, spec) {
   };
   for (let n = 0; n < spec.games; n++) {
     const g = B3.game.sim(Object.assign(JSON.parse(JSON.stringify(teams)), { type: 'regular', rng: B3.rng.create('pg:' + spec.seed + ':' + spec.kind + ':' + spec.team + ':' + n) }));
-    // Outs and runs first (they go to the chunk the plate appearance belongs to, before addGame counts it).
+    // Outs and runs first (they go to the chunk the plate appearance belongs to, before addGame counts it). Session 24 (the
+    // review): a player's whole game goes to the chunk open when it starts, so a chunk closes only between games (it had moved
+    // the rest of a game's plate appearances and pitches to a new chunk, mixing FIP's and pitches per start's games), and
+    // caught-stealing outs count for the pitcher (they had been left out: about 0.9% of his outs).
     const starter = g.teams[0].used[0];
+    const mine = {}, pick = (id) => mine[id] || (mine[id] = cur(id));
     let started = false;
     for (const e of g.log) {
-      if (e.h !== side || e.e !== 'pa') continue;
-      const a = cur(spec.kind === 'hitter' ? e.b : e.p);
+      if (e.h !== side) continue;
+      if (e.e === 'cs' && spec.kind === 'pitcher') { pick(e.p).outs++; continue; }
+      if (e.e !== 'pa') continue;
+      const a = pick(spec.kind === 'hitter' ? e.b : e.p);
       if (spec.kind === 'pitcher' && e.p === starter && !started) { a.starts++; started = true; }
       a.outs += e.out;
-      if (spec.kind === 'pitcher') for (const sc of e.sc) { const r = cur(sc.p); r.runs++; r.er += sc.er; }
+      if (spec.kind === 'pitcher') for (const sc of e.sc) { const r = pick(sc.p); r.runs++; r.er += sc.er; }
       a.games = 1;
     }
-    addGame(B3, g, side, (e) => cur(spec.kind === 'hitter' ? e.b : e.p));
+    addGame(B3, g, side, (e) => pick(spec.kind === 'hitter' ? e.b : e.p));
   }
   const out = [];
   for (const id in chunks) for (const a of chunks[id]) {
@@ -436,7 +442,7 @@ function ladder(real, key, sign) {
 // Layer 3: the spread (5th to 95th percentile) of combined stats over the test population's
 // player-seasons against real ones.
 const POP_STATS = {
-  hitter: [['K%', 'k', 'bat.k_percent', 1], ['BB%', 'bb', 'bat.bb_percent', 1], ['AVG', 'avg', 'bat.batting_avg', 3], ['OBP', 'obp', 'bat.on_base_percent', 3],
+  hitter: [['K%', 'k', 'bat.k_percent', 1], ['BB%', 'bb', 'bat.bb_percent', 1], ['AVG', 'avg', 'bat.batting_avg', 3], ['OBP (real with HBP)', 'obp', 'bat.on_base_percent', 3],
     ['SLG', 'slg', 'bat.slg_percent', 3], ['ISO', 'iso', 'bat.isolated_power', 3], ['BABIP', 'babip', 'bat.babip', 3], ['exit speed', 'ev', 'bat.exit_velocity_avg', 1],
     ['hard-hit %', 'hard', 'bat.hard_hit_percent', 1], ['barrel %', 'barrel', 'bat.barrel_batted_rate', 1], ['whiff %', 'whiff', 'bat.whiff_percent', 1],
     ['swing %', 'swing', 'bat.swing_percent', 1], ['zone swing %', 'zSwing', 'bat.z_swing_percent', 1],

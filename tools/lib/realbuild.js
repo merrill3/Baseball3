@@ -169,8 +169,8 @@ module.exports = function build(dir, sources) {
     'whiff_percent', 'iz_contact_percent', 'edge_percent', 'meatball_percent', 'in_zone_percent', 'ff_avg_speed',
     'fastball_avg_speed', 'xwoba', 'woba']) put('pit.' + k, pit, k);
   put('pit.hr_per_pa', pit, (r) => 100 * num(r.p_home_run) / num(r.pa));
-  const starters = pit.filter((r) => num(r.p_starting_p) >= 10);
-  put('sp.ip_per_start', starters, (r) => { const ip = num(r.p_formatted_ip), w = Math.floor(ip); return (w + Math.round((ip - w) * 10) / 3) / num(r.p_game); });
+  // (Session 24, the review: sp.ip_per_start is gone; it divided every inning, relief included, by every game. Innings per start
+  // are Baseball-Reference's, sp.innings_per_start.)
   const evp = rowsOf('ev_pit');
   for (const k of ['max_hit_speed', 'avg_hit_speed', 'ev95percent', 'brl_percent']) put('evpit.' + k, evp, k);
 

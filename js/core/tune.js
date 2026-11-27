@@ -167,7 +167,10 @@
     // ladders; owner's choices, Sessions 14 and 23). The grades and Deception were refitted too and put back: refitted, the rated
     // starters' K% came out 13.6 / 19.7 / 26.4 at the 5th / 50th / 95th percentiles [MLB 15.3 / 21.5 / 30.0] (kept: 15.6 / 22.2 /
     // 29.0) and the league's strikeouts 20.5% [21.5-23]; realism wins (owner's choice, Session 8), so they stay set by the
-    // pitchers' population (Sessions 13 and 19) and their worth is reported.
+    // pitchers' population (Sessions 13 and 19) and their worth is reported. Session 24: Recognition's and Discipline's are back
+    // to Session 22's as well: refitted they narrowed the ratings' own ladders and the test population's spreads (chase %, 40 to 80,
+    // 9.6 points [MLB 19.2]; off-speed whiff 11.3 [25.2]); Timing's refit stays (its ladder narrower, but the population's
+    // squared-up spread is already wider than MLB's: the league's spread wins, owner's choice, Session 10).
     steps: {
       // Contact (step 1.5 task 4): step 1.4's table x 0.6 now that Contact scales the whole *where* spread (SWING.contactAll),
       // so the test population's whiff and zone-contact spreads match MLB's (the owner's ladder rule, Session 10).
@@ -177,8 +180,8 @@
       // Raw Power (step 1.5): mph of average bat speed from 71.7, on the real ladder (Savant 2024-2026: the worst
       // player-season 62.4, 5th percentile 67.3, median 71.7, 95th 76.1, best 81.2), rows at the points after the curve.
       rawPower: [[20, -9.332], [30, -7.2], [40, -4.438], [50, -1.751], [60, 0], [70, 1.724], [80, 4.322], [85, 5.251], [91.25, 6.181], [100, 8.013], [108.8, 9.478]],
-      recognition: [[20, -1.675], [30, -1.38], [40, -1.017], [50, -0.593], [60, 0], [70, 0.91], [80, 2.366], [90, 4.696], [100, 8.423], [110, 14.387]],
-      discipline: [[20, -3.024], [30, -2.282], [40, -1.558], [50, -0.819], [60, 0], [70, 0.844], [80, 1.826], [90, 2.994], [100, 4.582], [110, 7.123]],
+      recognition: [[20, -2.382], [30, -1.85], [40, -1.369], [50, -0.746], [60, 0], [70, 0.946], [80, 2.287], [90, 4.433], [100, 7.866], [110, 13.358]],
+      discipline: [[20, -4.112], [30, -3.042], [40, -2.014], [50, -1.014], [60, 0], [70, 0.945], [80, 2.147], [90, 3.667], [100, 5.975], [110, 8.284]],
       // Velocity (Session 13): mph of four-seam speed from PIT.velo, on the real ladder (Savant 2024-2026, pitchers with 250+
       // batters faced, against their median 94.4: the worst season 82.3, 1st percentile 87.8, 5th 90.7, 25th 92.9, 75th 95.9,
       // 95th 97.9, 99th 99.3, best 101.4), rows at the points after the curve; the step 1.4 fit had 20 at 69 mph.
@@ -242,8 +245,8 @@
     // hitter has already faced this pitcher in the game he plays as if his Recognition and Timing were `points` higher. Per
     // point (the ratings' slopes at 60): the share of pitches he doesn't pick up x unread (RATE.bat.recognition's 0.6 over
     // the table's 50-70 rows), his *when* spread x timingSd and the exit speed he loses to a mishit x square (Timing's 0.85
-    // and 0.9 over its 50-70 rows).
-    familiar: { points: 1, unread: 0.9577, timingSd: 0.9881, square: 0.9923 },
+    // and 0.9 over its 50-70 rows; Session 24: recomputed for Session 23's Timing table, were 0.9881 and 0.9923).
+    familiar: { points: 1, unread: 0.9577, timingSd: 0.9925, square: 0.9951 },
     callWidth: 0.085,  // umpire: feet over which a borderline call goes from likely strike to likely ball (the logistic's
                        // scale; Session 15, was 0.055: MLB 2024's called strikes by feet from the zone padded by the ball,
                        // 97.6 / 93.1 / 85.7 / 66.6 / 33.9 / 15.9 / 5.3% from 0.4 ft inside to 0.3 ft off, 109,184 pitches)
@@ -405,12 +408,15 @@
     twoStrike: [0.75, 2], // with two strikes a hitter shortens up (step 1.4; Session 12, was 0.64: MLB 2024 whiffs 25.9% of
                        // swings before two strikes and 24.5% with two): [share of his *where* spread, mph of bat
                        // speed he gives up (step 1.5; it was 4% of exit speed)]
-    shapeSd: [0.137, 0.065], // the shape's counterweight (step 1.4, owner's choice: value-neutral): share of the
+    shapeSd: [0.125, 0.015], // the shape's counterweight (step 1.4, owner's choice: value-neutral): share of the
                        // *where* spread taken off per unit of ground-ball shape (easier to square up), and
                        // added per unit of fly-ball shape (harder). Session 19, with the 8-degree shape: refitted (was
                        // [0.112, 0.09], which on Session 18's code cost +0.29 runs a team-game at +1 and saved 0.27 at -1); the
                        // value bends (a big tilt either way moves hitters off their best launch angle), so +-0.5 and +-1 are
-                       // balanced within about +-0.1 runs
+                       // balanced within about +-0.1 runs. Session 24 (step 1.5 task 7): refitted again (was [0.137, 0.065]:
+                       // after Session 23's flight, a fly-ball shape at -1 saved 0.24 runs; a larger fly-ball share saves
+                       // more, as a harder-to-square ball is weak contact): over seeds 1-3, +0.5 / -0.5 / +1 / -1 cost
+                       // +0.05 / +0.09 / -0.03 / -0.02 runs a team-game
     // Swing path (owner's choice, Session 11: a hitter's own shape; the sizes are Claude's defaults): per unit of
     // swingPath (+1 Lift, -1 Ground-ball), degrees added to his launch angle (real: the 15th and 85th percentiles of
     // hitters' average launch angle sit about 4.5 degrees from the median), degrees of spray toward his pull side
