@@ -1,4 +1,4 @@
-**Docs version: 74** (2026-11-27): Session 29, add-on: M2 step 2.1a task 4, balancing the pitching ratings (owner's choices from a brainstorm outside the coding sessions), added after task 3 and before step 2.1b; Stopped at and the hand-off (state.md section 51) point to it. Before that, 73: Session 29: the overall and the Arsenal numbers; 72: Session 28: the calibration on the generated league.
+**Docs version: 75** (2026-11-27): Session 30 (in progress): M2 step 2.1a task 4, balancing the pitching ratings: DESIGN.md section 10 ("Balancing the pitching ratings, built") and ARCHITECTURE.md (the task 4 block). Before that, 74: Session 29's add-on, task 4 planned; 73: Session 29: the overall and the Arsenal numbers.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
