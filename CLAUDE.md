@@ -17,7 +17,7 @@ Diamond Dash (working title, owner's choice) is a browser baseball game built fr
 
 ## Working rules (owner's choices, every session)
 - Work on a branch. Commit and push after every task. Keep the **Stopped at:** line in `docs/plan.md` current, because the owner rests for hours between sessions.
-- One coding session at a time. Merge to `main` after each finished, tested step, each time with the owner's OK (owner's choice, Session 3); the next session starts from `main`. Milestones that span more than one session end with one independent review agent. No parallel building agents.
+- One coding session at a time. Merge to `main` after each finished, tested step, each time with the owner's OK (owner's choice, Session 3); the next session starts from `main`. Milestones that span more than one session end with one independent review agent. Parallel agents are allowed (owner's choice, Session 24; it replaces the earlier "no parallel building agents"): a session may split a job among sub-agents that work at the same time. Claude's defaults with it: use them when the work splits cleanly (they spend usage faster); give each agent its own files or its own worktree; have each commit often so a stop loses nothing; Claude reviews and tests the combined result before it counts as done.
 - Label every decision "owner's choice" or "Claude's default". Never present your defaults as the owner's choices. Text marked "suggested" is not decided.
 - In any commit that changes `CLAUDE.md`, `README.md`, `DESIGN.md`, `ARCHITECTURE.md` or `docs/plan.md`, add 1 to the **Docs version** at the top of `docs/plan.md`, and update its date and note.
 - Don't build past the current milestone or step.

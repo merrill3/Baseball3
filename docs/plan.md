@@ -1,4 +1,4 @@
-**Docs version: 67** (2026-11-27): Session 25: Velocity's exit-speed fix and its calibration (DESIGN.md sections 7 and 10); the step 2.1 interview (owner's choices: DESIGN.md sections 5, 6 and 10; M2's plan here, step 2.1 split in two). Before that, 66: step 1.5 merged to `main`.
+**Docs version: 68** (2026-11-27): Session 25: Velocity's exit-speed fix and its calibration (DESIGN.md sections 7 and 10); the step 2.1 interview (owner's choices: DESIGN.md sections 5, 6 and 10; M2's plan here, step 2.1 split in two); merged with 67. Before that, 67: Session 24: parallel agents allowed (owner's choice; CLAUDE.md, plan.md, the proposal annotated); 66: step 1.5 merged to `main`.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
@@ -11,7 +11,7 @@ This file is the hand-off between the owner's planning chats and the coding sess
 - Each roadmap step is one coding session (one Claude Code session in a usage window). Gates (interviews, playtests, the owner's OK) are not sessions.
 - The coding session builds the current milestone in order, ticks off tasks, keeps **Stopped at** current, and moves finished milestones to "Done".
 - Every milestone opens with a plan check against the code (Claude's default, carried from Baseball1).
-- Milestones that span more than one session end with one independent review agent. No parallel building agents.
+- Milestones that span more than one session end with one independent review agent. Parallel agents are allowed (owner's choice, Session 24; it replaces the earlier "no parallel building agents"): a session may split a job among sub-agents that work at the same time. Claude's defaults with it: use them when the work splits cleanly (they spend usage faster); give each agent its own files or its own worktree; have each commit often so a stop loses nothing; Claude reviews and tests the combined result before it counts as done.
 - Label every decision **owner's choice** or **Claude's default**.
 - When a milestone finishes, update DESIGN.md (decisions) and ARCHITECTURE.md (files and APIs) too.
 
@@ -212,7 +212,7 @@ Tasks (commit and push after each):
 **Goal:** A full 30-team league of generated players with an overall, rosters and a 162-game schedule (2.1), played as a season with standings, stats and leaders (2.2), rest, injuries, CPU roster moves and WAR (2.3), and saved (2.4).
 **Why now:** It is next in the owner's order. Everything after it (the UI, the game view, the offseason) runs on the league.
 
-**Based on:** docs version 67 (Session 25). The step 2.1 plan comes from Session 25's interview (owner's choices below); steps 2.2–2.4 keep the roadmap's lines until their own plan checks.
+**Based on:** docs version 68 (Session 25). The step 2.1 plan comes from Session 25's interview (owner's choices below); steps 2.2–2.4 keep the roadmap's lines until their own plan checks.
 
 **Decisions (step 2.1 interview, Session 25, Nov 27, 2026; four questions, a follow-up and a summary, confirmed)**
 - **Step 2.1 splits in two** (owner's choice): 2.1a is player generation and the overall, checked on a full generated league; 2.1b is teams, ballparks, rosters and the 162-game schedule. M2 grows from 4 to about 5 sessions.
