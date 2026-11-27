@@ -1,9 +1,9 @@
-**Docs version: 65** (2026-11-27): Session 24: step 1.5 task 7 done (DESIGN.md sections 7 and 10, ARCHITECTURE.md, plan.md). Before that, 64: DESIGN.md section 7, starters' ERA keeps MLB's shape (owner's choice).
+**Docs version: 66** (2026-11-27): Session 24: step 1.5 merged to `main` (owner's OK); plan.md Stopped at (the Velocity fix next, owner's choice). Before that, 65: step 1.5 task 7 done (DESIGN.md sections 7 and 10, ARCHITECTURE.md, plan.md).
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 24 on branch `ccr-3e670162-0wcenc` (from `ccr-85bd7c5f-5kx3lh`; not merged; `main` is at Session 5's end). Step 1.5 is done (task 7 finished, the review agent's findings fixed); waiting on the owner: read step 1.5's report (the chart page https://claude.ai/artifact/TQxy1moKJjkhBaivEHMEpv and DESIGN.md sections 7 and 10), then the merge of Sessions 6–24 to `main` with the owner's OK. See `state.md` sections 40–41 for the prompt for Session 25.
+**Stopped at:** Session 24 on branch `ccr-3e670162-0wcenc`, merged to `main` with the owner's OK (Sessions 6–24, step 1.5 done). Next (owner's choice, Session 24): a short physics pass before M2 so a harder thrower's exit speed against moves as little as MLB's (−0.39 mph per mph [+0.05]; Session 23's jammed contact), with a calibration rerun; then M2 step 2.1 with the interview. See `state.md` section 41 for the prompt for Session 25.
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 
@@ -41,7 +41,7 @@ Confirmed by the owner on Nov 20, 2026 (order and sizes from `docs/proposal.md` 
 ## Current milestones
 
 ### M1: Game engine, headless
-**Status:** in progress: step 1.1 done (Session 2); step 1.2 done (Session 3); step 1.3 done (Session 4); step 1.4 done (Session 5); step 1.5 done (Sessions 6–24; added in Session 7, owner's choice), waiting for the owner's report reading and merge OK. The gate: the owner reads step 1.5's report, then the merge to `main` with the owner's OK.
+**Status:** in progress: step 1.1 done (Session 2); step 1.2 done (Session 3); step 1.3 done (Session 4); step 1.4 done (Session 5); step 1.5 done (Sessions 6–24; added in Session 7, owner's choice), merged to `main` in Session 24 with the owner's OK. The gate: the owner reads step 1.5's report, then the merge to `main` with the owner's OK.
 **Goal:** A headless engine that plays full games pitch by pitch, for simulated games and games you play alike, and hits the calibration targets with rated test teams.
 **Why now:** It is first in the owner's order. The season, the game view and every later number run on it. Baseball1's lesson: calibrate before building on top, because every later tuning change ripples through WAR, workload and contracts.
 

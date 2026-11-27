@@ -765,12 +765,13 @@ Measuring: `node tools/calibrate.js --part=targets --seed=1` (about 10 s), `node
 - Tests: 89 pass; `gametest.js 1000 7` checksum `f59a0a5b`; boot check passes.
 
 ## 41. Hand-off for Session 25
-Branch `ccr-3e670162-0wcenc` (from `ccr-85bd7c5f-5kx3lh`); everything is committed and pushed. `main` is still at Session 5's end (`1feb3da`). Step 1.5 is done; its gate is the owner reading the report, then the merge of Sessions 6–24 to `main` with the owner's OK.
+Branch `ccr-3e670162-0wcenc` (from `ccr-85bd7c5f-5kx3lh`); everything is committed and pushed, and **merged to `main`** (a fast-forward, the owner's OK in Session 24): Sessions 6–24, step 1.5 done. Tests: 89 pass; `gametest.js 1000 7` checksum `f59a0a5b`; boot check passes.
 
-**For the owner:**
-1. Read the report: the chart page (link above) and DESIGN.md section 7 ("Calibration results, step 1.5 task 7") and section 10 ("The one calibration").
-2. Decisions: the merge to `main`; whether to fix Velocity's exit-speed miss (hard throwers give up softer contact than MLB's) before M2 or keep it reported; whether to delete the three stale chart pages.
+**The owner's choices at the end of Session 24:**
+1. Merge step 1.5 to `main` now (done).
+2. Fix Velocity's exit-speed miss before M2: per mph of fastball the engine's exit speed against falls 0.39 mph and hard-hit % 0.81 points, where MLB's barely move (+0.05 / +0.15, `velo.exit_velocity_avg` and `velo.hard_hit_percent` in `tools/lib/real.js`). The cause to check first: Session 23's jammed contact (`SWING.bar`'s 0.235 inches a ms late, with a faster pitch making the swing later); Session 13 had it at −0.13 / −0.40. Keep whiff +0.98 [+0.93] and K% per mph, then rerun `node tools/calibrate.js` and the Velocity sweep (`node tools/ratingstats.js --only=velocity`), and republish the chart page to https://claude.ai/artifact/TQxy1moKJjkhBaivEHMEpv (publish the regenerated page with that `url`; it was published from Session 24).
+3. Keep the three old chart pages, marked stale (Session 24 added a stale banner pointing to the new link where it could).
 
-**Then:** the merge (with the owner's OK), then M2 step 2.1 (teams and players; interview first, one multiple-choice question at a time).
+**Then:** M2 step 2.1 (teams and players; interview first, one multiple-choice question at a time).
 
-**Prompt for the next session:** "Start Session 25 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from the branch `ccr-3e670162-0wcenc` (not main, unless I have merged it). Read CLAUDE.md, then `state.md` sections 40–41 and the "Stopped at:" line in docs/plan.md. Step 1.5 is done: apply my answers on the merge and the Velocity miss, then start M2 step 2.1 with the interview. Baseball1 is reference only; never change it."
+**Prompt for the next session:** "Start Session 25 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from `main` (step 1.5 is merged). Read CLAUDE.md, then `state.md` sections 40–41 and the "Stopped at:" line in docs/plan.md. First fix Velocity's exit-speed miss (my choice in Session 24) and rerun the calibration, then start M2 step 2.1 with the interview. Baseball1 is reference only; never change it."
