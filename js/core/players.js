@@ -253,7 +253,7 @@
     for (const role of PEN) out.relievers.push(pitcher(rng, ctx, { role: role, level: level }));
     // Session 29 (the overall, task 3): the short relievers' roles go by quality, the best overall the closer, the next two
     // the setup men (the roles don't change how a reliever is drawn, so the draws are as before).
-    if (B3.overall && B3.overall.WORTH) {
+    if (B3.overall && B3.overall.WORTH && B3.overall.BASE) {
       const pen = out.relievers.slice(0, PEN.length - 1).map((p, i) => ({ p: p, o: B3.overall.of(p), i: i }));
       pen.sort((a, b) => b.o - a.o || a.i - b.i);
       pen.forEach((x, i) => { x.p.role = PEN[i]; out.relievers[i] = x.p; });

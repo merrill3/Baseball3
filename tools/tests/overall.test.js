@@ -1,7 +1,7 @@
-// The overall and the Arsenal numbers (M2 step 2.1a task 3, Session 29): B3.overall. The scale's anchors (an average
-// regular and an average starter at 50), each rating counting by its worth and by position, the Arsenal number as a grade
-// weighted toward his best pitch, potential on the overall's scale, and a generated league's spread. How well the overall
-// matches the game's replays is tools/overall.js --part=check's job.
+// The overall and the Arsenal numbers (M2 step 2.1a task 3, Session 29): B3.overall. The scale's anchors (the league's
+// average regular at each position and its average starter at 50), each rating counting by its worth and by position,
+// the Arsenal number as a grade weighted toward his best pitch, potential on the overall's scale, and a generated
+// league's spread. How well the overall matches the game's replays is tools/overall.js --part=check's job.
 'use strict';
 const assert = require('assert');
 const { loadCore } = require('../lib/load');
@@ -30,14 +30,19 @@ function league() {
 }
 
 module.exports = function (t) {
-  t.test('an average player at his position is 50: a regular with his position\'s leans, a starter with every rating 60', () => {
-    const B3 = loadCore(), G = B3.players.GEN;
+  t.test('the league\'s average player is 50: regulars at each position and starters, and a player with his position\'s average ratings about that', () => {
+    const { B3, regulars, starters } = league();
+    const G = B3.players.GEN, O = B3.overall;
+    const pts = (p) => 50 + O.SEASON.points * O.detail(p).runs / O.SEASON.runsPerWin; // before rounding and the 20-99 clip
     for (const pos of B3.data.LINEUP_POS) {
-      const p = hitter(pos, { rawPower: 60 + G.posPower[pos], speed: 60 + G.posSpeed[pos] });
-      assert.strictEqual(B3.overall.of(p), 50, pos);
-      assert.ok(Math.abs(B3.overall.detail(p).war - B3.overall.SEASON.regularWins) < 1e-9, pos + ' wins');
+      const m = mean(regulars.filter((p) => p.pos === pos).map(pts));
+      assert.ok(Math.abs(m - 50) < 4, pos + ' mean ' + m.toFixed(1));
+      const avg = O.of(hitter(pos, { rawPower: 60 + G.posPower[pos], speed: 60 + G.posSpeed[pos] }));
+      assert.ok(Math.abs(avg - 50) <= 3, pos + ' average ratings ' + avg);
     }
-    assert.strictEqual(B3.overall.of(pitcher('SP', { velocity: 60, command: 60, deception: 60 })), 50);
+    assert.ok(Math.abs(mean(regulars.map(pts)) - 50) < 1.5, 'regulars ' + mean(regulars.map(pts)).toFixed(1));
+    assert.ok(Math.abs(mean(starters.map(pts)) - 50) < 1.5, 'starters ' + mean(starters.map(pts)).toFixed(1));
+    assert.ok(Math.abs(O.detail(regulars[0]).war - O.SEASON.regularWins - O.detail(regulars[0]).runs / O.SEASON.runsPerWin) < 1e-9);
   });
 
   t.test('every rating counts by its worth: a better rating never lowers the overall, and the job decides how much', () => {

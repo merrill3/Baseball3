@@ -1,7 +1,7 @@
 // The overall and the Arsenal numbers (M2 step 2.1a task 3, Session 29; DESIGN.md section 10, "The overall"): measures
 // what each rating is worth, checks the formulas in js/core/overall.js against replays, and reports a generated league's
 // overall spread. Node only; it checks nothing (exit 0).
-// Usage: node tools/overall.js [--part=worth,stamina,arsenal,check,league] [--samples=1500] [--seed=1] [--jobs=N] [--n=40]
+// Usage: node tools/overall.js [--part=worth,stamina,arsenal,base,check,league] [--samples=1500] [--seed=1] [--jobs=N] [--n=40]
 //                              [--orgs=30] [--tweak=file.js]
 //
 //   worth    each rating's run value from 20 to 99 (everyone else at 60), in the replays of tools/lib/value.js (as the
@@ -15,6 +15,9 @@
 //   arsenal  the Arsenal formula against replays: --n generated pitchers' arsenals, each swapped in for every pitcher of
 //            the staffs, with its own grades and with every grade at 60 (its grades' worth is the difference); prints the
 //            share of pitches by count kind and how well the formula's runs match, for a few put-away weights.
+//   base     the league's average players: a large generated league's (1,000 organizations unless --orgs) mean runs for
+//            regulars at each position and for starters; prints the BASE table (the overall's 50). Rerun it after the
+//            worth table, the Arsenal's fit or the generator changes.
 //   check    the overall against replays: --n generated regulars (one away lineup slot each: his running and hitting minus
 //            his fielding's runs allowed) and --n generated pitchers (every pitcher of the staffs); measured runs against the
 //            overall's runs (a slope of 1 and a high r mean the overall adds the ratings up as the game does).
@@ -37,7 +40,8 @@ function args() {
     jobs: parseInt(opt('jobs', String(os.cpus().length)), 10),
     n: parseInt(opt('n', '40'), 10),
     orgs: parseInt(opt('orgs', '30'), 10),
-    tweak: opt('tweak', null) ? path.resolve(opt('tweak')) : null
+    tweak: opt('tweak', null) ? path.resolve(opt('tweak')) : null,
+    dump: opt('dump', null)
   };
 }
 
@@ -237,22 +241,51 @@ function arsenal(o, next) {
   const plan = ps.map((p) => ({ p: p, own: add({ kind: 'pitcher', arsenal: flat(p) }), avg: add({ kind: 'pitcher', arsenal: flat(p, 60) }) }));
   console.log('arsenal: ' + ps.length + ' arsenals, ' + jobs.length + ' conditions; pitches by count kind (normal, two balls ahead, two strikes): ' + kinds.map((x) => (100 * x).toFixed(1) + '%').join(', '));
   run(o, jobs, (res) => {
-    const B = res[base];
-    const meas = plan.map((x) => -(diff(B, res[x.own]).v - diff(B, res[x.avg]).v));
-    const types = plan.map((x) => -diff(B, res[x.avg]).v);
-    const out = [];
-    out.push('Arsenal: each arsenal\'s grades, worth in runs per team-game for a whole staff (its own grades against every grade at 60, same pitch types).');
-    out.push('  measured: mean ' + fmt(mean(meas)) + ', sd ' + sd(meas).toFixed(3) + '; the pitch types alone (every grade 60, against the test staffs\' types): sd ' + sd(types).toFixed(3));
-    const O = B3.overall;
+    const B = res[base], O = B3.overall, A = O.ARSENAL, out = [];
+    const own = plan.map((x) => -diff(B, res[x.own]).v), avg = plan.map((x) => -diff(B, res[x.avg]).v);
+    const meas = own.map((v, i) => v - avg[i]);
+    const at60 = (x) => Object.assign({}, x.p, { ratings: Object.assign({}, x.p.ratings, { velocity: 60 }) });
+    const flat60 = (x) => { const q = at60(x); q.arsenal = {}; for (const t of x.p.pitches) q.arsenal[t] = { grade: 60, shape: 0 }; return q; };
+    out.push('Arsenal: each arsenal swapped in for every pitcher (runs saved a team-game for a whole staff, against the test staffs\' own arsenals at 60).');
+    out.push('  its grades (own grades against every grade at 60, same types): mean ' + fmt(mean(meas)) + ', sd ' + sd(meas).toFixed(3) + '; its pitch types alone (every grade 60): mean ' +
+      fmt(mean(avg)) + ', sd ' + sd(avg).toFixed(3));
     for (const w2 of [1, 1.5, 2, 3]) {
-      const pred = plan.map((x) => O.arsenalRuns(Object.assign({}, x.p, { ratings: Object.assign({}, x.p.ratings, { velocity: 60 }) }), { twoStrike: w2 }));
+      const pred = plan.map((x) => O.gradeRuns(at60(x), { twoStrike: w2 }));
       const ln = line(pred, meas);
-      out.push('  two-strike weight ' + w2.toFixed(1) + ':  r ' + corr(pred, meas).toFixed(3) + ', measured = ' + ln.a.toFixed(3) + ' + ' + ln.b.toFixed(2) + ' x formula, rms ' +
-        Math.sqrt(mean(pred.map((y, i) => (meas[i] - y) * (meas[i] - y)))).toFixed(3));
+      out.push('  grades only, two-strike weight ' + w2.toFixed(1) + ':  r ' + corr(pred, meas).toFixed(3) + ', measured = ' + ln.a.toFixed(3) + ' + ' + ln.b.toFixed(2) + ' x formula');
     }
-    const pred = plan.map((x) => O.arsenalRuns(Object.assign({}, x.p, { ratings: Object.assign({}, x.p.ratings, { velocity: 60 }) })));
-    out.push('  (current weights: r ' + corr(pred, meas).toFixed(3) + ')');
-    out.push('  a few: ' + plan.slice(0, 8).map((x, i) => x.p.pitches.map((t) => t + ' ' + x.p.arsenal[t].grade).join('/') + ' measured ' + fmt(meas[i], 2) + ' formula ' + fmt(pred[i], 2)).join('; '));
+    // The fit (least squares): own = scale x grades' formula + types, avg = types; types = his weights x each type's value.
+    const TYPES = ['FF', 'SI', 'FC', 'SL', 'CU', 'CH', 'FS'];
+    const rows = [], ys = [];
+    plan.forEach((x, i) => {
+      const wo = O.weights(at60(x)), w0 = O.weights(flat60(x));
+      rows.push([O.gradeRuns(at60(x), { scale: 1 })].concat(TYPES.map((t) => wo[t] || 0))); ys.push(own[i]);
+      rows.push([0].concat(TYPES.map((t) => w0[t] || 0))); ys.push(avg[i]);
+    });
+    const nP = 1 + TYPES.length, M = [], v = [];
+    for (let r = 0; r < nP; r++) { M.push(new Array(nP).fill(0)); v.push(0); }
+    rows.forEach((x, i) => { for (let r = 0; r < nP; r++) { v[r] += x[r] * ys[i]; for (let c = 0; c < nP; c++) M[r][c] += x[r] * x[c]; } });
+    for (let r = 1; r < nP; r++) M[r][r] += 0.01; // a little ridge for the rare types
+    for (let i = 0; i < nP; i++) {
+      let m = i; for (let r = i + 1; r < nP; r++) if (Math.abs(M[r][i]) > Math.abs(M[m][i])) m = r;
+      [M[i], M[m]] = [M[m], M[i]]; [v[i], v[m]] = [v[m], v[i]];
+      for (let r = i + 1; r < nP; r++) { const f = M[r][i] / M[i][i]; for (let c = i; c < nP; c++) M[r][c] -= f * M[i][c]; v[r] -= f * v[i]; }
+    }
+    const sol = new Array(nP).fill(0);
+    for (let i = nP - 1; i >= 0; i--) { let t = v[i]; for (let c = i + 1; c < nP; c++) t -= M[i][c] * sol[c]; sol[i] = t / M[i][i]; }
+    // Each type's value against the arsenals' mean (only differences between types matter: the overall's baseline is the league's).
+    const tv = {}; TYPES.forEach((t, i) => { tv[t] = sol[i + 1]; });
+    const mid = mean(plan.map((x) => { const w0 = O.weights(flat60(x)); return TYPES.reduce((s2, t) => s2 + (w0[t] || 0) * tv[t], 0); }));
+    for (const t of TYPES) tv[t] = r3(tv[t] - mid);
+    const fitOwn = rows.filter((x, i) => i % 2 === 0).map((x) => sol.reduce((s2, c, j) => s2 + c * x[j], 0));
+    const cur = plan.map((x) => O.arsenalRuns(at60(x)));
+    out.push('  fitted: scale ' + sol[0].toFixed(3) + ' on the grades\' formula; each type (runs a team-game for a whole staff, all of its pitches that type, against the mean): ' +
+      TYPES.map((t) => t + ' ' + fmt(tv[t])).join(', '));
+    out.push('  whole arsenal (types and grades): with the fit r ' + corr(fitOwn, own).toFixed(3) + ', rms ' + Math.sqrt(mean(fitOwn.map((y, i) => (own[i] - y) * (own[i] - y)))).toFixed(3) +
+      '; the current formula r ' + corr(cur, own).toFixed(3) + '; grades alone r ' + corr(plan.map((x) => O.gradeRuns(at60(x))), own).toFixed(3));
+    out.push('  ARSENAL: scale: ' + r3(sol[0]) + ', types: ' + JSON.stringify(tv).replace(/,/g, ', ').replace(/"/g, '').replace(/:/g, ': '));
+    out.push('  a few: ' + plan.slice(0, 6).map((x, i) => x.p.pitches.map((t) => t + ' ' + x.p.arsenal[t].grade).join('/') + ' measured ' + fmt(own[i], 2) + ' fit ' + fmt(fitOwn[i], 2)).join('; '));
+    if (o.dump) require('fs').writeFileSync(o.dump, JSON.stringify(plan.map((x, i) => ({ pitches: x.p.pitches, arsenal: x.p.arsenal, own: own[i], avg: avg[i] }))));
     console.log(out.join('\n'));
     next();
   });
@@ -280,9 +313,9 @@ function check(o, next) {
   run(o, jobs, (res) => {
     const B = res[base], O = B3.overall, out = [];
     const hm = hp.map((x) => diff(B, res[x.id], 0).v - diff(B, res[x.id], 1).v);
-    const hf = hp.map((x) => O.detail(x.p).perGame);
+    const hf = hp.map((x) => O.raw(x.p));
     const pm = pp.map((x) => -diff(B, res[x.id]).v);
-    const pf = pp.map((x) => O.detail(x.p).staffRuns);
+    const pf = pp.map((x) => O.raw(x.p));
     const rep = (label, f, m, unit) => {
       const ln = line(f, m);
       out.push('  ' + label.padEnd(10) + 'r ' + corr(f, m).toFixed(3) + '   measured = ' + ln.a.toFixed(3) + ' + ' + ln.b.toFixed(2) + ' x overall\'s   rms ' +
@@ -301,6 +334,30 @@ function check(o, next) {
     console.log(out.join('\n'));
     next();
   });
+}
+
+// ---- base ----
+// The league's average players: a large generated league's mean runs (against an all-60 player) for regulars at each
+// position and for starters. Prints the BASE table for js/core/overall.js.
+function base(o, next) {
+  const B3 = loadCore();
+  if (o.tweak) require(o.tweak)(B3);
+  const O = B3.overall, orgs = o.orgs === 30 ? 1000 : o.orgs;
+  const rng = B3.rng.create('overall base:' + o.seed), ctx = B3.players.context();
+  const by = {}, sp = [];
+  for (let i = 0; i < orgs; i++) {
+    const sq = B3.players.squad(rng, ctx);
+    for (const p of sq.regulars) (by[p.pos] = by[p.pos] || []).push(O.raw(p));
+    for (const p of sq.starters) sp.push(O.raw(p));
+  }
+  const hit = {};
+  for (const pos of B3.data.LINEUP_POS) hit[pos] = r4(mean(by[pos]));
+  const se = (xs) => sd(xs) / Math.sqrt(xs.length);
+  console.log('Base: ' + orgs + ' generated organizations (seed ' + o.seed + '): mean runs against an all-60 player (standard error)');
+  console.log('  regulars (a team-game in his slot): ' + B3.data.LINEUP_POS.map((pos) => pos + ' ' + fmt(hit[pos], 4) + ' (' + se(by[pos]).toFixed(4) + ')').join(', '));
+  console.log('  starters (a whole staff of him): ' + fmt(mean(sp), 4) + ' (' + se(sp).toFixed(4) + ')');
+  console.log('  const BASE = { hit: ' + JSON.stringify(hit).replace(/"([A-Z][A-Z0-9]?)":/g, (m, k) => (/^[0-9]/.test(k) ? "'" + k + "': " : k + ': ')).replace(/,/g, ', ') + ', pit: ' + r4(mean(sp)) + ' };');
+  next();
 }
 
 // ---- league ----
@@ -375,7 +432,7 @@ function league(o, next) {
 
 function main() {
   const o = args();
-  const parts = { worth: worth, stamina: stamina, arsenal: arsenal, check: check, league: league };
+  const parts = { worth: worth, stamina: stamina, arsenal: arsenal, base: base, check: check, league: league };
   const todo = o.parts.filter((p) => parts[p]);
   const step = () => { const p = todo.shift(); if (p) parts[p](o, () => { console.log(''); step(); }); };
   step();

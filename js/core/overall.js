@@ -11,11 +11,12 @@
 //                                        player at his position over a full season, wins above replacement, and each
 //                                        rating's share of the runs (see below)
 //   B3.overall.arsenal(player)           { arsenal, fastball, breaking, offspeed }: 20-99, null for a group he doesn't throw
-//   B3.overall.arsenalRuns(player, o)    his grades' worth in runs a team-game for a whole staff of him (o.twoStrike: the
-//                                        two-strike weight, for tools/overall.js)
+//   B3.overall.arsenalRuns(player)      his arsenal's worth for the overall, runs a team-game for a whole staff of him
+//                                        (his grades' runs and his pitch types' values); gradeRuns(player) the grades' part,
+//                                        weights(player) each pitch's weight (tools/overall.js fits and checks them)
 //   B3.overall.potential(player, which)  the overall his potential leads to: every rating moved by his potential points
 //                                        (which: 'shown', the default, or 'hidden')
-//   B3.overall.WORTH, SEASON, ARSENAL    the tables and numbers below
+//   B3.overall.WORTH, BASE, SEASON, ARSENAL   the tables and numbers below
 //
 // How: each rating's worth is measured in the game's own replays (tools/overall.js --part=worth, as the equal-value check:
 // one rating moved from 20 to 99, everyone else at 60) and read here at his rating after the top-end curve, the pair
@@ -82,14 +83,25 @@
   };
 
   // The Arsenal: each pitch weighted by how often he throws it, as the CPU picks pitches (B3.tune.CPU.pitch: its type's
-  // usual share, more for a better grade, fastballs when behind, the put-away pitch with two strikes), with two-strike
-  // pitches counting twoStrike times as much (a grade's whiffs there are strikeouts). kinds: the share of pitches thrown
-  // in a normal count, two balls ahead of the strikes and with two strikes (tools/overall.js --part=arsenal).
+  // usual share, more for a better grade, fastballs two balls behind, the put-away pitch with two strikes), with two-strike
+  // pitches counting twoStrike times as much (a grade's whiffs there are strikeouts; the replays can't tell 1 from 3, so it
+  // is a light lean toward the put-away pitch). kinds: the share of pitches thrown in a normal count, two balls ahead of the
+  // strikes and with two strikes (tools/overall.js --part=arsenal, average teams). For the overall (not the Arsenal number,
+  // which is grades only), his grades' runs are scaled by `scale` and each pitch adds its type's value (`types`, runs a
+  // team-game for a whole staff throwing only that type, against the generated arsenals' mean): both fitted on replays of
+  // generated arsenals (tools/overall.js --part=arsenal), since the pitch type stays the main driver (DESIGN.md section 10).
   const ARSENAL = {
     twoStrike: 1.5,
-    kinds: [0.6, 0.07, 0.33],
+    kinds: [0.637, 0.071, 0.292],
+    scale: 1,
+    types: { FF: 0, SI: 0, FC: 0, SL: 0, CU: 0, CH: 0, FS: 0 },
     groups: { fastball: ['FF', 'SI', 'FC'], breaking: ['SL', 'CU'], offspeed: ['CH', 'FS'] }
   };
+
+  // The league's average players (tools/overall.js --part=base: the mean of a large generated league, B3.players): a
+  // regular's runs a team-game at each position, and a starter's runs for a whole staff of him, both against an all-60
+  // player. Each is the overall's 50, so an average regular at his position and an average starter are 50.
+  const BASE = null;
 
   const HIT = ['contact', 'timing', 'launch', 'rawPower', 'recognition', 'discipline'];
   const PIT = ['velocity', 'command', 'deception'];
@@ -118,7 +130,10 @@
 
   // ---- The Arsenal ----
   // Each pitch's weight: his chance to throw it in each kind of count, the kinds by their share of pitches and weight.
-  function weights(p, e, twoStrike) {
+  // { type: weight }, adding to 1.
+  function weights(p, twoStrike, e) {
+    if (!isPitcher(p)) return {};
+    e = e || B3.ratings.effective(p);
     const P = B3.tune.CPU.pitch, G = B3.tune.RATE.grade, A = ARSENAL;
     const ts = twoStrike === undefined ? A.twoStrike : twoStrike;
     const mult = {};
@@ -141,11 +156,21 @@
     return w;
   }
 
-  function arsenalRuns(p, o) {
+  // His grades' worth: runs a team-game for a whole staff of him, against every grade at 60 (o.twoStrike, o.scale: for tools).
+  function gradeRuns(p, o) {
     if (!isPitcher(p)) return 0;
-    const e = B3.ratings.effective(p), w = weights(p, e, o && o.twoStrike), G = W().pit.grade;
+    const e = B3.ratings.effective(p), w = weights(p, o && o.twoStrike, e), G = W().pit.grade;
     let v = 0;
     for (const t of p.pitches) v += w[t] * at(G, e.grades[t]);
+    return v * (o && o.scale !== undefined ? o.scale : ARSENAL.scale);
+  }
+
+  // His whole arsenal's worth for the overall: his grades' runs plus his pitch types' values.
+  function arsenalRuns(p, o) {
+    if (!isPitcher(p)) return 0;
+    const e = B3.ratings.effective(p), w = weights(p, o && o.twoStrike, e);
+    let v = gradeRuns(p, o);
+    for (const t of p.pitches) v += w[t] * (ARSENAL.types[t] || 0);
     return v;
   }
 
@@ -167,7 +192,7 @@
 
   function arsenal(p) {
     if (!isPitcher(p)) return { arsenal: null, fastball: null, breaking: null, offspeed: null };
-    const e = B3.ratings.effective(p), w = weights(p, e), G = W().pit.grade;
+    const e = B3.ratings.effective(p), w = weights(p, undefined, e), G = W().pit.grade;
     const num = (types) => {
       const list = p.pitches.filter((t) => !types || types.indexOf(t) >= 0);
       if (!list.length) return null;
@@ -195,23 +220,13 @@
   }
   function sum(o) { let s = 0; for (const k in o) s += o[k]; return s; }
 
-  // His position's average player (the generator's leans: B3.players.GEN), so each position's average regular is 50.
-  let baseCache = { worth: null, pos: {} };
-  function baseline(pos) {
-    if (baseCache.worth !== W()) baseCache = { worth: W(), pos: {} };
-    if (baseCache.pos[pos] === undefined) {
-      const G = B3.players && B3.players.GEN;
-      const r = { rawPower: 60 + ((G && G.posPower[pos]) || 0), speed: 60 + ((G && G.posSpeed[pos]) || 0) };
-      baseCache.pos[pos] = sum(hitterParts({ ratings: r }, pos));
-    }
-    return baseCache.pos[pos];
-  }
+  function base() { if (!B3.overall.BASE) fail('the BASE table is missing (node tools/overall.js --part=base)'); return B3.overall.BASE; }
 
   function hitter(p, opts) {
     const pos = (opts && opts.pos) || p.pos;
     if (!pos || pos === 'P' || B3.data.LINEUP_POS.indexOf(pos) < 0) fail((p.id || 'player') + ': a hitter needs a lineup position, not ' + pos);
     const S = SEASON, parts = hitterParts(p, pos), perGame = sum(parts);
-    const runs = S.games * (perGame - baseline(pos));
+    const runs = S.games * (perGame - base().hit[pos]);
     const war = S.regularWins + runs / S.runsPerWin;
     const seasonParts = {};
     for (const k in parts) seasonParts[k] = S.games * parts[k];
@@ -230,7 +245,7 @@
     const parts = {};
     for (const k of PIT) parts[k] = at(T.pit[k], e[k]);
     parts.arsenal = arsenalRuns(p);
-    const staffRuns = sum(parts), perBF = staffRuns / T.pa;
+    const staffRuns = sum(parts), perBF = (staffRuns - base().pit) / T.pa;
     // Wins above replacement: his batters times his runs saved a batter, plus his innings at replacement's gap
     // (an average starter's season is regularWins).
     const ip0 = S.starts * at(S.inningsPerStart, 60);
@@ -241,6 +256,7 @@
     const war = (bf * perBF + rep) / S.runsPerWin;
     const seasonParts = {};
     for (const k in parts) seasonParts[k] = bf * parts[k] / T.pa;
+    seasonParts.league = -bf * base().pit / T.pa; // the league's average starter's runs, taken off so he is 50
     seasonParts.stamina = role === 'SP' ? repSP * (ip - ip0) : 0;
     return { overall: clip(50 + S.points * (war - S.regularWins)), war: war, runs: S.runsPerWin * (war - S.regularWins), staffRuns: staffRuns,
       perBF: perBF, innings: ip, parts: seasonParts, role: role };
@@ -252,6 +268,18 @@
   }
 
   function of(p, opts) { return detail(p, opts).overall; }
+
+  // His runs against an all-60 player, before the league's baseline: a hitter's runs a team-game in his slot, a pitcher's
+  // for a whole staff of him (what BASE averages; tools/overall.js --part=base and --part=check).
+  function raw(p, opts) {
+    if (isPitcher(p)) {
+      let v = arsenalRuns(p);
+      const e = B3.ratings.effective(p);
+      for (const k of PIT) v += at(W().pit[k], e[k]);
+      return v;
+    }
+    return sum(hitterParts(p, (opts && opts.pos) || p.pos));
+  }
 
   function potential(p, which) {
     const pot = p.potential || {};
@@ -266,6 +294,6 @@
     return of(q);
   }
 
-  B3.overall = { of: of, detail: detail, arsenal: arsenal, arsenalRuns: arsenalRuns, potential: potential,
-    WORTH: WORTH, SEASON: SEASON, ARSENAL: ARSENAL };
+  B3.overall = { of: of, detail: detail, arsenal: arsenal, arsenalRuns: arsenalRuns, gradeRuns: gradeRuns, weights: weights, raw: raw,
+    potential: potential, WORTH: WORTH, BASE: BASE, SEASON: SEASON, ARSENAL: ARSENAL };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
