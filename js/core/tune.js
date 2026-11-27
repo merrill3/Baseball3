@@ -115,6 +115,17 @@
     // others count at `others`, and the extras together add at most `cap` points.
     // Groups: hitting; pitching (with every pitch grade); defense and running (step 1.4).
     top: { from: 85, k: 0.05, others: 0.5, cap: 12 },
+    // The pair synergies (Session 26, M2 step 2.1a, the owner's note 1; DESIGN.md section 10): when both ratings of a pair
+    // are above 60 (as rated), the pair gives k x (a - 60) x (b - 60) / 100 points to its `to` ratings (shared equally),
+    // inside the group's cap above. Claude's defaults: the four pairs from Session 25's summary; a rating whose own stat is a
+    // raw physical measure (bat speed, fastball mph, sprint speed) never receives points, so the partner skill takes them;
+    // k sized with tools/calibrate.js --part=synergy (the pair's payoff at 80 and 80, physics included).
+    synergy: [
+      { pair: ['contact', 'rawPower'], to: ['contact'], k: 0.4 },
+      { pair: ['recognition', 'discipline'], to: ['recognition', 'discipline'], k: 1.8 },
+      { pair: ['velocity', 'putAway'], to: ['putAway'], k: 2.0 },
+      { pair: ['speed', 'baserunning'], to: ['baserunning'], k: 0.6 }
+    ],
     bat: {
       contactSd: ['contact', 'mul', 0.88],
       timingSd: ['timing', 'mul', 0.85],

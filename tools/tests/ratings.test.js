@@ -114,16 +114,58 @@ module.exports = function (t) {
     // One elite rating gets its full extra; a second gets half; many together stop at the cap.
     const one = B3.ratings.effective(hitter({ contact: 95 }));
     near(one.contact, 100, 1e-9, 'one 95');
-    const two = B3.ratings.effective(hitter({ contact: 95, rawPower: 90 }));
+    // (Timing, not Raw Power: Contact with Raw Power is a synergy pair, Session 26.)
+    const two = B3.ratings.effective(hitter({ contact: 95, timing: 90 }));
     near(two.contact, 100, 1e-9, 'the best of two');
-    near(two.rawPower, 90 + 0.5 * 1.25, 1e-9, 'the second of two');
+    near(two.timing, 90 + 0.5 * 1.25, 1e-9, 'the second of two');
     const all = B3.ratings.effective(hitter({ contact: 99, timing: 99, launch: 99, rawPower: 99, recognition: 99, discipline: 99 }));
     const extra = B3.ratings.HIT.reduce((s, k) => s + all[k] - 99, 0);
     near(extra, B3.tune.RATE.top.cap, 1e-9, 'the cap');
     // Hitting and pitching are separate groups; pitch grades share the pitching group.
-    const p = B3.ratings.effective(pitcher({ velocity: 95 }, { arsenal: { SL: { grade: 95 } } }));
-    near(p.velocity + p.grades.SL, 95 + 5 + 95 + 2.5, 1e-9, 'velocity and the slider share a group');
+    // (Command, not Velocity: Velocity with the put-away pitch is a synergy pair, Session 26.)
+    const p = B3.ratings.effective(pitcher({ command: 95 }, { arsenal: { SL: { grade: 95 } } }));
+    near(p.command + p.grades.SL, 95 + 5 + 95 + 2.5, 1e-9, 'command and the slider share a group');
     near(B3.ratings.effective(pitcher({ velocity: 95, stamina: 95 })).stamina, 100, 1e-9, 'Stamina is outside the cap');
+  });
+
+  t.test('the pair synergies (Session 26): both above 60 pay off, inside the cap; physical measures never receive', () => {
+    const B3 = loadCore();
+    const rows = B3.tune.RATE.synergy;
+    assert.strictEqual(rows.map((r) => r.pair.join('+')).join(' '), 'contact+rawPower recognition+discipline velocity+putAway speed+baserunning');
+    for (const r of rows) assert.ok(r.k > 0 && r.to.length >= 1 && r.to.every((k) => r.pair.indexOf(k) >= 0), r.pair.join('+') + ' has a size and its own receivers');
+    const k = (a, b) => rows.find((r) => r.pair[0] === a && r.pair[1] === b).k;
+    // Nothing unless both are above 60: a specialist with a hole plays as before.
+    for (const rt of [{ contact: 80 }, { rawPower: 80 }, { contact: 80, rawPower: 60 }, { contact: 80, rawPower: 40 }, { contact: 40, rawPower: 40 }]) {
+      const e = B3.ratings.effective(hitter(rt));
+      near(e.contact, rt.contact || 60, 1e-12, JSON.stringify(rt) + ' contact');
+      near(e.rawPower, rt.rawPower || 60, 1e-12, JSON.stringify(rt) + ' rawPower');
+    }
+    // Both above 60: k x (a - 60) x (b - 60) / 100 points to the receivers; bat speed (Raw Power's own stat) is untouched.
+    const cp = B3.ratings.effective(hitter({ contact: 80, rawPower: 70 }));
+    near(cp.contact, 80 + k('contact', 'rawPower') * 20 * 10 / 100, 1e-9, 'contact gets the points');
+    near(cp.rawPower, 70, 1e-12, 'raw power stays');
+    assert.strictEqual(B3.ratings.synergy(hitter({ contact: 80, rawPower: 70 })).filter((b) => b.points > 0).map((b) => b.pair.join('+')).join(' '), 'contact+rawPower');
+    // A pair with two receivers shares them equally.
+    const rd = B3.ratings.effective(hitter({ recognition: 75, discipline: 75 }));
+    near(rd.recognition, 75 + k('recognition', 'discipline') * 15 * 15 / 100 / 2, 1e-9, 'recognition gets half');
+    near(rd.discipline, rd.recognition, 1e-12, 'discipline gets half');
+    // Velocity with the put-away pitch: the put-away grade gets the points, Velocity (fastball mph) stays.
+    const vp = B3.ratings.effective(pitcher({ velocity: 75 }, { arsenal: { SL: { grade: 70 }, CH: { grade: 65 } } }));
+    near(vp.grades.SL, 70 + k('velocity', 'putAway') * 15 * 10 / 100, 1e-9, 'the put-away slider gets the points');
+    near(vp.grades.CH, 65, 1e-12, 'another pitch does not');
+    near(vp.velocity, 75, 1e-12, 'velocity stays');
+    const vpIn = B3.ratings.inputs(pitcher({ velocity: 75 }, { arsenal: { SL: { grade: 70 } } })), vpOff = B3.ratings.inputs(pitcher({ velocity: 60 }, { arsenal: { SL: { grade: 70 } } }));
+    assert.ok(vpIn.pit.grades.SL > vpOff.pit.grades.SL, 'and it reaches the slider\'s movement');
+    // Speed with Baserunning: Baserunning gets the points, sprint speed stays.
+    const sb = B3.ratings.effective(hitter({ speed: 80, baserunning: 80 }));
+    near(sb.baserunning, 80 + k('speed', 'baserunning') * 4, 1e-9, 'baserunning gets the points');
+    near(sb.speed, 80, 1e-12, 'speed stays');
+    // Inside the cap: a hitter at 99 everywhere still adds at most the cap in all.
+    const all = B3.ratings.effective(hitter({ contact: 99, timing: 99, launch: 99, rawPower: 99, recognition: 99, discipline: 99 }));
+    near(B3.ratings.HIT.reduce((x, kk) => x + all[kk] - 99, 0), B3.tune.RATE.top.cap, 1e-9, 'the cap holds');
+    // More of either rating adds more once both are above 60 (the payoff grows with the partner).
+    let last = -1;
+    for (let r = 61; r <= 85; r += 2) { const e = B3.ratings.effective(hitter({ contact: 70, rawPower: r })); assert.ok(e.contact > last, 'grows at ' + r); last = e.contact; }
   });
 
   t.test('Stamina sets the pitches before fatigue, one scale for every role', () => {

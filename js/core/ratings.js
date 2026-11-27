@@ -2,7 +2,8 @@
 //
 //   B3.ratings.inputs(player)     the player's physics inputs: B3.tune.inputs with his ratings mapped in
 //   B3.ratings.hooks(player)      just the mapped part, { bat, pit, fld, run } (for tests and tools)
-//   B3.ratings.effective(player)  each rating after the top-end curve and the combination cap
+//   B3.ratings.effective(player)  each rating after the top-end curve, the pair synergies and the combination cap
+//   B3.ratings.synergy(player)    his rating pairs' bonuses before the cap: [{ pair, to, points }] (Session 26)
 //   B3.ratings.curve(r)           one rating through the top-end curve, alone (no cap)
 //   B3.ratings.steps(k, points)   steps from 60 for rating k at these points (its table in RATE.steps)
 //   B3.ratings.stamina(r)         pitches before fatigue for a Stamina rating
@@ -46,19 +47,43 @@
 
   function curve(r) { return r + extra(r); }
 
-  // One group's ratings after the curve, with the combination cap: the biggest extra counts in full,
-  // the others at top.others, and all of them together add at most top.cap points.
-  function capped(items) {
+  // One group's ratings after the curve, with the combination cap: the biggest curve extra counts in full,
+  // the others at top.others; the pair synergies' points (syn: { key: points }) add to them, and all of it
+  // together adds at most top.cap points (scaled down alike when over).
+  function capped(items, syn) {
     const t = R().top;
     const ex = items.map((it) => ({ it: it, x: extra(it.r) }));
     let best = -1;
     ex.forEach((e, i) => { if (e.x > 0 && (best < 0 || e.x > ex[best].x)) best = i; });
     let total = 0;
-    ex.forEach((e, i) => { e.x = i === best ? e.x : e.x * t.others; total += e.x; });
+    ex.forEach((e, i) => { e.x = (i === best ? e.x : e.x * t.others) + ((syn && syn[e.it.k]) || 0); total += e.x; });
     const scale = total > t.cap ? t.cap / total : 1;
     const out = {};
     for (const e of ex) out[e.it.k] = e.it.r + e.x * scale;
     return out;
+  }
+
+  // The pair synergies (Session 26, M2 step 2.1a; DESIGN.md section 10): two ratings that pay off more together than
+  // apart. For each RATE.synergy row, when both ratings (as rated, before the curve) are above 60 the pair gives
+  // k x (a - 60) x (b - 60) / 100 points, shared by its `to` ratings; nothing when either is 60 or below, so a specialist
+  // with a hole plays as before. 'putAway' is his put-away pitch's grade. rated: { key: points } for one group, where a
+  // pitch grade's key is 'grade:' + type; pa: the put-away type. Returns [{ pair, to, points, keys }] for the rows it finds.
+  function pairBonuses(rated, pa) {
+    const key = (k) => (k === 'putAway' ? (pa ? 'grade:' + pa : null) : k);
+    const out = [];
+    for (const row of R().synergy || []) {
+      const a = key(row.pair[0]), b = key(row.pair[1]);
+      if (a === null || b === null || !has(rated, a) || !has(rated, b)) continue;
+      const pts = row.k * Math.max(0, rated[a] - 60) * Math.max(0, rated[b] - 60) / 100;
+      out.push({ pair: row.pair.slice(), to: row.to.slice(), points: pts, keys: row.to.map(key) });
+    }
+    return out;
+  }
+
+  function synMap(bonuses) {
+    const m = {};
+    for (const b of bonuses) for (const k of b.keys) m[k] = (m[k] || 0) + b.points / b.keys.length;
+    return m;
   }
 
   function ratingOf(player, k) {
@@ -74,17 +99,35 @@
 
   // Every rating after the curve and the cap: { contact, ..., stamina, range, ..., grades: { type: points } }.
   // Three groups share a cap each: hitting; pitching with the pitch grades; defense and running.
-  function effective(player) {
+  // The three groups as rated: { hit, pit, def } lists of { k, r }, and the put-away type.
+  function groups(player) {
     const pitches = Array.isArray(player.pitches) ? player.pitches : [];
-    const hit = capped(HIT.map((k) => ({ k: k, r: ratingOf(player, k) })));
     // The put-away pitch (his best grade as rated) comes first, so on a tie it keeps the full extra.
     const raw = {};
     for (const type of pitches) raw[type] = gradeOf(player, type);
     const pa = pitches.length ? putAway(pitches, raw) : null;
     const order = pa ? [pa].concat(pitches.filter((t) => t !== pa)) : [];
-    const pit = capped(order.map((type) => ({ k: 'grade:' + type, r: raw[type] }))
-      .concat(PIT.map((k) => ({ k: k, r: ratingOf(player, k) }))));
-    const def = capped(DEF.map((k) => ({ k: k, r: ratingOf(player, k) })));
+    return {
+      pitches: pitches, pa: pa,
+      hit: HIT.map((k) => ({ k: k, r: ratingOf(player, k) })),
+      pit: order.map((type) => ({ k: 'grade:' + type, r: raw[type] })).concat(PIT.map((k) => ({ k: k, r: ratingOf(player, k) }))),
+      def: DEF.map((k) => ({ k: k, r: ratingOf(player, k) }))
+    };
+  }
+
+  function asMap(items) { const m = {}; for (const it of items) m[it.k] = it.r; return m; }
+
+  function synergy(player) {
+    const g = groups(player);
+    return [].concat(pairBonuses(asMap(g.hit), null), pairBonuses(asMap(g.pit), g.pa), pairBonuses(asMap(g.def), null))
+      .map((b) => ({ pair: b.pair, to: b.to, points: b.points }));
+  }
+
+  function effective(player) {
+    const g = groups(player), pitches = g.pitches, pa = g.pa;
+    const hit = capped(g.hit, synMap(pairBonuses(asMap(g.hit), null)));
+    const pit = capped(g.pit, synMap(pairBonuses(asMap(g.pit), pa)));
+    const def = capped(g.def, synMap(pairBonuses(asMap(g.def), null)));
     const out = { grades: {} };
     for (const k of HIT) out[k] = hit[k];
     for (const k of PIT) out[k] = pit[k];
@@ -184,6 +227,7 @@
     inputs: inputs,
     hooks: hooks,
     effective: effective,
+    synergy: synergy,
     curve: curve,
     steps: steps,
     stamina: stamina,

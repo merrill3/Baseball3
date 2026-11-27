@@ -1,7 +1,8 @@
 // Calibration (M1 step 1.4): the target table (DESIGN.md section 7, with the extra engine targets), the
 // equal-value check, defense and running at their key spots, the tendencies and the pitch shape.
-// Usage: node tools/calibrate.js [--part=targets,value,defense,styles,shape] [--games=3000] [--samples=1500]
+// Usage: node tools/calibrate.js [--part=targets,value,defense,styles,shape,synergy] [--games=3000] [--samples=1500]
 //                                [--seed=1] [--jobs=N] [--only=contact,arm,...] [--tweak=file.js] [--json=file]
+//                                [--synlevels=40,80]
 //
 //   targets  plays --games seeded regular-season games between rated test teams (a league-like spread,
 //            tools/lib/testteams.js) and prints each league-wide target with its band
@@ -12,6 +13,12 @@
 //   styles   the tendencies against Balanced: Aggressiveness at Discipline 40, 60, 80; Aim at Command
 //            40, 60, 80. Target: within about +-0.1 runs at 60, and paying off the owner's way
 //   shape    a ground-ball and a fly-ball shape on every pitch: about 0 (owner's choice: value-neutral)
+//   synergy  the rating pairs (Session 26, M2 step 2.1a; DESIGN.md section 10, "Synergy between rating pairs"): for
+//            each pair, both ratings at each --synlevels level against each alone, for a whole lineup or staff
+//            (Speed with Baserunning: the away lineup, running and fielding together). The pair's payoff is
+//            together minus the two alone (runs per team-game, and in points of one rating: runs / (TARGET / 10)).
+//            It includes what the physics already gives; B3.tune.RATE.synergy adds the rest. --tweak with
+//            RATE.synergy = [] measures the physics alone.
 //   speed    (not in the default parts) times a season's 2,430 games in this one process, alone
 //            (the rated test teams; DESIGN.md's budget is about 10 s, the owner accepted about 13 s)
 //   fit      (not in the default parts) measures each rating's run value from 20 to 99 and fits its step
@@ -38,7 +45,8 @@ function args() {
   const a = process.argv.slice(2);
   const opt = (k, d) => { const x = a.find((s) => s.startsWith('--' + k + '=')); return x ? x.slice(k.length + 3) : d; };
   return {
-    parts: opt('part', 'targets,value,defense,styles,shape').split(','),
+    parts: opt('part', 'targets,value,defense,styles,shape,synergy').split(','),
+    synlevels: opt('synlevels', '40,80').split(',').map(Number),
     games: parseInt(opt('games', '3000'), 10),
     samples: parseInt(opt('samples', '1500'), 10),
     seed: opt('seed', '1'),
@@ -61,10 +69,38 @@ function setFrom(c) {
     if (c.away && !p.id.startsWith('AWY')) return;
     if (c.grades) for (const t in p.arsenal) p.arsenal[t].grade = c.L;
     else if (c.k) p.ratings[c.k] = c.L;
-    if (c.at) for (const k in c.at) { if (k === 'grades') { for (const t in p.arsenal) p.arsenal[t].grade = c.at[k]; } else p.ratings[k] = c.at[k]; }
+    if (c.at) {
+      for (const k in c.at) {
+        if (k === 'grades') { for (const t in p.arsenal) p.arsenal[t].grade = c.at[k]; }
+        else if (k === 'putAway') { if (p.arsenal) p.arsenal[putAwayOf(p)].grade = c.at[k]; } // his put-away pitch alone (Session 26)
+        else p.ratings[k] = c.at[k];
+      }
+    }
     if (c.tend) p.tendencies[c.tend[0]] = c.tend[1];
     if (c.shape !== undefined) for (const t in p.arsenal) p.arsenal[t].shape = c.shape;
   };
+}
+
+// The put-away pitch of a player as he is now (B3.ratings.putAway: his best grade, a tie to the type that misses most).
+let coreForPutAway = null;
+function putAwayOf(p) {
+  if (!coreForPutAway) coreForPutAway = require('./lib/load').loadCore();
+  const g = {};
+  for (const t of p.pitches) g[t] = p.arsenal[t].grade;
+  return coreForPutAway.ratings.putAway(p.pitches, g);
+}
+
+// The rating pairs (Session 26): [first, second, kind]. Speed with Baserunning is read as one away lineup's running and fielding.
+const PAIRS = [
+  ['contact', 'rawPower', 'hitter'],
+  ['recognition', 'discipline', 'hitter'],
+  ['velocity', 'putAway', 'pitcher'],
+  ['speed', 'baserunning', 'hitter']
+];
+function pairCond(pr, at) {
+  const c = { kind: pr[2], at: at };
+  if (pr[0] === 'speed') c.away = true;
+  return c;
 }
 
 // ---- Workers ----
@@ -358,7 +394,7 @@ function main() {
   const want = (k) => !o.only || o.only.split(',').indexOf(k) >= 0;
   const plan = { value: [], defense: [], styles: [], shape: [], targets: [] };
   const add = (cond) => { const j = { id: id++, cond: cond, samples: o.samples, seed: o.seed }; jobs.push(j); return j.id; };
-  const needReplays = o.parts.some((p) => ['value', 'defense', 'styles', 'shape', 'fit'].indexOf(p) >= 0);
+  const needReplays = o.parts.some((p) => ['value', 'defense', 'styles', 'shape', 'synergy', 'fit'].indexOf(p) >= 0);
   const base = needReplays ? add(null) : null;
   if (o.parts.indexOf('value') >= 0) {
     for (const k of HIT.concat(PIT)) {
@@ -381,6 +417,17 @@ function main() {
     }
   }
   if (o.parts.indexOf('shape') >= 0) for (const sh of [0.5, -0.5, 1, -1]) plan.shape.push({ sh, id: add({ kind: 'pitcher', shape: sh }) });
+  plan.synergy = [];
+  if (o.parts.indexOf('synergy') >= 0) {
+    for (const pr of PAIRS) {
+      if (!want(pr[0]) && !want(pr[1])) continue;
+      for (const L of o.synlevels) {
+        const one = {}, two = {}, both = {};
+        one[pr[0]] = L; two[pr[1]] = L; both[pr[0]] = L; both[pr[1]] = L;
+        plan.synergy.push({ pr: pr, L: L, a: add(pairCond(pr, one)), b: add(pairCond(pr, two)), ab: add(pairCond(pr, both)) });
+      }
+    }
+  }
   plan.fit = [];
   if (o.parts.indexOf('fit') >= 0) {
     const { loadCore } = require('./lib/load');
@@ -482,6 +529,26 @@ function main() {
     if (plan.shape.length) {
       out.push('Pitch shape on every pitch (owner\'s choice: value-neutral), runs allowed per team-game against shape 0:');
       out.push('  ' + plan.shape.map((p) => 'shape ' + fmt(p.sh, 1) + ' ' + fmt(diff(B, res[p.id]).v, 3) + '±' + diff(B, res[p.id]).se.toFixed(3)).join('    '));
+      out.push('');
+    }
+    if (plan.synergy.length) {
+      out.push('Rating pairs (Session 26): both at a level against each alone, everyone else at 60, for a whole lineup or staff, runs per team-game');
+      out.push('(pitching: runs saved; Speed with Baserunning: the away lineup, its running minus its runs allowed). Payoff = together - first - second:');
+      out.push('what the pair adds over the two alone, also in points of one rating (runs / ' + (TARGET / 10).toFixed(3) + ').');
+      out.push('');
+      for (const sy of plan.synergy) {
+        const sign = sy.pr[2] === 'pitcher' ? -1 : 1;
+        const val = (id) => {
+          if (sy.pr[0] === 'speed') { const a = diff(B, res[id], 0), b = diff(B, res[id], 1); return { v: a.v - b.v, se: Math.sqrt(a.se * a.se + b.se * b.se) }; }
+          const d = diff(B, res[id]); return { v: sign * d.v, se: d.se };
+        };
+        const a = val(sy.a), b = val(sy.b), ab = val(sy.ab);
+        // The payoff's error from the paired differences: ab - a - b, each against the same base replays.
+        const pay = ab.v - a.v - b.v;
+        const se = Math.sqrt(ab.se * ab.se + a.se * a.se + b.se * b.se);
+        out.push('  ' + (sy.pr[0] + ' + ' + sy.pr[1] + ' at ' + sy.L).padEnd(32) + sy.pr[0] + ' ' + fmt(a.v, 3) + '   ' + sy.pr[1] + ' ' + fmt(b.v, 3) + '   both ' + fmt(ab.v, 3) +
+          '   payoff ' + fmt(pay, 3) + '±' + se.toFixed(3) + ' (' + fmt(pay / (TARGET / 10), 1) + ' points)');
+      }
       out.push('');
     }
     if (plan.fit.length) {
