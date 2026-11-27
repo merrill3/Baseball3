@@ -4,8 +4,9 @@
 //                                [--seed=1] [--jobs=N] [--only=contact,arm,...] [--tweak=file.js] [--json=file]
 //                                [--synlevels=40,80]
 //
-//   targets  plays --games seeded regular-season games between rated test teams (a league-like spread,
-//            tools/lib/testteams.js) and prints each league-wide target with its band
+//   targets  plays --games seeded regular-season games between generated teams (B3.players, the league's own
+//            players, from Session 27; --teams=rated for the rated test teams of Sessions 4-26, tools/lib/testteams.js)
+//            and prints each league-wide target with its band
 //   value    the equal-value check: +10 points at 40, 60 and 80 for each rating (everyone else at 60),
 //            for a whole lineup or staff, in runs per team-game. Target: about TARGET runs, within +-20%.
 //   defense  defense and running at their key spots (DESIGN.md section 10, the value rule), for one player:
@@ -54,7 +55,8 @@ function args() {
     only: opt('only', null),
     tweak: opt('tweak', null) ? path.resolve(opt('tweak')) : null,
     fitout: opt('fitout', null),
-    json: opt('json', null)
+    json: opt('json', null),
+    teams: opt('teams', 'gen') // Session 27: the targets' teams, generated (B3.players) or rated (the test teams)
   };
 }
 
@@ -113,7 +115,7 @@ function worker() {
   let s = null;
   process.on('message', (m) => {
     if (m.done) process.exit(0);
-    if (m.targets) { process.send({ id: m.id, out: targets(B3, m.from, m.to, m.seed) }); return; }
+    if (m.targets) { process.send({ id: m.id, out: targets(B3, m.from, m.to, m.seed, m.teams) }); return; }
     if (!s) s = V.sample(B3, m.samples, m.seed);
     const r = V.measure(B3, s, setFrom(m.cond), { keep: true });
     process.send({ id: m.id, out: { vals: Array.from(r.vals), hs: s.snaps.map((x) => x.h), pa: s.paPerTeamGame, counts: r.counts } });
@@ -135,14 +137,15 @@ function pool(jobs, n, tweak, onDone) {
 }
 
 // ---- Targets: league-wide rates from rated teams ----
-function targets(B3, from, to, seed) {
-  const { ratedPair } = require('./lib/testteams');
+function targets(B3, from, to, seed, kind) {
+  const { ratedPair, generatedPair } = require('./lib/testteams');
   const c = { games: 0, runs: 0, pa: 0, ab: 0, h: 0, tb: 0, bb: 0, k: 0, sf: 0, d2: 0, d3: 0, hr: 0, e: 0, pitches: 0,
     out: 0, swOut: 0, sw: 0, whiff: 0, sb: 0, cs: 0, spOuts: 0, spPitches: 0, starts: 0, ms: 0,
     plat: { opp: [0, 0, 0, 0], same: [0, 0, 0, 0] } }; // [pa, ab, h + bb, tb] by matchup
   const t0 = Date.now();
   for (let n = from; n < to; n++) {
-    const teams = ratedPair(B3.rng.create('teams:' + seed + ':' + n));
+    const trng = B3.rng.create('teams:' + seed + ':' + n);
+    const teams = kind === 'rated' ? ratedPair(trng) : generatedPair(B3, trng);
     const g = B3.game.sim(Object.assign(teams, { type: 'regular', rng: B3.rng.create(seed + ':' + n) }));
     c.games++;
     c.runs += g.score[0] + g.score[1];
@@ -223,7 +226,7 @@ function targetReport(c) {
     ['Starter pitches', c.spPitches / c.starts, 82, 88, 1],
     ['Errors per team-game', c.e / tg, 0.45, 0.6, 2]
   ];
-  const lines = ['Targets: ' + c.games + ' regular-season games between rated test teams (DESIGN.md section 7)', ''];
+  const lines = ['Targets: ' + c.games + ' regular-season games between ' + (c.teams === 'rated' ? 'rated test teams' : 'generated teams (B3.players)') + ' (DESIGN.md section 7)', ''];
   for (const [name, v, lo, hi, d] of rows) {
     const ok = (lo === null || v >= lo) && (hi === null || v <= hi);
     const band = lo === null ? hi + ' or fewer' : hi === null ? lo + ' or more' : lo + '-' + hi;
@@ -452,14 +455,14 @@ function main() {
   }
   if (o.parts.indexOf('targets') >= 0) {
     const per = Math.ceil(o.games / o.jobs);
-    for (let f = 0; f < o.games; f += per) { const j = { id: id++, targets: true, from: f, to: Math.min(o.games, f + per), seed: o.seed }; jobs.push(j); plan.targets.push(j.id); }
+    for (let f = 0; f < o.games; f += per) { const j = { id: id++, targets: true, from: f, to: Math.min(o.games, f + per), seed: o.seed, teams: o.teams }; jobs.push(j); plan.targets.push(j.id); }
   }
   // Long jobs first (the target games), so the pool ends together.
   jobs.sort((a, b) => (b.targets ? 1 : 0) - (a.targets ? 1 : 0));
   const t0 = Date.now();
   pool(jobs, o.jobs, o.tweak, (res) => {
     const out = [], valueRows = [];
-    if (plan.targets.length) out.push(targetReport(merge(plan.targets.map((i) => res[i]))), '');
+    if (plan.targets.length) out.push(targetReport(Object.assign(merge(plan.targets.map((i) => res[i])), { teams: o.teams })), '');
     const B = base !== null ? res[base] : null;
     let lineupValue = null;
     if (plan.value.length) {

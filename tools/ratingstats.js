@@ -71,7 +71,10 @@ function args() {
     html: opt('html', null),
     value: opt('value', null),
     popTeams: parseInt(opt('popteams', '40'), 10),
-    popKind: opt('popkind', null) // only the hitters' or the pitchers' population (Session 14)
+    popKind: opt('popkind', null), // only the hitters' or the pitchers' population (Session 14)
+    // Session 27: the population's players come from the league's generator (B3.players, M2 step 2.1a) unless --pop=test
+    // (the test population of Sessions 8-26, kept for comparison).
+    popFrom: opt('pop', 'gen')
   };
 }
 
@@ -209,6 +212,7 @@ function measure(B3, cond, games, seed) {
 // opponents. Returns one accumulator per player (with his innings pitched for pitchers).
 // The owner's choice (Session 10): ratings independent, except Raw Power and Contact lean opposite (POP_PC -0.3: power
 // hitters tend to whiff more); pitchers independent too (Claude's reading). POPR and POPPC override them for experiments.
+let POP_FROM = 'gen'; // set by main (Session 27)
 const POP_SD = 12.2, POP_R = process.env.POPR !== undefined ? +process.env.POPR : 0;
 // POP_PC: the correlation between Raw Power and Contact.
 const POP_PC = process.env.POPPC !== undefined ? +process.env.POPPC : -0.3;
@@ -276,6 +280,7 @@ function measurePop(B3, spec) {
       p.arsenal[t].shape = Math.round(Math.max(-1, Math.min(1, POP_SHAPE * z)) * 10) / 10;
     }
   }
+  if (spec.from === 'gen') return measureGen(B3, spec, teams);
   for (const id in teams.away.players) {
     const p = teams.away.players[id];
     if (spec.kind === 'hitter' && !p.pitches) Object.assign(p.ratings, draws[id] = popRatings(rng, HIT));
@@ -299,6 +304,36 @@ function measurePop(B3, spec) {
       p.tendencies.aim = za < -0.674 ? 'Nibbler' : za > 0.674 ? 'Attacker' : 'Balanced';
     }
   }
+  return playPop(B3, spec, teams, draws);
+}
+
+// Session 27 (M2 step 2.1a task 2): the population's players from the league's generator, as the league gets them: the
+// test team's away side takes generated regulars at its lineup positions (hitters) or a generated starter and relievers
+// in its staff's roles (pitchers), with their own hands, arsenals, shapes, tendencies, defense and running; everyone else
+// stays average, as before. The generator's numbers are B3.players.GEN (--tweak can change them).
+function measureGen(B3, spec, teams) {
+  const ctx = B3.players.context(), grng = B3.rng.create('popgen:' + spec.seed + ':' + spec.kind + ':' + spec.team);
+  const draws = {};
+  const t = teams.away;
+  if (spec.kind === 'hitter') {
+    for (const slot of t.lineup) {
+      const g = B3.players.hitter(grng, ctx, { pos: slot.pos }), p = t.players[slot.id];
+      Object.assign(p, { bats: g.bats, throws: g.throws, ratings: g.ratings, tendencies: g.tendencies });
+      draws[slot.id] = Object.assign({ age: g.age, pos: g.pos }, g.ratings);
+    }
+  } else {
+    for (const id of [t.pitcher].concat(t.bullpen)) {
+      const p = t.players[id], g = B3.players.pitcher(grng, ctx, { role: p.role });
+      Object.assign(p, { bats: g.bats, throws: g.throws, pitches: g.pitches, arsenal: g.arsenal, ratings: g.ratings, tendencies: g.tendencies });
+      const d = Object.assign({ age: g.age }, g.ratings);
+      for (const ty of g.pitches) d['g:' + ty] = g.arsenal[ty].grade;
+      draws[id] = d;
+    }
+  }
+  return playPop(B3, spec, teams, draws);
+}
+
+function playPop(B3, spec, teams, draws) {
   // Each player's games are cut into "player-seasons" of CHUNK plate appearances (batters faced), so the
   // spread carries the same sampling noise as real seasons; a last piece of 250 or more counts too.
   const CHUNK = 500, side = spec.kind === 'hitter' ? 0 : 1;
@@ -535,6 +570,9 @@ function popReport(res, real) {
       // inning, no hit-by-pitches in either; its constant is set below so the population's pooled FIP is its pooled ERA, as
       // MLB's is set to the league's).
       st.kbb = 100 * (x.acc.k - x.acc.bb) / x.acc.pa;
+      // Session 27: wOBA (2024's weights; no hit-by-pitches) and his ratings, for the stars' check.
+      st.woba = (0.69 * x.acc.bb + 0.88 * x.acc.h1 + 1.25 * x.acc.h2 + 1.59 * x.acc.h3 + 2.05 * x.acc.hr) / x.acc.pa;
+      st.ratings = x.ratings;
       st.fipRaw = x.acc.outs ? 3 * (13 * x.acc.hr + 3 * x.acc.bb - 2 * x.acc.k) / x.acc.outs : NaN;
       st.acc = x.acc;
       st.curve = x.acc.curve;
@@ -547,7 +585,7 @@ function popReport(res, real) {
       for (const st of seasons) st.fip = st.fipRaw + C;
     }
     const rows = [];
-    console.log('\nPopulation check, ' + kind + 's: ' + seasons.length + ' test player-seasons (250+ PA; ratings about 60 +- ' + POP_SD + ', r ' + POP_R + ', Raw Power-Contact ' + POP_PC + (kind === 'pitcher' ? ', stuff-Command ' + POP_SC + ', Aim lean ' + POP_AIM + ', shapes ' + POP_SHAPE : '') + '; tendencies 1:2:1) against real 2024-2026');
+    console.log('\nPopulation check, ' + kind + 's: ' + seasons.length + (POP_FROM === 'gen' ? ' generated player-seasons (B3.players: 250+ PA)' : ' test player-seasons (250+ PA; ratings about 60 +- ' + POP_SD + ', r ' + POP_R + ', Raw Power-Contact ' + POP_PC + (kind === 'pitcher' ? ', stuff-Command ' + POP_SC + ', Aim lean ' + POP_AIM + ', shapes ' + POP_SHAPE : '') + '; tendencies 1:2:1)') + ' against real 2024-2026');
     console.log('  stat                   engine p5    p25    p50    p75    p95  |   real p5    p25    p50    p75    p95');
     for (const [lab, key, rk, d] of POP_STATS[kind]) {
       const xs = seasons.map((s2) => s2[key]);
@@ -564,12 +602,53 @@ function popReport(res, real) {
       const f = fitLine(seasons.map((s2) => s2[y]), seasons.map((s2) => xs.map((x) => s2[x])));
       console.log('  ' + y + ' per point of ' + xs.map((x, i) => x + ' ' + fmt(f.beta[i], 3) + ' [' + fmt(rb[i], 3) + ']').join(', ') + '; R2 ' + fmt(f.r2, 2) + ' [' + fmt(rr2, 2) + ']');
     }
+    rep.stars = Object.assign(rep.stars || {}, starsReport(kind, seasons, real, q));
     if (kind === 'hitter') rep.curves = curveReport(seasons);
     if (kind === 'pitcher') rep.aim = aimReport(seasons);
     if (kind === 'pitcher') rep.starters = startersReport(seasons, q);
     rep[kind] = { n: seasons.length, rows: rows, corr: cs };
   }
   return rep;
+}
+
+// Stars (Session 27, M2 step 2.1a task 2; Claude's default): how many player-seasons stand out by as much as MLB's top 5%
+// and 1% do, measured from each side's own median (so the engine's level, such as wOBA without hit-by-pitches, doesn't
+// count), and how many of the engine's top 5% have a real hole (a skill rating of 45 or lower). Pitchers: starters with
+// 10+ starts, against MLB's starters (REAL_STARTERS), plus MLB's aces, K% 27+ with BB% 6.5 or less (5.9% of MLB's).
+function starsReport(kind, seasons, real, q) {
+  const pc = (n, d) => (d ? 100 * n / d : NaN);
+  const out = {};
+  const tail = (list, key, real5, real1, real50, up) => {
+    const xs = list.map((s) => s[key]).filter(Number.isFinite), med = q(xs, 0.5);
+    const beyond = (gap) => xs.filter((x) => (up ? x >= med + gap : x <= med - gap)).length;
+    return { med: med, p5: pc(beyond(Math.abs(real5 - real50)), xs.length), p1: real1 === null ? NaN : pc(beyond(Math.abs(real1 - real50)), xs.length) };
+  };
+  const holes = (list, keys) => {
+    const r = list.filter((s) => s.ratings);
+    return { n: r.length, hole: pc(r.filter((s) => keys.some((k) => s.ratings[k] !== undefined && s.ratings[k] <= 45)).length, r.length),
+      high: r.length ? r.reduce((t, s) => t + keys.filter((k) => s.ratings[k] >= 70).length, 0) / r.length : NaN };
+  };
+  if (kind === 'hitter') {
+    const w = real.pct['bat.woba'];
+    const t = tail(seasons, 'woba', w.p95, w.p99, w.p50, true);
+    const top = seasons.slice().sort((a, b) => b.woba - a.woba).slice(0, Math.max(1, Math.round(seasons.length / 20)));
+    const hk = ['contact', 'timing', 'launch', 'rawPower', 'recognition', 'discipline'];
+    const h = holes(top, hk);
+    console.log('  stars: wOBA (no hit-by-pitches) median ' + fmt(t.med, 3) + ' [' + fmt(w.p50, 3) + ']; seasons as far above the median as MLB\'s top 5% / 1%: ' +
+      fmt(t.p5, 1) + '% / ' + fmt(t.p1, 1) + '% [5 / 1]; the top 5% (' + h.n + '): ' + fmt(h.hole, 0) + '% with a hitting rating of 45 or lower, ' + fmt(h.high, 1) + ' hitting ratings of 70+ each');
+    out.hitter = { woba: t, top: h };
+  } else {
+    const sp = seasons.filter((s) => Number.isFinite(s.pps));
+    const R = {}; for (const [, key, , v] of REAL_STARTERS.rows) R[key] = v;
+    const era = tail(sp, 'era', R.era[0], null, R.era[2], false), fip = tail(sp, 'fip', R.fip[0], null, R.fip[2], false), k = tail(sp, 'k', R.k[4], null, R.k[2], true);
+    const aces = pc(sp.filter((s) => s.k >= 27 && s.bb <= 6.5).length, sp.length);
+    const top = sp.slice().sort((a, b) => a.fip - b.fip).slice(0, Math.max(1, Math.round(sp.length / 20)));
+    const h = holes(top, ['velocity', 'command', 'deception']);
+    console.log('  stars (starters): as far below the median as MLB\'s best 5%: ERA ' + fmt(era.p5, 1) + '%, FIP ' + fmt(fip.p5, 1) + '%; K% as far above: ' + fmt(k.p5, 1) +
+      '% [5 each]; aces (K% 27+, BB% 6.5 or less) ' + fmt(aces, 1) + '% [5.9]; the top 5% by FIP (' + h.n + '): ' + fmt(h.hole, 0) + '% with Velocity, Command or Deception 45 or lower');
+    out.pitcher = { era: era, fip: fip, k: k, aces: aces, top: h };
+  }
+  return out;
 }
 
 // The swing curve by thirds of hitters (Session 15): swing % by feet from the zone's edge, before two strikes and with two,
@@ -693,11 +772,12 @@ function main() {
       }
     }
   }
+  POP_FROM = o.popFrom;
   if (o.parts.indexOf('pop') >= 0) {
     // Hitters: 9 per team, about 118 games for a 500-PA season each. Pitchers: three times the teams at
     // 40 games each (the starter's two seasons; relievers rarely reach 250 batters faced).
-    if (o.popKind !== 'pitcher') for (let t = 0; t < o.popTeams; t++) jobs.push({ id: 'pop:h:' + t, pop: { kind: 'hitter', team: t, games: 118, seed: o.seed } });
-    if (o.popKind !== 'hitter') for (let t = 0; t < 3 * o.popTeams; t++) jobs.push({ id: 'pop:p:' + t, pop: { kind: 'pitcher', team: t, games: 40, seed: o.seed } });
+    if (o.popKind !== 'pitcher') for (let t = 0; t < o.popTeams; t++) jobs.push({ id: 'pop:h:' + t, pop: { kind: 'hitter', team: t, games: 118, seed: o.seed, from: o.popFrom } });
+    if (o.popKind !== 'hitter') for (let t = 0; t < 3 * o.popTeams; t++) jobs.push({ id: 'pop:p:' + t, pop: { kind: 'pitcher', team: t, games: 40, seed: o.seed, from: o.popFrom } });
   }
   const t0 = Date.now();
   pool(jobs, o.jobs, o.tweak, (res) => {
@@ -747,4 +827,4 @@ function main() {
 
 if (process.argv[2] === '--worker') worker();
 else if (require.main === module) main();
-module.exports = { RATINGS, LEVELS, ANCHOR, ladder, stats, measure, measurePop, newAcc, merge, barrel, attack };
+module.exports = { RATINGS, LEVELS, ANCHOR, ladder, stats, measure, measurePop, measureGen, playPop, newAcc, merge, barrel, attack };

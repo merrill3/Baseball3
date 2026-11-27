@@ -8,8 +8,12 @@
 //                                 the catcher): tools/worth.js and tools/lib/value.js move one rating from here
 //   rated(code, name, rng)        players with ratings drawn with a league-like spread (step 1.3)
 //   ratedPair(rng)                two rated teams; rng is a B3.rng generator used only for the draws
-// The spread is Claude's default for testing (each rating about 60 +- 10, independent); M2's player
-// generation (specialist stars, mild correlation) replaces it.
+//   generated(B3, code, name, rng, ctx)  a team of generated players (Session 27: B3.players, M2 step 2.1a): one
+//                                 squad's regulars in ORDER's batting order, its first starter and its 8 relievers
+//                                 (ids are the generator's; ctx from B3.players.context(), shared by a league)
+//   generatedPair(B3, rng)        two generated teams
+// The rated spread is Claude's default for testing (each rating about 60 +- 10, independent); M2's player
+// generation replaces it (calibrate.js's targets use generated teams from Session 27).
 'use strict';
 
 const ORDER = [['CF', 'L'], ['SS', 'R'], ['1B', 'L'], ['DH', 'R'], ['3B', 'R'], ['RF', 'S'], ['LF', 'R'], ['C', 'R'], ['2B', 'L']];
@@ -106,4 +110,20 @@ function ratedPair(rng) {
   return { away: rated('AWY', 'Away Testers', rng), home: rated('HOM', 'Home Testers', rng) };
 }
 
-module.exports = { team, pair, average, averagePair, rated, ratedPair, HIT, PIT, DEF, STAMINA };
+function generated(B3, code, name, rng, ctx) {
+  const sq = B3.players.squad(rng, ctx || B3.players.context());
+  const players = {}, lineup = [];
+  const byPos = {};
+  for (const p of sq.regulars) byPos[p.pos] = p;
+  for (const [pos] of ORDER) { const p = byPos[pos]; players[p.id] = p; lineup.push({ id: p.id, pos: pos }); }
+  const staff = [sq.starters[0]].concat(sq.relievers);
+  for (const p of staff) players[p.id] = p;
+  return { id: code, code: code, name: name, players: players, lineup: lineup, pitcher: staff[0].id, bullpen: staff.slice(1).map((p) => p.id) };
+}
+
+function generatedPair(B3, rng) {
+  const ctx = B3.players.context();
+  return { away: generated(B3, 'AWY', 'Away Testers', rng, ctx), home: generated(B3, 'HOM', 'Home Testers', rng, ctx) };
+}
+
+module.exports = { team, pair, average, averagePair, rated, ratedPair, generated, generatedPair, HIT, PIT, DEF, STAMINA };
