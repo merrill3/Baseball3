@@ -994,11 +994,29 @@ Branch `ccr-ea5d17f6-kaw0i9`, committed and pushed, **not merged to `main`** (th
 
 **After the report** (owner's choices): a hard cap of 1 minute for simming a full season (DESIGN.md section 7); the Rating Ladder Check page versioned from now on (owner's choice): **v.31** is https://claude.ai/artifact/6TQsVYZLXsCebcfvePBzMC (7 on the ladder, 9 near, 10 off; Session 30's page, FkV5DVNvnqFjpP6QToen2h, had 8 / 7 / 11 and stays as the earlier version). Each new version is a new private page labeled with its session (`ratingstats.js --html=page.html --value=value.json --version=v.N`); the earlier ones are kept.
 
-## 56. Session 32 (Nov 28, 2026; branch `ccr-355f57c1-azdh2x`, started from `main`): step 2.1c, the brainstorm (in progress)
+## 56. Session 32 (Nov 28, 2026; branch `ccr-355f57c1-azdh2x`, started from `main`): step 2.1c, the brainstorm (done)
 `main` fast-forwarded to Session 31's branch (58f7003) at the start, as the prompt asked. No code changed, no calibration run.
 
-**The owner's answers so far** (one rating at a time; written up in docs/plan.md and DESIGN.md section 10 at the end):
+**The owner's answers** (Claude's brief per rating, then 2–4 ideas a rating, the owner picking, parking or dropping each; recorded in DESIGN.md section 10, "Calibrating six ratings: the brainstorm", and planned in docs/plan.md as steps 2.1d and 2.1e):
 - Cross-cutting, the ladder judged against MLB's skill spread (year-to-year): **parked**.
 - Contact: a steeper low end (20–40), **picked**; part of the whiff spread moved from Raw Power to Contact, **parked**; the owner's idea instead of accepting its worth: Contact's three parts split up, way **A** (owner's choice): handling velocity (`timingTop`) moves to Timing, tracking late break moves to Recognition, Contact keeps plain bat-to-ball accuracy and the location part of bat control; still six hitting ratings (reopens the Session 11 choice "handling velocity is Contact's"). The steeper low end is built after A, on Contact's new table.
 - Recognition: the read reshaped so it keeps gaining past 80 (built only if the top is still flat after A; Deception rechecked), **picked**; a read breaking ball headed off the plate is easier to lay off (the chase gap toward its ladder), **picked**; accepting its falling worth, **parked**.
 - Timing: squared-up % counted as Savant does (fouls get an exit speed worked out with no extra random draws; the engine now counts balls in play only, the likely cause of most of the 15-point gap), **picked**; Timing's table widened afterward if still flatter than MLB's, under the league-spread rule, **picked**.
+- Discipline: a smaller Recognition × Discipline pair, **parked**; low Discipline leaning Aggressive in generation (chases that don't add strikeouts), **picked**; leaving it as it is, **dropped**.
+- Command: walk spread moved from Aim onto Command, **picked**; real wildness at the low end, **picked**; first-pitch strikes as a new job, **picked**; a Velocity × Command pair, **picked**.
+- The grades: the double payoff checked against MLB (usage by grade), **picked**; the top lifted to MLB's, **picked**; the league's curveballs reined in, **picked**; new jobs (the change-up's speed gap, pop-ups on high riding fastballs), **both picked**.
+- **The summary, confirmed:** two steps (owner's choice): step 2.1d the hitting ideas (Session 33), step 2.1e the pitching ideas (Session 34); the order inside each is Claude's default.
+
+**Found while reading the code (not verified by a run):** the engine's squared-up % leaves fouls out (they get no exit speed), while Savant counts per bat contact with fouls; that is the likely cause of most of Timing's 15-point gap (step 2.1d item 1).
+
+**Small decisions Claude made (Claude's defaults):** the order of the items inside steps 2.1d and 2.1e (each sets up the next: the count fix first, the split before the tables; the grades' usage check before the top and the curves); Recognition's read reshape and Timing's wider table made conditional on what the split leaves; the strikeout-star check after each Command item; the ladder pages v.33 and v.34; the "Done when" checks.
+
+## 57. Hand-off for Session 33
+Branch `ccr-355f57c1-azdh2x`, committed and pushed, **not merged to `main`** (the owner's OK is needed). Docs version 85. Tests unchanged since Session 31 (no code changed): 117 pass; `gametest.js 1000 7` checksum `ada27fe9`.
+
+**Next: step 2.1d, calibrating the hitting ratings** (docs/plan.md, "Step 2.1d"): seven items in order (Timing's squared-up count; Contact's parts split up, way A; Contact's steeper low end; Recognition's lay-off of read breaking balls; Recognition's read reshaped if still needed; Timing's wider table if still needed; low Discipline leaning Aggressive), then the level, equal value, the league's population, the overall's tables, the season's time and a v.33 ladder page. Step 2.1e (the pitching ideas) is Session 34.
+
+**Waiting on the owner:** the OK to merge this branch to `main` (before Session 33); keep or change Claude's small decisions above.
+
+**Prompt for the next session:** "Start Session 33 of Baseball3 (merrill3/Baseball3). Use the branch the session environment gives you, starting from `main` (merge Session 32's branch `ccr-355f57c1-azdh2x` first if I haven't). Read CLAUDE.md, then `state.md` sections 56–57, the "Stopped at:" line and "Step 2.1d" in docs/plan.md, and DESIGN.md section 10's "Calibrating six ratings: the brainstorm". We're still on step 2.1. This session is step 2.1d: build the seven hitting items in order, stopping and reporting any that would take a ladder or the league's spreads off MLB's, then run the end checks and publish the v.33 Rating Ladder Check as a new private page. Commit and push after each item. Baseball1 is reference only; never change it."
+
