@@ -2,7 +2,7 @@
 // (the home team's park, each team's rotation in turn, its bullpen; no rest, injuries or roster moves until step 2.3),
 // --seasons times with different game seeds, and reports each team's wins against its expected wins, the spread, the
 // park's runs at home against away, and the time a season takes. Node only; it checks nothing (exit 0).
-// Usage: node tools/leaguecheck.js [--seed=1] [--seasons=1] [--jobs=N]
+// Usage: node tools/leaguecheck.js [--seed=1] [--seasons=1] [--jobs=N] [--parks=off] (every game in the standard park) [--tweak=file.js]
 // The starting balance (owner's choice): a few teams expected to win about 95-100, a few about 60-65, most in between.
 'use strict';
 const os = require('os');
@@ -12,11 +12,13 @@ const { loadCore } = require('./lib/load');
 function args() {
   const a = process.argv.slice(2);
   const opt = (k, d) => { const x = a.find((s) => s.startsWith('--' + k + '=')); return x ? x.slice(k.length + 3) : d; };
-  return { seed: opt('seed', '1'), seasons: parseInt(opt('seasons', '1'), 10), jobs: parseInt(opt('jobs', String(os.cpus().length)), 10) };
+  return { seed: opt('seed', '1'), seasons: parseInt(opt('seasons', '1'), 10), jobs: parseInt(opt('jobs', String(os.cpus().length)), 10),
+    parks: opt('parks', 'on') !== 'off', tweak: opt('tweak', null) ? require('path').resolve(opt('tweak')) : null };
 }
 
 // One season: wins and runs by team, runs in each park.
-function season(B3, L, n) {
+function season(B3, L, n, o) {
+  o = o || {};
   const t0 = Date.now();
   const W = {}, R = {}, park = {};
   const games = {};
@@ -24,7 +26,7 @@ function season(B3, L, n) {
   for (const gm of L.schedule.games) {
     const a = L.byId(gm.away), h = L.byId(gm.home);
     const g = B3.game.sim({ away: B3.league.gameTeam(a, games[a.id]++), home: B3.league.gameTeam(h, games[h.id]++), type: 'regular',
-      park: h.park, rng: B3.rng.create('season:' + L.seed + ':' + n + ':' + gm.id) });
+      park: o.parks === false ? null : h.park, rng: B3.rng.create('season:' + L.seed + ':' + n + ':' + gm.id) });
     const s = g.score;
     W[s[0] > s[1] ? a.id : h.id]++;
     R[a.id][0] += s[0]; R[a.id][1] += s[1]; R[h.id][0] += s[1]; R[h.id][1] += s[0];
@@ -35,24 +37,26 @@ function season(B3, L, n) {
 
 if (process.argv[2] === '--worker') {
   const B3 = loadCore();
+  if (process.argv[3] && process.argv[3] !== '-') require(process.argv[3])(B3);
   process.on('message', (m) => {
     if (m.done) process.exit(0);
     const L = B3.league.create(m.seed);
-    process.send({ out: season(B3, L, m.n) });
+    process.send({ out: season(B3, L, m.n, m.o) });
   });
   process.send({ ready: true });
 } else {
   const o = args();
   const B3 = loadCore();
+  if (o.tweak) require(o.tweak)(B3);
   const t0 = Date.now();
   const L = B3.league.create(o.seed);
   const build = Date.now() - t0;
   const res = [];
   let next = 0, active = 0;
   for (let w = 0; w < Math.min(o.jobs, o.seasons); w++) {
-    const c = fork(__filename, ['--worker']);
+    const c = fork(__filename, ['--worker', o.tweak || '-']);
     active++;
-    const give = () => { if (next < o.seasons) c.send({ seed: o.seed, n: next++ }); else c.send({ done: true }); };
+    const give = () => { if (next < o.seasons) c.send({ seed: o.seed, n: next++, o: o }); else c.send({ done: true }); };
     c.on('message', (m) => { if (m.ready) return give(); res.push(m.out); give(); });
     c.on('exit', () => { if (--active === 0) report(B3, L, res, o, build); });
   }

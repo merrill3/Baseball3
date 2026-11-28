@@ -27,8 +27,8 @@
       East: [
         ['NYB', 'New York', 'Bodegas', 'New York', 19.5, 30, ['#1F6F43', '#D9822B'], 'NYC',
           { name: 'The Corner Lot', odd: 'squeezed into a city block: a short right field behind a very tall wall',
-            fence: [[-45, 335], [-25, 382], [0, 405], [20, 375], [30, 330], [45, 305]], wall: [[-45, 8], [10, 8], [20, 30], [45, 30]] }],
-        ['ORL', 'Orlando', 'Swans', 'Orlando', 2.8, 100, ['#2E7F86', '#E8752C'], 'LV', { name: 'Lakeshore Park', fence: five(330, 377, 402, 375, 325), wall: 9 }],
+            fence: [[-45, 335], [-25, 382], [0, 405], [20, 375], [30, 330], [45, 305]], wall: [[-45, 8], [10, 8], [20, 26], [45, 26]] }],
+        ['ORL', 'Orlando', 'Swans', 'Orlando', 2.8, 100, ['#2E7F86', '#E8752C'], 'LV', { name: 'Lakeshore Park', fence: five(330, 375, 401, 374, 325), wall: 8 }],
         ['ATL', 'Atlanta', 'Peaches', 'Atlanta', 6.3, 1050, ['#F4A261', '#A0442B'], 'VA', { name: 'Red Clay Field', fence: five(330, 378, 400, 377, 330), wall: 9 }],
         ['PHI', 'Philadelphia', 'Jawns', 'Philadelphia', 6.2, 40, ['#8A5A2B', '#D9A520'], 'PA', { name: 'Rowhouse Park', fence: five(328, 372, 398, 372, 328), wall: 8 }],
         ['NSH', 'Nashville', 'Pickers', 'Nashville', 2.1, 550, ['#C1661C', '#2E4A6B'], 'AUS', { name: 'Sunburst Field', fence: five(330, 375, 402, 375, 330), wall: 8 }]
@@ -36,18 +36,18 @@
       Central: [
         ['CHE', 'Chicago', 'Els', 'Chicago', 9.3, 600, ['#9EA3A8', '#1E5C8C'], 'CHD',
           { name: 'Loop Field', odd: 'the elevated tracks cut a notch into right-center: a deep pocket beside a short right-field line',
-            fence: [[-45, 340], [-25, 372], [0, 400], [12, 404], [16, 418], [26, 414], [30, 372], [45, 318]], wall: 10 }],
-        ['DET', 'Detroit', 'Mittens', 'Detroit', 4.3, 600, ['#5A6470', '#A8322D'], 'TOR', { name: 'Foundry Field', fence: five(330, 378, 402, 378, 330), wall: 9 }],
+            fence: [[-45, 335], [-25, 372], [0, 400], [12, 404], [16, 414], [26, 410], [30, 370], [45, 318]], wall: 10 }],
+        ['DET', 'Detroit', 'Mittens', 'Detroit', 4.3, 600, ['#5A6470', '#A8322D'], 'TOR', { name: 'Foundry Field', fence: five(330, 376, 401, 376, 330), wall: 8 }],
         ['IND', 'Indianapolis', 'Pit Crew', 'Indianapolis', 2.1, 720, ['#232323', '#E8682A'], 'OKC', { name: 'Pit Lane Park', fence: five(330, 375, 400, 375, 330), wall: 9 }],
         ['MI', 'Michigan', 'Cherries', 'Grand Rapids', 1.1, 610, ['#9E1B32', '#2E5339'], 'OH', { name: 'Blossom Field', fence: five(330, 376, 401, 376, 330), wall: 8 }],
         ['WI', 'Wisconsin', 'Curds', 'Milwaukee', 1.6, 620, ['#E89B2F', '#3D6FA5'], 'DAK', { name: 'Creamery Park', fence: five(327, 372, 400, 372, 327), wall: 8 }]
       ],
       West: [
-        ['LA4', 'Los Angeles', '405s', 'Los Angeles', 12.8, 300, ['#006B3F', '#8E4F8C'], 'LAT', { name: 'Cloverleaf Park', fence: five(330, 376, 401, 376, 330), wall: 8 }],
-        ['SF', 'San Francisco', 'Sourdoughs', 'San Francisco', 4.6, 50, ['#C0362C', '#B8BEC2'], 'SD', { name: 'Fogline Park', fence: five(332, 378, 400, 375, 325), wall: 10 }],
+        ['LA4', 'Los Angeles', '405s', 'Los Angeles', 12.8, 300, ['#006B3F', '#8E4F8C'], 'LAT', { name: 'Cloverleaf Park', fence: five(330, 375, 400, 375, 330), wall: 8 }],
+        ['SF', 'San Francisco', 'Sourdoughs', 'San Francisco', 4.6, 50, ['#C0362C', '#B8BEC2'], 'SD', { name: 'Fogline Park', fence: five(330, 376, 400, 374, 325), wall: 9 }],
         ['PHX', 'Phoenix', 'Gilas', 'Phoenix', 5.1, 1090, ['#E07B39', '#231F20'], 'NM', { name: 'Saguaro Field', fence: five(330, 376, 402, 376, 330), wall: 8 }],
-        ['SEA', 'Seattle', 'Freeze', 'Seattle', 4.0, 50, ['#5E6A71', '#1D4D3A'], 'SLC', { name: 'Drizzle Field', fence: five(330, 378, 402, 378, 327), wall: 8 }],
-        ['MTL', 'Montreal', 'Poutine', 'Montreal', 4.3, 100, ['#1F4E9C', '#7A4A23'], 'BOS', { name: 'Parc du Vieux-Port', fence: five(330, 375, 400, 375, 330), wall: 9 }]
+        ['SEA', 'Seattle', 'Freeze', 'Seattle', 4.0, 50, ['#5E6A71', '#1D4D3A'], 'SLC', { name: 'Drizzle Field', fence: five(330, 376, 401, 376, 327), wall: 8 }],
+        ['MTL', 'Montreal', 'Poutine', 'Montreal', 4.3, 100, ['#1F4E9C', '#7A4A23'], 'BOS', { name: 'Parc du Vieux-Port', fence: five(330, 375, 400, 375, 330), wall: 8 }]
       ]
     },
     'Diamond League': {
@@ -57,11 +57,11 @@
           { name: 'The Ravine', odd: 'a triangle: straight walls from each foul pole to a deep point in dead center, so the alleys are short',
             // straight lines in space from 340 ft at each pole to 440 ft in center (the distances along each ray)
             fence: [[-45, 340], [-40, 339], [-35, 340], [-30, 343], [-25, 350], [-20, 360], [-15, 373], [-10, 390], [-5, 412], [0, 440], [5, 412], [10, 390], [15, 373], [20, 360], [25, 350], [30, 343], [35, 340], [40, 339], [45, 340]], wall: 12 }],
-        ['BOS', 'Boston', 'Wicked', 'Boston', 4.9, 20, ['#8B2F23', '#6F7378'], 'MTL', { name: 'Brickworks Park', fence: five(325, 375, 400, 375, 330), wall: 10 }],
-        ['VA', 'Virginia', 'Hams', 'Richmond', 1.3, 150, ['#8C2F22', '#4A6FA5'], 'ATL', { name: 'Smokehouse Field', fence: five(332, 376, 400, 376, 332), wall: 8 }],
+        ['BOS', 'Boston', 'Wicked', 'Boston', 4.9, 20, ['#8B2F23', '#6F7378'], 'MTL', { name: 'Brickworks Park', fence: five(325, 375, 400, 375, 330), wall: 9 }],
+        ['VA', 'Virginia', 'Hams', 'Richmond', 1.3, 150, ['#8C2F22', '#4A6FA5'], 'ATL', { name: 'Smokehouse Field', fence: five(330, 375, 400, 375, 330), wall: 8 }],
         ['PA', 'Pennsylvania', 'Yinzers', 'Pittsburgh', 2.4, 730, ['#4A4A48', '#B23A2E'], 'PHI',
           { name: 'Incline Field', odd: 'built into a hillside: a deep center field up a grassy incline',
-            fence: [[-45, 330], [-25, 376], [-8, 408], [0, 415], [8, 408], [25, 376], [45, 325]], wall: 8 }]
+            fence: [[-45, 330], [-25, 375], [-8, 405], [0, 412], [8, 405], [25, 375], [45, 325]], wall: 8 }]
       ],
       Central: [
         ['CHD', 'Chicago', 'Deep Dish', 'Chicago', 9.3, 600, ['#C98A2B', '#B5302A'], 'CHE', { name: 'The Oven', fence: five(330, 372, 400, 372, 330), wall: 10 }],
@@ -69,11 +69,11 @@
         ['OH', 'Ohio', 'Coasters', 'Columbus', 2.2, 760, ['#C8352E', '#6D7378'], 'MI', { name: 'Lift Hill Field', fence: five(330, 375, 400, 375, 330), wall: 8 }],
         ['OKC', 'Oklahoma City', 'Twisters', 'Oklahoma City', 1.5, 1200, ['#5B6470', '#A4472C'], 'IND', { name: 'Red Dirt Park', fence: five(330, 376, 400, 376, 330), wall: 9 }],
         ['DAK', 'Dakota', 'Pheasants', 'Sioux Falls', 0.3, 1470, ['#A45A2A', '#D6B65A'], 'WI',
-          { name: 'The Prairie', odd: 'the biggest outfield behind a low wall: the triples park', fence: five(335, 385, 418, 385, 335), wall: 6 }]
+          { name: 'The Prairie', odd: 'the biggest outfield behind a low wall: the triples park', fence: five(332, 382, 412, 382, 332), wall: 6 }]
       ],
       West: [
         ['LAT', 'Los Angeles', 'Taco Trucks', 'Los Angeles', 12.8, 300, ['#B83A2B', '#7DB84A'], 'LA4', { name: 'Sunset Lot', fence: five(328, 372, 398, 372, 328), wall: 9 }],
-        ['SD', 'San Diego', 'Sea Lions', 'San Diego', 3.3, 60, ['#1B7BAA', '#3B5323'], 'SF', { name: 'Harbor Cove Park', fence: five(331, 377, 401, 377, 330), wall: 8 }],
+        ['SD', 'San Diego', 'Sea Lions', 'San Diego', 3.3, 60, ['#1B7BAA', '#3B5323'], 'SF', { name: 'Harbor Cove Park', fence: five(330, 375, 400, 375, 330), wall: 8 }],
         ['SLC', 'Salt Lake', 'Powder', 'Salt Lake City', 1.3, 4230, ['#EEEDE8', '#3E5C8A'], 'SEA', { name: 'Wasatch Field', fence: five(330, 375, 400, 375, 330), wall: 9 }],
         ['LV', 'Las Vegas', 'Locals', 'Las Vegas', 2.3, 2030, ['#FF3EA5', '#1A1A2E'], 'ORL', { name: 'Off-Strip Park', fence: five(330, 375, 400, 375, 330), wall: 9 }],
         ['NM', 'New Mexico', 'Chiles', 'Albuquerque', 0.9, 5310, ['#4C7A2C', '#30A3A0'], 'PHX', { name: 'Mesa Field', fence: five(330, 375, 402, 375, 330), wall: 8 }]

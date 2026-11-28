@@ -20,10 +20,12 @@
 //   at (rank + 0.5) / 30: about 100, 96, 93 at the top and 62, 66, 69 at the bottom), the places in the order the teams
 //   were drawn (so the best-drawn team gets the top target), and its ratings are shifted (as B3.players' level: hitting,
 //   pitching and grades by the shift, fielding and running by half) until its expected wins are the target.
-// - Roles by profile: the rotation is the five best starters in the organization by the overall as a starter (its own five
-//   and its three reserve starters), ace first; a wild flamethrower (Velocity 70 and up, Command 40 or lower) goes to the
-//   bullpen as its long man when another starter is within BALANCE.swapGap points of him, and the long man to the
-//   reserves. The short relievers keep B3.players' roles by overall (the best the closer).
+// - Roles by profile: the rotation is the organization's five starters, ace first by the overall as a starter; a wild
+//   flamethrower (Velocity 70 and up, Command 40 or lower) goes to the bullpen as its long man when its best reserve
+//   starter is within BALANCE.swapGap points of him (that one comes up, the long man goes down). The short relievers keep
+//   B3.players' roles by overall (the best the closer). Reserves don't otherwise compete for the rotation: letting the
+//   best five of its eight starters start made the league's pitching better than the population the engine's level is
+//   calibrated on (4.42-4.52 runs a team-game against 4.66); the CPU's roster moves (step 2.3) bring them up.
 // - The team overall: 50 for an 81-win team, plus BALANCE.pointsPerWin a win (so about 75 for 100 wins, 25 for 62).
 (function (root) {
   'use strict';
@@ -91,23 +93,20 @@
   // The rotation and the long man by profile (see the header).
   function roles(org) {
     const starterOf = (p) => B3.overall.of(p, { role: 'SP' });
-    const sps = org.starters.concat(org.reserves.filter((p) => p.pitches && p.role === 'SP'));
-    sps.sort((a, b) => starterOf(b) - starterOf(a));
-    let rot = sps.slice(0, 5), rest = sps.slice(5);
+    let rot = org.starters.slice().sort((a, b) => starterOf(b) - starterOf(a));
+    const spares = org.reserves.filter((p) => p.pitches && p.role === 'SP').sort((a, b) => starterOf(b) - starterOf(a));
     const wild = (p) => p.ratings.velocity >= 70 && p.ratings.command <= 40;
-    for (const p of rot.slice()) {
-      if (!wild(p) || !rest.length || starterOf(rest[0]) < starterOf(p) - BALANCE.swapGap) continue;
-      const up = rest.shift();
+    for (const p of rot) {
+      if (!wild(p) || !spares.length || starterOf(spares[0]) < starterOf(p) - BALANCE.swapGap) continue;
+      const up = spares[0], lr = org.relievers.find((x) => x.role === 'LR');
       rot = rot.filter((x) => x !== p).concat([up]).sort((a, b) => starterOf(b) - starterOf(a));
-      const lr = org.relievers.find((x) => x.role === 'LR');
       p.role = 'LR';
-      if (lr) { org.relievers[org.relievers.indexOf(lr)] = p; rest.push(lr); }
+      up.role = 'SP';
+      org.reserves = org.reserves.filter((x) => x !== up);
+      if (lr) { org.relievers[org.relievers.indexOf(lr)] = p; org.reserves.push(lr); } else org.relievers.push(p);
       break; // one swap at most: the bullpen has one long man
     }
-    for (const p of rot) p.role = 'SP';
-    const others = org.reserves.filter((p) => !(p.pitches && sps.indexOf(p) >= 0));
     org.starters = rot;
-    org.reserves = others.concat(rest.filter((p) => org.relievers.indexOf(p) < 0));
   }
 
   const PEN = ['CL', 'SU', 'SU', 'MR', 'MR', 'MR', 'MR'];
@@ -166,8 +165,16 @@
   // managers of step 2.2), its n-th starter (the rotation in turn) and its bullpen.
   function gameTeam(t, n) {
     const org = t.org, players = {}, lineup = [];
-    const hitRuns = (p) => { const d = B3.overall.detail(p); let s = 0; for (const k of HIT) s += d.parts[k] || 0; return s; };
-    const regs = org.regulars.slice().sort((a, b) => hitRuns(b) - hitRuns(a));
+    // The order is worked out once a league (t.order, the regulars' ids) and again only when the regulars change.
+    const key = org.regulars.map((p) => p.id).join(',');
+    if (!t.order || t.order.key !== key) {
+      const hitRuns = (p) => { const d = B3.overall.detail(p); let s = 0; for (const k of HIT) s += d.parts[k] || 0; return s; };
+      const ids = org.regulars.slice().sort((a, b) => hitRuns(b) - hitRuns(a)).map((p) => p.id);
+      t.order = { key: key, ids: ids };
+    }
+    const byId = {};
+    for (const p of org.regulars) byId[p.id] = p;
+    const regs = t.order.ids.map((id) => byId[id]);
     for (const p of regs) { players[p.id] = p; lineup.push({ id: p.id, pos: p.pos }); }
     const sp = org.starters[((n || 0) % org.starters.length + org.starters.length) % org.starters.length];
     players[sp.id] = sp;

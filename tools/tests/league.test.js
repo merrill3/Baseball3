@@ -112,13 +112,18 @@ module.exports = (t) => {
     assert.ok(B3.league.teamOverall(100) >= 72 && B3.league.teamOverall(62) <= 28);
   });
 
-  t.test('roles by profile: the rotation is the best five starters, ace first; a game\'s team is one the engine takes', () => {
+  t.test('roles by profile: the rotation ace first, wild flamethrowers to the bullpen; a game\'s team is one the engine takes', () => {
     const { B3, L } = league();
     for (const t of L.teams) {
       const sp = t.org.starters.map((p) => B3.overall.of(p, { role: 'SP' }));
       for (let i = 1; i < 5; i++) assert.ok(sp[i - 1] >= sp[i], t.id + ' ace first');
+      // A wild flamethrower stays in the rotation only when no reserve starter is close enough to take his spot.
       const left = t.org.reserves.filter((p) => p.pitches && p.role === 'SP').map((p) => B3.overall.of(p, { role: 'SP' }));
-      for (const x of left) assert.ok(x <= sp[4] + B3.league.BALANCE.swapGap, t.id + ' a better starter left in the reserves');
+      for (const p of t.org.starters) {
+        if (p.ratings.velocity >= 70 && p.ratings.command <= 40) {
+          for (const x of left) assert.ok(x < B3.overall.of(p, { role: 'SP' }) - B3.league.BALANCE.swapGap, t.id + ' a wild flamethrower kept');
+        }
+      }
     }
     const g = B3.game.sim({ away: B3.league.gameTeam(L.teams[0], 3), home: B3.league.gameTeam(L.teams[1], 4), park: L.teams[1].park, type: 'regular', rng: B3.rng.create('lg') });
     assert.ok(g.over);
