@@ -223,6 +223,12 @@
     const T = B3.tune.TYPE[type];
     return (g - 1) / (R().grade.step * ((T && T.gradeStep) || 1));
   }
+  // How much more (or less) often a pitch of multiplier g is thrown than its type's usual share (B3.tune.CPU.pitch.gradeUse, per
+  // tens of grade points; Session 34: [below an average grade, above it]).
+  function usePull(type, g) {
+    const u = gradeUnits(type, g), gu = B3.tune.CPU.pitch.gradeUse;
+    return Math.exp((Array.isArray(gu) ? gu[u < 0 ? 0 : 1] : gu) * u);
+  }
 
   // The put-away pitch: his best-graded type. On a tie, the type that misses the most bats in MLB (B3.tune.TYPE's miss;
   // step 1.5 task 4: it was the type's bite, which tuning moves).
@@ -248,6 +254,7 @@
     stamina: stamina,
     gradeMult: gradeMult,
     gradeUnits: gradeUnits,
+    usePull: usePull,
     putAway: putAway
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

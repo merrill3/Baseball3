@@ -122,8 +122,10 @@
   // average reliever's +0.40 (he throws harder, and his arsenal is smaller); the raw Arsenal averages 63.6.
   // Session 33, after step 2.1d's hitting changes and the new WORTH table (the same 4,000 organizations): the starter's +0.47, the
   // average reliever's +0.48 (both +0.07: the hitters' level and the pitchers' re-measured worth); the regulars within 0.02 runs.
-  const BASE = { hit: { C: -0.0609, '1B': -0.0131, '2B': -0.0265, '3B': -0.0154, SS: -0.0155, LF: -0.0085, CF: 0.0341, RF: 0.0036, DH: -0.0125 }, pit: 0.4737,
-    rel: 0.4787, arsenal: { arsenal: 3.62, fastball: 1.24, breaking: 0.83, offspeed: 0.24 } };
+  // Session 34, after step 2.1e items 1-5 (an interim re-run; the end checks re-measure WORTH and ARSENAL, then this): the starter's
+  // +0.36, the average reliever's +0.40 (an above-average pitch no longer thrown more than its usual share, item 5).
+  const BASE = { hit: { C: -0.0609, '1B': -0.0131, '2B': -0.0265, '3B': -0.0154, SS: -0.0155, LF: -0.0085, CF: 0.0341, RF: 0.0036, DH: -0.0125 }, pit: 0.3593,
+    rel: 0.3992, arsenal: { arsenal: 2.33, fastball: 0.84, breaking: 0.60, offspeed: 0.19 } };
 
   const HIT = ['contact', 'timing', 'launch', 'rawPower', 'recognition', 'discipline'];
   const PIT = ['velocity', 'command', 'deception'];
@@ -162,7 +164,7 @@
     for (const t of p.pitches) mult[t] = B3.ratings.gradeMult(t, e.grades[t]);
     const share = (kind) => {
       const x = p.pitches.map((t) => {
-        let v = (P.use[t] || 1) * Math.exp(P.gradeUse * B3.ratings.gradeUnits(t, mult[t]));
+        let v = (P.use[t] || 1) * B3.ratings.usePull(t, mult[t]);
         if (kind === 1 && FAST[t]) v *= P.behind;
         if (kind === 2 && t === e.putAway) v *= P.putAway;
         return v;

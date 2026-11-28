@@ -90,7 +90,7 @@
       const pit = g.teams[d.side].inp[d.pitcher].pit;
       const w = d.pitches.map((t) => {
         const m = pit.grades[t] === undefined ? 1 : pit.grades[t];
-        let x = (P.use[t] || 1) * Math.exp(P.gradeUse * B3.ratings.gradeUnits(t, m)); // tens of grade points (Session 30: per type)
+        let x = (P.use[t] || 1) * B3.ratings.usePull(t, m); // by its grade (Session 30: per type; Session 34: below and above average)
         if (fast(t) && d.balls - d.strikes >= 2) x *= P.behind;
         if (d.strikes === 2 && t === pit.putAway) x *= P.putAway;
         return x;

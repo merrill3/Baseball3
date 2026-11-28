@@ -732,10 +732,17 @@
       // Session 12: so the test staffs throw MLB 2024's mix (fastballs 56%: FF 35.6, SI 16.6, FC 8.0; SL 21.2, CU 6.3,
       // CH 9.0, FS 3.2; Savant's pitch-arsenal leaderboard, sweepers and slurves with sliders).
       use: { FF: 2.5, SI: 1.45, FC: 2.5, SL: 1.6, CU: 0.65, CH: 0.75, FS: 2.5 },
-      gradeUse: 0.3,       // better pitches get thrown more: weight x e^(gradeUse x u), u = tens of grade points
+      // Better pitches get thrown more: weight x e^(gradeUse x u), u = tens of grade points (B3.ratings.usePull). Session 34 (step 2.1e
+      // item 5, owner's choice: the double payoff checked against MLB): [below an average grade, above it], was 0.3 both ways. MLB's
+      // pitchers barely throw their better breaking and off-speed pitches more: within a pitcher-season with two or more (50+ PA
+      // ending on each; Savant 2024-2026, 465), log usage +0.015 a whiff point, the best one 48.4% of them; the engine at 0.3 had
+      // 0.038 and 51.0%, now 0.018 and 47.6%. A pitch below average stays pulled down (MLB's pitchers keep poor pitches out of their
+      // arsenals or rarely throw them; at 0.12 both ways the league's change-up whiff low tail fell 3.4 points below MLB's).
+      gradeUse: [0.3, 0],
       behind: 1.8,         // fastballs (FF, SI, FC) x this when 2 balls ahead of the strikes (2-0, 3-0, 3-1)
-      putAway: 1.6,        // the put-away pitch x this with two strikes (Session 12, was 2.5: MLB 2024 throws 40.9% off-speed
-                           // pitches before two strikes and 50.7% with two)
+      putAway: 1.8,        // the put-away pitch x this with two strikes (Session 12, was 2.5: MLB 2024 throws 40.9% off-speed
+                           // pitches before two strikes and 50.7% with two). Session 34 (step 2.1e item 5): was 1.6; average teams'
+                           // two-strike off-speed share 48.2 -> 49.6% [50.7], before two strikes 40.0 -> 39.5 [40.9]
       // Chance the target is in the zone, by balls (rows) and strikes (columns), for a Balanced pitcher.
       // Session 16: fitted so average pitchers' zone % by count is MLB's (2024-2025 Statcast, every pitch: 0-0 54.4, 0-1 45.5,
       // 0-2 32.4, 1-0 55.7, 1-1 50.5, 1-2 38.2, 2-0 59.5, 2-1 56.8, 2-2 47.1, 3-0 63.2, 3-1 62.2, 3-2 58.9; the engine had the

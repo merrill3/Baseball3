@@ -153,14 +153,15 @@ module.exports = function (t) {
     assert.ok(widen(30) > widen(90) + 0.04, 'chases added ' + widen(30) + ' / ' + widen(90));
   });
 
-  t.test('the pitch: better grades get thrown more, the put-away pitch with two strikes, fastballs when behind', () => {
+  t.test('the pitch: poorer grades get thrown less (Session 34: a better one about as often as its type usually is), the put-away pitch with two strikes, fastballs when behind', () => {
     const base = picks(setup(), 1, 1);
-    const slGood = picks(setup({ arsenal: { SL: { grade: 85, shape: 0 } } }), 1, 1);
-    assert.ok(slGood.types.SL > base.types.SL + 0.05, 'a better slider gets thrown more');
+    const slGood = picks(setup({ arsenal: { SL: { grade: 85, shape: 0 } } }), 1, 1), slPoor = picks(setup({ arsenal: { SL: { grade: 35, shape: 0 } } }), 1, 1);
+    assert.ok(slPoor.types.SL < base.types.SL - 0.05, 'a poorer slider gets thrown less');
+    assert.ok(Math.abs(slGood.types.SL - base.types.SL) < 0.03, 'a better slider about as often before two strikes');
     const chGood = setup({ arsenal: { CH: { grade: 80, shape: 0 } } });
     assert.strictEqual(chGood.g.teams[1].inp['HOM-SP'].pit.putAway, 'CH');
     // (Session 12: a smaller boost, as MLB's off-speed share rises from 41% to 51% with two strikes.)
-    assert.ok(picks(chGood, 0, 2).types.CH > picks(chGood, 0, 0).types.CH + 0.06, 'the put-away pitch with two strikes');
+    assert.ok(picks(chGood, 0, 2).types.CH > picks(chGood, 0, 0).types.CH + 0.04, 'the put-away pitch with two strikes'); // Session 34: was + 0.06 (with a better pitch thrown more)
     const behind = picks(setup(), 3, 1), even = picks(setup(), 1, 1);
     const fb = (x) => (x.types.FF || 0) + (x.types.SI || 0) + (x.types.FC || 0); // Session 12: the test starter has a sinker too
     assert.ok(fb(behind) > fb(even) + 0.1, 'fastballs when behind ' + fb(even) + ' -> ' + fb(behind));
@@ -355,7 +356,7 @@ module.exports = function (t) {
       return { deep: rate(300, 999), mid: mid, shallow: rate(0, 180) };
     };
     const avg = run(27, 250), fast = run(30, 250);
-    assert.ok(avg.deep > 0.9, 'deep catches: ' + avg.deep);
+    assert.ok(avg.deep > 0.85, 'deep catches: ' + avg.deep); // Session 34: was > 0.9; about 35 deep catches in 250 games (sd about 0.045; 0.93 over 600 games)
     assert.ok(avg.shallow < 0.1, 'shallow catches: ' + avg.shallow);
     assert.ok(fast.mid > avg.mid + 0.05, 'faster runners tag more on medium catches: ' + fast.mid + ' vs ' + avg.mid);
   });

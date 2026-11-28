@@ -90,7 +90,7 @@ function newAcc() {
     n: 0, zone: 0, sw: 0, zsw: 0, osw: 0, out: 0, contact: 0, zcontact: 0, ocontact: 0, whiff: 0, foul: 0,
     heart: 0, shadow: 0, chaseZ: 0, waste: 0, meat: 0, shTake: 0, shCalled: 0, fp: 0, fs: 0,
     fbN: 0, fbV: 0, offSw: 0, offWhiff: 0, offOut: 0, offOutSw: 0, fbOut: 0, fbOutSw: 0, sw95: 0, whiff95: 0,
-    bySw: {}, byWhiff: {}, paBy: {}, curve: {}, zc: {}, azc: {},
+    bySw: {}, byWhiff: {}, paBy: {}, nBy: {}, curve: {}, zc: {}, azc: {},
     bip: 0, evSum: 0, evs: [], laSum: 0, laSq: 0, hard: 0, barrel: 0, sweet: 0, gb: 0, ld: 0, fb: 0, pu: 0, starts: 0, spPitches: 0, spOuts: 0,
     pull: 0, straight: 0, oppo: 0, squared: 0, blast: 0, fast: 0, batSpeedSum: 0, swings: 0 };
 }
@@ -149,6 +149,7 @@ function addGame(B3, g, side, accFor) {
     if (inZ) a.zone++; else { a.out++; if (OFF[e.t]) a.offOut++; if (FB[e.t]) a.fbOut++; }
     a.zc['n' + e.c] = (a.zc['n' + e.c] || 0) + 1; // zone % by count (Session 16)
     if (e.c === '0-0') { a.fp++; if (e.r !== 'B') a.fs++; } // first-pitch strikes (Session 34)
+    a.nBy[e.t] = (a.nBy[e.t] || 0) + 1; // pitches by type (Session 34: usage by quality)
     if (inZ) a.zc['z' + e.c] = (a.zc['z' + e.c] || 0) + 1;
     // The swing curve (Session 15): swings by feet from the zone's edge, before two strikes (e) and with two (t).
     const cb = (+e.c.split('-')[1] >= 2 ? 't' : 'e') + CURVE_BINS.findIndex((b) => B3.data.zoneEdge(e.x, e.z) < b);
@@ -432,6 +433,34 @@ function stats(a) {
   out.edgeGapEV = out.heartEV - out.edgeEV; out.edgeGapHard = out.heartHard - out.edgeHard; out.edgeGapWcon = out.heartWcon - out.edgeWcon;
   // Whiff % by pitch type, when 50+ plate appearances end on the type (as Savant's arsenal table).
   for (const t of ['FF', 'SI', 'FC', 'SL', 'CU', 'CH', 'FS']) out['whiff' + t] = (a.paBy[t] || 0) >= 50 ? pc(a.byWhiff[t] || 0, a.bySw[t]) : NaN;
+  // Session 34 (step 2.1e item 5): his breaking and off-speed pitches' usage (share of his pitches) and whiff, 50+ PA ending on each.
+  out.offUse = ['SL', 'CU', 'CH', 'FS'].filter((t) => (a.paBy[t] || 0) >= 50 && a.bySw[t]).map((t) => ({ t: t, use: pc(a.nBy[t] || 0, a.n), whiff: pc(a.byWhiff[t] || 0, a.bySw[t]) }));
+  return out;
+}
+
+// Usage by quality (Session 34, step 2.1e item 5): how much more pitchers throw their better breaking and off-speed pitches, measured
+// as tools/lib/realbuild.js measures MLB's (pitchingOnly): within each pitcher-season with two or more such pitches (50+ PA ending
+// on each), log usage on whiff %, both against the type's mean and the pitcher's own; and the share of them his best one takes.
+function usageReport(seasons, real) {
+  const rows = [];
+  seasons.forEach((s, i) => { for (const x of s.offUse || []) rows.push({ who: i, g: x.t, lu: Math.log(x.use), use: x.use, whiff: x.whiff }); });
+  const mean = (k) => { const m = {}, n = {}; for (const x of rows) { m[x.g] = (m[x.g] || 0) + x[k]; n[x.g] = (n[x.g] || 0) + 1; } for (const g in m) m[g] /= n[g]; return m; };
+  const mw = mean('whiff'), ml = mean('lu'), by = {};
+  for (const x of rows) (by[x.who] = by[x.who] || []).push(x);
+  let sxy = 0, sxx = 0, groups = 0, best = 0;
+  for (const k in by) {
+    const l = by[k];
+    if (l.length < 2) continue;
+    groups++;
+    const w = l.map((x) => x.whiff - mw[x.g]), u = l.map((x) => x.lu - ml[x.g]);
+    const aw = w.reduce((a, b) => a + b, 0) / w.length, au = u.reduce((a, b) => a + b, 0) / u.length;
+    for (let i = 0; i < l.length; i++) { sxy += (w[i] - aw) * (u[i] - au); sxx += (w[i] - aw) * (w[i] - aw); }
+    best += l[w.indexOf(Math.max.apply(null, w))].use / l.reduce((a, x) => a + x.use, 0);
+  }
+  const R = real.usage || {};
+  const out = { groups: groups, perWhiff: sxy / sxx, bestShare: best / groups };
+  console.log('  usage by quality (' + groups + ' pitcher-seasons with two or more breaking or off-speed pitches): log usage per whiff point ' + fmt(out.perWhiff, 3) +
+    ' [' + fmt(R.perWhiff, 3) + ']; his best one\'s share of them ' + fmt(100 * out.bestShare, 1) + '% [' + fmt(100 * R.bestShare, 1) + ']');
   return out;
 }
 
@@ -633,6 +662,7 @@ function popReport(res, real) {
     rep.joint = Object.assign(rep.joint || {}, { [kind]: jointReport(kind === 'hitter' ? 'hitter' : 'starter', kind === 'hitter' ? seasons : seasons.filter((s2) => Number.isFinite(s2.pps))) });
     if (kind === 'hitter') rep.curves = curveReport(seasons);
     if (kind === 'pitcher') rep.aim = aimReport(seasons);
+    if (kind === 'pitcher') rep.usage = usageReport(seasons, real);
     if (kind === 'pitcher') rep.starters = startersReport(seasons, q);
     rep[kind] = { n: seasons.length, rows: rows, corr: cs };
   }
