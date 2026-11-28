@@ -88,7 +88,11 @@ module.exports = function (t) {
   });
 
   t.test('the Arsenal number is a grade: every pitch at a grade reads that grade, weighted toward his best', () => {
-    const B3 = loadCore(), A = (a) => B3.overall.arsenal(pitcher('SP', {}, a));
+    // Session 31: the numbers are re-centered so the league's average pitcher reads 60 (BASE.arsenal); before that shift
+    // (raw) a flat arsenal reads its grade.
+    const B3 = loadCore(), A = (a) => B3.overall.arsenal(pitcher('SP', {}, a), true);
+    const shifted = B3.overall.arsenal(pitcher('SP', {}, { FF: 70, SL: 70, CH: 70 }));
+    assert.ok(Math.abs(shifted.arsenal - (70 - B3.overall.BASE.arsenal.arsenal)) <= 1, 'the shift ' + shifted.arsenal);
     for (const g of [30, 45, 60, 75, 90]) {
       const x = A({ FF: g, SI: g, SL: g, CH: g, CU: g });
       assert.ok(Math.abs(x.arsenal - g) <= 1, g + ': ' + x.arsenal);
@@ -118,7 +122,7 @@ module.exports = function (t) {
     for (const p of all.filter((x) => x.age >= 28 && x.age <= 31 && x.potential.shown === 0)) assert.strictEqual(B3.overall.potential(p), B3.overall.of(p));
   });
 
-  t.test('a generated league: regulars and starters about 50 in the middle, real stars and holes, relievers lower, closers the best', () => {
+  t.test('a generated league: regulars, starters and relievers about 50 in the middle, real stars and holes, closers the best', () => {
     const { B3, orgs, regulars, starters, relievers, bench, reserves } = league();
     const o = (list) => list.map((p) => B3.overall.of(p));
     const reg = o(regulars), sp = o(starters), rp = o(relievers);
@@ -126,7 +130,14 @@ module.exports = function (t) {
     assert.ok(median(sp) >= 47 && median(sp) <= 53, 'starters ' + median(sp));
     assert.ok(reg.some((x) => x >= 75) && reg.some((x) => x <= 30), 'regulars spread');
     assert.ok(median(o(bench)) < median(reg) && median(o(reserves.filter((p) => !p.pitches))) < median(o(bench)), 'tiers');
-    assert.ok(median(rp) < median(sp) - 5, 'relievers below starters (fewer innings)');
+    // Session 31 (owner's choice): relievers on a scale of their own, the league's average reliever about 50; their real wins
+    // stay lower than a starter's (fewer innings).
+    assert.ok(median(rp) >= 46 && median(rp) <= 54, 'relievers on their own scale ' + median(rp));
+    assert.ok(median(relievers.map((p) => B3.overall.detail(p).war)) < median(starters.map((p) => B3.overall.detail(p).war)) - 1, 'relievers\' wins below starters\'');
+    assert.ok(relievers.every((p) => B3.overall.detail(p).scale === 'relief') && starters.every((p) => B3.overall.detail(p).scale === 'wins'));
+    // Session 31 (owner's choice): the league's average pitcher's Arsenal reads 60.
+    const ars = starters.concat(relievers).map((p) => B3.overall.arsenal(p).arsenal);
+    assert.ok(Math.abs(ars.reduce((a, b) => a + b, 0) / ars.length - 60) <= 1.5, 'Arsenal centered on 60');
     for (const org of orgs) {
       const r = org.relievers;
       assert.deepStrictEqual(Array.from(r, (p) => p.role), ['CL', 'SU', 'SU', 'MR', 'MR', 'MR', 'MR', 'LR']);

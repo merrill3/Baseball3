@@ -20,6 +20,7 @@ Saves (from M2) stay in your browser under Baseball3's own names, separate from 
 - `node tools/ratingstats.js`: each rating from 20 to 99 against real 2024–2026 players (its own stat, each unit's effect, and a population of generated players against real regulars, with how common stars are); `--html=page.html` writes a chart page. About 2 minutes (`--part=pop` alone about 40 s); it checks nothing.
 - `node tools/genleague.js`: a generated league of 1,200 players: ratings by tier, hands, ages, potential, countries and names, arsenals, tendencies, and sample players. Instant; it checks nothing.
 - `node tools/overall.js`: a generated league's overall ratings (by tier, position and role), the Arsenal numbers and the best ten players. Instant; `--part=worth` re-measures what each rating is worth (about 14 minutes) and `--part=check` checks the overall against the game's own replays (about 6 minutes). It checks nothing.
+- `node tools/parks.js`: each ballpark's runs, home runs and hits against the standard park (about 4 minutes). `node tools/leaguecheck.js --seasons=4`: builds a new league and plays its 162-game schedule four times (wins against expected wins, runs in each park, a season's time; about 2 minutes). Both check nothing.
 - `node tools/runningdefense.js`: running and defense against real players (Speed's and Baserunning's running by level, Range's outs above average, Framing's strike rate); about 150 s. `node tools/running.js` prints extra bases taken against 2024's rates.
 - `node tools/replay.js DIR`: real 2024 batted balls (Statcast days downloaded into `DIR`, the curl line is at the top of the file) through the engine's flight and fielding (with 2024's ball; the league's is livelier), and the engine's own balls with real directions; about 20 s. It checks nothing.
 - `node tools/calibrate.js`: the calibration report: the target table (DESIGN.md section 7), the equal-value check for every rating, defense and running at their key spots, the tendencies, the pitch shape and the rating pairs' payoffs. About 10 minutes; `--part=targets` (about a minute) or `--part=speed` run one part.
@@ -37,8 +38,11 @@ js/core/              game logic, no DOM (Node-testable)
   ratings.js          ratings into the physics' inputs (the steep curve, the pair synergies, the cap, Stamina, the arsenal, tendencies)
   names.js            invented player names (never a real MLB player's)
   realnames.js        real MLB names the lists could build, as hashes (generated)
+  teams.js            the 30 teams: leagues, divisions, names, colors, markets, rivals, ballparks
+  schedule.js         the 162-game schedule
   players.js          player generation: ratings, positions, hands, arsenals, tendencies, ages, potential
   overall.js          the overall rating and the Arsenal numbers (each rating by its measured worth)
+  league.js           a new league: 30 organizations, the starting balance, roles, the team overall
   pitch.js            pitches, the two-error swing and contact
   ball.js             balls in play: flight, fielders, throws, runners, steals, tag-ups, the play script
   manager.js          the CPU's choices: swing or take, the pitch, pitching changes
@@ -57,6 +61,8 @@ tools/plate.js        prints plate discipline by pitch group, zone and count aga
 tools/calibrate.js    the calibration report; fits the rating step tables
 tools/genleague.js    prints a generated league's make-up
 tools/overall.js      measures what each rating is worth, checks the overall, prints a league's overalls
+tools/parks.js        measures each ballpark's runs and home runs against the standard park
+tools/leaguecheck.js  plays a new league's seasons: wins against expected, park runs, a season's time
 tools/realnames.js    builds js/core/realnames.js (real MLB names, as hashes) from the Chadwick Bureau register
 tools/lib/value.js    paired plate-appearance replays (the precise value measure)
 tools/lib/load.js     loads js/core/ into Node in index.html order

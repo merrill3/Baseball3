@@ -1,4 +1,4 @@
-**Docs version: 78** (2026-11-28): Session 31: the owner's choices recorded (a new 30-team league: the United and Diamond Leagues; invented park names, five odd parks, altitude by elevation, the natural rivals; relievers on their own scale; the Arsenal re-centered to 60; the hitters' MLB-like trade-off links; Velocity to MLB's year-to-year numbers; edge % later); DESIGN.md sections 5, 6, 10, CLAUDE.md and ARCHITECTURE.md (the names rule widened); Stopped at. Before that, 77: Session 30's end.
+**Docs version: 79** (2026-11-28): Session 31 (in progress): DESIGN.md section 6 "The league built" and section 10 "The owner's Session 31 choices, built" (Velocity, the grades against Velocity, the hitters' links, the level); ARCHITECTURE.md (the step 2.1b files; also covers its earlier commit without a bump); README (the new files and tools). Before that, 78: the owner's Session 31 choices recorded.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
