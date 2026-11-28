@@ -90,7 +90,7 @@ function newAcc() {
     n: 0, zone: 0, sw: 0, zsw: 0, osw: 0, out: 0, contact: 0, zcontact: 0, ocontact: 0, whiff: 0, foul: 0,
     heart: 0, shadow: 0, chaseZ: 0, waste: 0, meat: 0, shTake: 0, shCalled: 0, fp: 0, fs: 0,
     fbN: 0, fbV: 0, offSw: 0, offWhiff: 0, offOut: 0, offOutSw: 0, fbOut: 0, fbOutSw: 0, sw95: 0, whiff95: 0,
-    bySw: {}, byWhiff: {}, paBy: {}, nBy: {}, curve: {}, zc: {}, azc: {},
+    bySw: {}, byWhiff: {}, paBy: {}, nBy: {}, vBy: {}, curve: {}, zc: {}, azc: {},
     bip: 0, evSum: 0, evs: [], laSum: 0, laSq: 0, hard: 0, barrel: 0, sweet: 0, gb: 0, ld: 0, fb: 0, pu: 0, starts: 0, spPitches: 0, spOuts: 0,
     pull: 0, straight: 0, oppo: 0, squared: 0, blast: 0, fast: 0, batSpeedSum: 0, swings: 0 };
 }
@@ -150,6 +150,7 @@ function addGame(B3, g, side, accFor) {
     a.zc['n' + e.c] = (a.zc['n' + e.c] || 0) + 1; // zone % by count (Session 16)
     if (e.c === '0-0') { a.fp++; if (e.r !== 'B') a.fs++; } // first-pitch strikes (Session 34)
     a.nBy[e.t] = (a.nBy[e.t] || 0) + 1; // pitches by type (Session 34: usage by quality)
+    a.vBy[e.t] = (a.vBy[e.t] || 0) + e.v; // and their speed (Session 34: the change-up's gap, as Savant's arsenal speeds)
     if (inZ) a.zc['z' + e.c] = (a.zc['z' + e.c] || 0) + 1;
     // The swing curve (Session 15): swings by feet from the zone's edge, before two strikes (e) and with two (t).
     const cb = (+e.c.split('-')[1] >= 2 ? 't' : 'e') + CURVE_BINS.findIndex((b) => B3.data.zoneEdge(e.x, e.z) < b);
@@ -434,7 +435,29 @@ function stats(a) {
   // Whiff % by pitch type, when 50+ plate appearances end on the type (as Savant's arsenal table).
   for (const t of ['FF', 'SI', 'FC', 'SL', 'CU', 'CH', 'FS']) out['whiff' + t] = (a.paBy[t] || 0) >= 50 ? pc(a.byWhiff[t] || 0, a.bySw[t]) : NaN;
   // Session 34 (step 2.1e item 5): his breaking and off-speed pitches' usage (share of his pitches) and whiff, 50+ PA ending on each.
+  // Session 34 (step 2.1e item 8): his change-up's gap under the faster of his four-seam and sinker, as Savant measures it.
+  const sp = (t) => (a.nBy[t] ? a.vBy[t] / a.nBy[t] : 0);
+  out.fbTop = Math.max(sp('FF'), sp('SI'));
+  out.chGap = (a.paBy.CH || 0) >= 50 && out.fbTop > 0 && a.nBy.CH ? out.fbTop - sp('CH') : NaN;
   out.offUse = ['SL', 'CU', 'CH', 'FS'].filter((t) => (a.paBy[t] || 0) >= 50 && a.bySw[t]).map((t) => ({ t: t, use: pc(a.nBy[t] || 0, a.n), whiff: pc(a.byWhiff[t] || 0, a.bySw[t]) }));
+  return out;
+}
+
+// Change-ups by speed gap (Session 34, step 2.1e item 8): whiff % by mph of gap under his fastball, and whiff points per mph of
+// gap at the same fastball, as tools/lib/realbuild.js measures MLB's (pitchingOnly).
+function changeupReport(seasons, real) {
+  const ch = seasons.filter((s) => Number.isFinite(s.chGap) && Number.isFinite(s.whiffCH)).map((s) => ({ gap: s.chGap, fb: s.fbTop, whiff: s.whiffCH }));
+  const R = real.changeup || {};
+  if (ch.length < 20) return null;
+  const reg = (xs, ys) => { const n = xs.length, mx = xs.reduce((x, y) => x + y, 0) / n, my = ys.reduce((x, y) => x + y, 0) / n; let u = 0, v = 0; for (let i = 0; i < n; i++) { u += (xs[i] - mx) * (ys[i] - my); v += (xs[i] - mx) * (xs[i] - mx); } return u / v; };
+  const resid = (k) => { const b = reg(ch.map((x) => x.fb), ch.map((x) => x[k])), mf = ch.reduce((x, y) => x + y.fb, 0) / ch.length, m = ch.reduce((x, y) => x + y[k], 0) / ch.length; return ch.map((x) => x[k] - m - b * (x.fb - mf)); };
+  const out = { n: ch.length, perMph: reg(resid('gap'), resid('whiff')), gapPerFbMph: reg(ch.map((x) => x.fb), ch.map((x) => x.gap)), bins: [] };
+  const mean = ch.reduce((x, y) => x + y.gap, 0) / ch.length, sd = Math.sqrt(ch.reduce((x, y) => x + (y.gap - mean) * (y.gap - mean), 0) / ch.length);
+  for (const [lo, hi] of [[0, 6], [6, 8], [8, 10], [10, 12], [12, 99]]) { const l = ch.filter((x) => x.gap >= lo && x.gap < hi); out.bins.push({ lo: lo, hi: hi, n: l.length, whiff: l.length ? l.reduce((x, y) => x + y.whiff, 0) / l.length : NaN }); }
+  const rb = R.bins || [];
+  console.log('  change-ups by speed gap (' + ch.length + ' with 50+ PA ending on them): gap ' + fmt(mean, 1) + ' +- ' + fmt(sd, 1) + ' mph [' + fmt((R.gap || {}).mean, 1) + ']; whiff by gap ' +
+    out.bins.map((b, i) => (b.hi > 50 ? b.lo + '+' : b.lo + '-' + b.hi) + ' ' + fmt(b.whiff, 1) + ' [' + fmt((rb[i] || {}).whiff, 1) + ']').join(', ') +
+    '; per mph of gap at the same fastball ' + fmt(out.perMph, 2) + ' [' + fmt(R.perMph, 2) + ']; gap per mph of fastball ' + fmt(out.gapPerFbMph, 2) + ' [' + fmt(R.gapPerFbMph, 2) + ']');
   return out;
 }
 
@@ -671,6 +694,7 @@ function popReport(res, real) {
     if (kind === 'hitter') rep.curves = curveReport(seasons);
     if (kind === 'pitcher') rep.aim = aimReport(seasons);
     if (kind === 'pitcher') rep.usage = usageReport(seasons, real);
+    if (kind === 'pitcher') rep.changeup = changeupReport(seasons, real);
     if (kind === 'pitcher') rep.starters = startersReport(seasons, q);
     rep[kind] = { n: seasons.length, rows: rows, corr: cs };
   }

@@ -86,7 +86,9 @@
     const wild = P.wild && P.wild.share && sd > T().PIT.commandSd ? Math.min(P.wild.max, P.wild.share * Math.pow(sd / T().PIT.commandSd - 1, P.wild.power)) : 0;
     if (wild > 0 && r.chance(wild)) sd *= P.wild.size;
     const x = a.x + r.normal(0, sd), z = a.z + r.normal(0, sd);
-    const speed = Math.round((fastball(w.p, d) * type.v + r.normal(0, P.speedSd)) * 10) / 10;
+    // A change-up with its own speed gap (Session 34) comes in that many mph under his fastball; other pitches at their type's share.
+    const gap = w.p.pit.gaps ? w.p.pit.gaps[a.type] : undefined;
+    const speed = Math.round(((gap === undefined ? fastball(w.p, d) * type.v : fastball(w.p, d) - gap) + r.normal(0, P.speedSd)) * 10) / 10;
     const rated = w.p.pit.grades[a.type] === undefined ? 1 : w.p.pit.grades[a.type];
     const grade = Math.max(T().RATE.grade.min, rated - P.fade.grade * (T().TYPE[a.type].gradeStep || 1) * d); // per type (Session 30)
     const mirror = w.throws === 'L' ? -1 : 1;
@@ -155,7 +157,10 @@
     // The surprise is the type's own movement (step 1.4: not the grade's extra, which would only move the
     // launch angle; the grade acts through the bite below and through how the pitch looks, B3.pitch.look).
     const type = B3.data.PITCH[pitch.type], ff = B3.data.PITCH.FF;
-    const surprise = unread(w, pitch) * (ff.vz - type.vz); // above 0: the ball ends lower than he thought, so the bat is over it
+    // A change-up's speed gap (Session 34, step 2.1e item 8): the slower it comes in under his fastball, the farther it drops below
+    // where he expected one, TYPE.gapDrop inches a mph of gap beyond the type's usual (its share of an average fastball).
+    const gd = kind.gapDrop ? kind.gapDrop * (fastball(w.p, pitch.fade) - pitch.speed - (1 - type.v) * T().PIT.velo) : 0;
+    const surprise = unread(w, pitch) * (ff.vz - type.vz + gd); // above 0: the ball ends lower than he thought, so the bat is over it
     const mean = kind.surprise * surprise * fool(pitch.grade);
     // Spread: Contact, the type's bite (grade makes it bigger), and distance from the middle of the zone.
     const edge = B3.data.zoneEdge(pitch.x, pitch.z);

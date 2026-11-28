@@ -66,6 +66,10 @@
     // (5th-95th) [MLB 20.5-44.5], the median 35.9 -> 33.9 [32.8]; at x 0.55 the 95th was 47.6 (the rest is the season's noise
     // and the other ratings).
     gradeSd: { CU: 0.7 },
+    // A change-up's speed gap, mph: mean, sd, lowest, highest (Session 34, step 2.1e item 8; Claude's default from MLB: Savant
+    // 2024-2026, 421 change-ups with 50+ PA ending on them, gap under the faster of his four-seam and sinker 8.1 +- 2.2 mph, not
+    // moving with his fastball's speed). null: every change-up at its type's share of his fastball.
+    chGap: [8.1, 2.2, 3, 15],
     shapeSd: 0.35,       // a pitch's shape: shapeSd x a normal, rounded to 0.1, within -1 to 1
     shapeOwn: 0.8,       // the share of each shape's variance that is the pitcher's own tilt, shared by his pitches
     // Position leans, in points from 60 (Claude's defaults, Session 27). Raw Power: first basemen, designated hitters and
@@ -315,6 +319,9 @@
     const za = -lean + Math.sqrt(Math.max(0, 1 - la * la - lc * lc - 2 * la * lc * rho)) * rng.normal(0, 1);
     p.tendencies = { aim: za < -0.674 ? 'Nibbler' : za > 0.674 ? 'Attacker' : 'Balanced' };
     p.potential = potentialOf(rng, p.age);
+    // His change-up's speed gap under his fastball, mph (Session 34, step 2.1e item 8, owner's choice: a change-up works better the
+    // slower it is than his fastball): drawn last, so his other draws stay as before.
+    if (p.arsenal.CH && GEN.chGap) p.arsenal.CH.gap = Math.round(Math.max(GEN.chGap[2], Math.min(GEN.chGap[3], rng.normal(GEN.chGap[0], GEN.chGap[1]))) * 10) / 10;
     return p;
   }
 

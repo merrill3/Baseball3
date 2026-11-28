@@ -66,6 +66,8 @@
     stamina: null,     // Stamina: pitches before fatigue sets in; null means the role's value in STAMINA
     grades: null,      // pitch grades: movement multiplier per type (1 average, 1.2 is 20% more break)
     shapes: null,      // pitch shapes: degrees taken off the launch angle per type (+ ground-ball tilt, - fly-ball tilt)
+    gaps: null,        // speed gaps under his fastball, mph, per type (Session 34: his change-up's); a missing type throws at its
+                       // share of his fastball (B3.data.PITCH's v)
     putAway: null,     // the put-away pitch (his best-graded type); null: the CPU picks by pitch type
     aim: 0             // tendency (-1 Nibbler, 0 Balanced, 1 Attacker): the CPU's pitch targets
   };
@@ -361,7 +363,11 @@
     FC: { bite: 1.05, surprise: 0.12, lift: 1, miss: 23.7, chase: 0.7 },
     SL: { bite: 0.64, surprise: 0.15, lift: 0, miss: 33.8, chase: 2.3, breaking: true, gradeSd: [0.5, 0], gradeStep: 0.957 },
     CU: { bite: 0.52, surprise: 0.085, lift: -1, miss: 33.0, chase: 2.3, breaking: true, gradeSd: [0.5, 0], gradeStep: 0.869 },
-    CH: { bite: 0.6, surprise: 0.15, lift: -4, miss: 31.9, chase: 2.3, breaking: true, foolTime: true, gradeSd: [0.5, 0], gradeStep: 1.174 },
+    // Session 34 (step 2.1e item 8, owner's choice: the change-up's speed gap as a new job): gapDrop 1.16 (an unread change-up ends
+    // that many inches lower a mph of gap beyond 8.1, before the surprise's share), surprise 0.15 -> 0.22 and gradeStep 1.174 -> 1.06
+    // (its level and ladder with the smaller, MLB-sized gap: 10.9 mph under an average fastball before, 8.1 now). Whiff +1.17 a mph
+    // of gap at the same fastball [MLB +1.16] (was +0.20); the league's change-up whiff 17.2-48.8, median 30.4 [18.1-46.4, 31.4].
+    CH: { bite: 0.6, surprise: 0.22, lift: -4, miss: 31.9, chase: 2.3, breaking: true, foolTime: true, gradeSd: [0.5, 0], gradeStep: 1.06, gapDrop: 1.16 },
     FS: { bite: 0.6, surprise: 0.15, lift: -8, miss: 35.1, chase: 2.3, breaking: true, foolTime: true, gradeSd: [0.5, 0], gradeStep: 0.974 }
   };
 
@@ -844,6 +850,7 @@
     if (pit.stamina === null) pit.stamina = has(STAMINA, player.role) ? STAMINA[player.role] : STAMINA.other;
     pit.grades = Object.assign({}, pit.grades || {});
     pit.shapes = Object.assign({}, pit.shapes || {});
+    pit.gaps = Object.assign({}, pit.gaps || {});
     return {
       bats: player.bats || 'R',
       throws: player.throws || 'R',

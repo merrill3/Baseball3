@@ -518,11 +518,13 @@ function pitchingOnly(dir, years, files) {
     if (!Number.isFinite(h)) continue;
     const g = c.pitch_type === 'FF' ? 'FF' : (c.pitch_type === 'SI' || c.pitch_type === 'FC') ? 'SIFC' : 'off';
     const band = h < 1 / 3 ? 'low' : h < 2 / 3 ? 'mid' : h < 1 ? 'high' : 'above';
-    const a = (pu[g] = pu[g] || {})[band] = pu[g][band] || { bip: 0, pu: 0 };
+    const a = (pu[g] = pu[g] || {})[band] = pu[g][band] || { bip: 0, pu: 0, laN: 0, la50: 0 };
     a.bip++; if (c.bb_type === 'popup') a.pu++;
+    const la = num(c.launch_angle);
+    if (c.description === 'hit_into_play' && Number.isFinite(la)) { a.laN++; if (la > 50) a.la50++; }
   }
-  for (const g in pu) for (const b in pu[g]) pu[g][b] = { bip: pu[g][b].bip, popup: Math.round(1000 * pu[g][b].pu / pu[g][b].bip) / 10 };
-  out.popups = Object.assign(pu, { note: 'Pop-ups as a % of balls in play (Statcast bb_type popup) by pitch height in the batter\'s zone (low: its lower third or below, mid, high: its upper third, above), every regular-season pitch of the attack days; FF four-seamers, SIFC sinkers and cutters, off the rest.' });
+  for (const g in pu) for (const b in pu[g]) pu[g][b] = { bip: pu[g][b].bip, popup: Math.round(1000 * pu[g][b].pu / pu[g][b].bip) / 10, la50: Math.round(1000 * pu[g][b].la50 / pu[g][b].laN) / 10 };
+  out.popups = Object.assign(pu, { note: 'Pop-ups as a % of balls in play by pitch height in the batter\'s zone (low: its lower third or below, mid, high: its upper third, above), every regular-season pitch of the attack days; FF four-seamers, SIFC sinkers and cutters, off the rest. popup: Statcast\'s bb_type; la50: launch angle above 50 degrees (as the engine counts a pop-up).' });
   write(out);
   console.log('wrote tools/lib/real.js: first-pitch strikes (' + fs1.length + ' pitcher-seasons), usage (' + groups + '), change-ups (' + ch.length + '), pop-ups');
 }

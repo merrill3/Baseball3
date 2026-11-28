@@ -199,13 +199,19 @@
     // The arsenal: a movement multiplier and extra drop per type, and the put-away pitch.
     const pitches = Array.isArray(player.pitches) ? player.pitches : [];
     if (pitches.length) {
-      pit.grades = {}; pit.shapes = {};
+      pit.grades = {}; pit.shapes = {}; pit.gaps = {};
       const arsenal = player.arsenal || {};
       for (const type of pitches) {
         pit.grades[type] = gradeMult(type, e.grades[type]);
         const shape = has(arsenal, type) && has(arsenal[type], 'shape') ? arsenal[type].shape : 0;
         if (typeof shape !== 'number' || !(shape >= -1 && shape <= 1)) fail((player.id || 'player') + ' ' + type + ' shape must be from -1 to 1, not ' + shape);
         pit.shapes[type] = rate.shape * shape;
+        // A change-up's speed gap under his fastball, mph (Session 34, step 2.1e item 8); without one it throws at its type's share.
+        if (has(arsenal, type) && has(arsenal[type], 'gap')) {
+          const gap = arsenal[type].gap;
+          if (typeof gap !== 'number' || !(gap >= 0 && gap <= 25)) fail((player.id || 'player') + ' ' + type + ' gap must be from 0 to 25 mph, not ' + gap);
+          pit.gaps[type] = gap;
+        }
       }
       pit.putAway = e.putAway; // chosen from the grades as rated (before the curve and the cap)
     }

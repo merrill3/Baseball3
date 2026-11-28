@@ -71,6 +71,7 @@ function average(code, name) {
       p.ratings.stamina = STAMINA[p.role] || STAMINA.other;
       p.arsenal = {};
       for (const type of p.pitches) p.arsenal[type] = { grade: 60, shape: 0 };
+      if (p.arsenal.CH) p.arsenal.CH.gap = 8.1; // Session 34: the league's mean change-up gap (B3.players GEN.chGap)
       p.tendencies = { aim: 'Balanced' };
     }
   });

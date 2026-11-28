@@ -52,11 +52,23 @@ module.exports = function (t) {
       assert.ok(rows.every((x) => Number.isInteger(x.p.ms) && x.p.ms > 300 && x.p.ms < 600), type + ' flight time');
     }
     near(speed.FF, 93.5, 0.2, 'four-seam speed');
-    assert.ok(speed.FF > speed.SI && speed.SI > speed.FC && speed.FC > speed.FS && speed.FS > speed.CH && speed.CH > speed.CU, JSON.stringify(speed));
+    assert.ok(speed.FF > speed.SI && speed.SI > speed.FC && speed.FC > speed.FS && speed.FC > speed.CH && Math.min(speed.FS, speed.CH) > speed.CU, JSON.stringify(speed));
+    near(speed.FF - speed.CH, 8.1, 0.2, 'the change-up comes in its own gap under his fastball (Session 34)');
     near(env.B3.pitch.flightMs(93.5), 404, 6, 'flight of a 93.5 mph pitch');
     const right = env.B3.pitch.throw(env.g, { type: 'SL', x: 0, z: 2.5 });
     const left = setup({ throws: 'L' }).B3.pitch.throw(setup({ throws: 'L' }).g, { type: 'SL', x: 0, z: 2.5 });
     assert.ok(right.hx > 0 && left.hx < 0 && Math.abs(right.hx + left.hx) < 1e-9, 'a slider breaks to the glove side');
+  });
+
+  t.test('a change-up\'s speed gap (Session 34): it comes in that many mph under his fastball, and a bigger gap is missed more', () => {
+    const whiff = (gap) => {
+      const env = setup({ pit: { gaps: { CH: gap } } });
+      const rows = trial(env, { type: 'CH', x: 0.2, z: 2.3 }, 'cpu', 6000);
+      return { speed: avg(rows.map((x) => x.p.speed)), whiff: rate(rows, (x) => x.r.r === 'S') };
+    };
+    const small = whiff(5), big = whiff(11);
+    near(small.speed - big.speed, 6, 0.15, 'the gap sets its speed');
+    assert.ok(big.whiff > small.whiff + 0.03, 'whiffs ' + small.whiff + ' -> ' + big.whiff);
   });
 
   t.test('Command scatters pitches around the target; his fade (Session 17) widens it, costs speed and flattens his pitches', () => {

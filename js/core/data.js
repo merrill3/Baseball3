@@ -21,7 +21,7 @@
     { code: 'FC', name: 'cutter', v: 0.94, hx: 3, vz: 8 },
     { code: 'SL', name: 'slider', v: 0.885, hx: 6, vz: 1 },
     { code: 'CU', name: 'curveball', v: 0.815, hx: 8, vz: -10 },
-    { code: 'CH', name: 'change-up', v: 0.885, hx: -14, vz: 6 },
+    { code: 'CH', name: 'change-up', v: 0.914, hx: -14, vz: 6 }, // Session 34: v was 0.885 (10.9 mph under an average fastball; MLB's 8.1)
     { code: 'FS', name: 'splitter', v: 0.90, hx: -9, vz: 2 }
   ];
   const PITCH = {};

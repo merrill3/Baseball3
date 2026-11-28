@@ -21,6 +21,7 @@ module.exports = function (t) {
       for (const k in a.pit) {
         if (k === 'grades') assert.ok(Object.values(a.pit.grades).every((x) => x === 1), id + ' grades');
         else if (k === 'shapes') assert.ok(Object.values(a.pit.shapes).every((x) => x === 0), id + ' shapes');
+        else if (k === 'gaps') assert.ok(Object.values(a.pit.gaps).every((x) => x === 8.1), id + ' gaps'); // Session 34: the average change-up's gap
         else if (k !== 'putAway') assert.deepStrictEqual(a.pit[k], b.pit[k], id + ' pit.' + k);
       }
     }
@@ -28,8 +29,9 @@ module.exports = function (t) {
     for (const id in avg.players) {
       const a = B3.ratings.inputs(avg.players[id]), b = B3.ratings.inputs(plain.players[id.replace('AVG', 'AWY')]);
       assert.deepStrictEqual(a.bat, b.bat, id + ' bat');
-      for (const k in a.pit) if (k !== 'stamina') assert.deepStrictEqual(a.pit[k], b.pit[k], id + ' pit.' + k);
+      for (const k in a.pit) if (k !== 'stamina' && k !== 'gaps') assert.deepStrictEqual(a.pit[k], b.pit[k], id + ' pit.' + k);
       near(a.pit.stamina, b.pit.stamina, 0.1, id + ' stamina');
+      assert.ok(Object.values(a.pit.gaps || {}).every((x) => x === 8.1), id + ' gaps'); // Session 34: the average change-up's own gap
     }
   });
 

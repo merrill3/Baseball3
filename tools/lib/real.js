@@ -3920,57 +3920,69 @@ module.exports = {
   "off": {
    "high": {
     "bip": 352,
-    "popup": 15.9
+    "popup": 15.9,
+    "la50": 20
    },
    "mid": {
     "bip": 1335,
-    "popup": 7.7
+    "popup": 7.7,
+    "la50": 10.3
    },
    "low": {
     "bip": 2215,
-    "popup": 4.7
+    "popup": 4.7,
+    "la50": 5.9
    },
    "above": {
     "bip": 54,
-    "popup": 13
+    "popup": 13,
+    "la50": 16.7
    }
   },
   "SIFC": {
    "mid": {
     "bip": 1156,
-    "popup": 4.8
+    "popup": 4.8,
+    "la50": 6.8
    },
    "high": {
     "bip": 566,
-    "popup": 8.8
+    "popup": 8.8,
+    "la50": 10.6
    },
    "low": {
     "bip": 919,
-    "popup": 1.4
+    "popup": 1.4,
+    "la50": 2.3
    },
    "above": {
     "bip": 58,
-    "popup": 17.2
+    "popup": 17.2,
+    "la50": 20.7
    }
   },
   "FF": {
    "high": {
     "bip": 932,
-    "popup": 13.7
+    "popup": 13.7,
+    "la50": 19.2
    },
    "mid": {
     "bip": 1087,
-    "popup": 7.4
+    "popup": 7.4,
+    "la50": 13.1
    },
    "above": {
     "bip": 242,
-    "popup": 17.4
+    "popup": 17.4,
+    "la50": 24
    },
    "low": {
     "bip": 503,
-    "popup": 4.2
+    "popup": 4.2,
+    "la50": 6.6
    }
   },
-  "note": "Pop-ups as a % of balls in play (Statcast bb_type popup) by pitch height in the batter's zone (low: its lower third or below, mid, high: its upper third, above), every regular-season pitch of the attack days; FF four-seamers, SIFC sinkers and cutters, off the rest."
+  "note": "Pop-ups as a % of balls in play by pitch height in the batter's zone (low: its lower third or below, mid, high: its upper third, above), every regular-season pitch of the attack days; FF four-seamers, SIFC sinkers and cutters, off the rest. popup: Statcast's bb_type; la50: launch angle above 50 degrees (as the engine counts a pop-up)."
  }
 };
