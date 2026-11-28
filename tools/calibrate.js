@@ -8,9 +8,10 @@
 //            players, from Session 27; --teams=rated for the rated test teams of Sessions 4-26, tools/lib/testteams.js)
 //            and prints each league-wide target with its band
 //   value    the equal-value check: +10 points at 40, 60 and 80 for each rating (everyone else at 60),
-//            for a whole lineup or staff, in runs per team-game. Target: about TARGET runs, within +-20%.
+//            for a whole lineup or staff, in runs per team-game. Target: about TARGET runs, within +-20%. The grades
+//            get a second line per the league's spread (their runs x the league's Arsenal sd / 12.2; Session 35).
 //   defense  defense and running at their key spots (DESIGN.md section 10, the value rule), for one player:
-//            about a hitting rating's lineup value / 9, and less at other spots
+//            a point, TARGET / 9 (half for Arm and Baserunning), and less at other spots
 //   styles   the tendencies against Balanced: Aggressiveness at Discipline 40, 60, 80; Aim at Command
 //            40, 60, 80. Target: within about +-0.1 runs at 60, and paying off the owner's way
 //   shape    a ground-ball and a fly-ball shape on every pitch: about 0 (owner's choice: value-neutral)
@@ -36,8 +37,13 @@ const os = require('os');
 const path = require('path');
 const { fork } = require('child_process');
 
-const TARGET = 0.3; // runs per team-game for +10 points for a whole lineup or staff (Claude's default)
+// Runs per team-game for +10 points for a whole lineup or staff: 0.45 within +-20%, 0.36-0.54 (owner's choice, Session 35,
+// step 2.1f; was 0.3, Claude's default from Session 4). Defense and running follow it (owner's choice): a key-spot point is
+// TARGET / 9 (0.050), Arm and Baserunning half that (0.025).
+const TARGET = 0.45;
 const BAND = 0.2;   // +-20%
+const POINT = TARGET / 9; // one player's key-spot point (defense and running)
+const RATING_SD = 12.2;   // the ratings' standard spread in generation (DESIGN.md section 10)
 const HIT = ['contact', 'timing', 'launch', 'rawPower', 'recognition', 'discipline'];
 const PIT = ['velocity', 'command', 'deception', 'grades'];
 const LEVELS = [40, 50, 60, 70, 80, 90];
@@ -407,6 +413,27 @@ function diff(a, b, side) {
 
 function fmt(x, d) { return (x >= 0 ? '+' : '') + x.toFixed(d === undefined ? 2 : d); }
 
+// The grades per the league's spread (owner's choice, Session 35, report only): the equal-value check's grades move every
+// pitch at once, i.e. the Arsenal number, whose spread in a generated league is narrower than the ratings' 12.2. Read from
+// a generated league as tools/overall.js --part=league does (120 organizations, its seed; starters and relievers). Returns
+// the Arsenal number's sd, the factor (its sd / 12.2) and, for reference, the pitchers' Velocity, Command and Deception sds.
+function arsenalSpread(tweak) {
+  const { loadCore } = require('./lib/load');
+  const B3 = loadCore();
+  if (tweak) require(tweak)(B3);
+  const rng = B3.rng.create('league:1'), ctx = B3.players.context();
+  const ars = [], r = { velocity: [], command: [], deception: [] };
+  for (let i = 0; i < 120; i++) {
+    const sq = B3.players.squad(rng, ctx);
+    for (const p of sq.starters.concat(sq.relievers)) { ars.push(B3.overall.arsenal(p).arsenal); for (const k in r) r[k].push(p.ratings[k]); }
+  }
+  const sd = (xs) => { const m = xs.reduce((a, b) => a + b, 0) / xs.length; return Math.sqrt(xs.reduce((a, x) => a + (x - m) * (x - m), 0) / xs.length); };
+  const out = { sd: sd(ars), n: ars.length, others: {} };
+  out.factor = out.sd / RATING_SD;
+  for (const k in r) out.others[k] = sd(r[k]);
+  return out;
+}
+
 function main() {
   const o = args();
   const jobs = [];
@@ -424,7 +451,6 @@ function main() {
   }
   if (o.parts.indexOf('defense') >= 0) {
     for (const [label, cond, key, read] of DEFENSE) if (want(cond.k)) plan.defense.push({ label, key, read, id: add(cond) });
-    if (o.parts.indexOf('value') < 0) plan.defense.hit = HIT.map((k) => add(ratingCond(k, 70)));
   }
   if (o.parts.indexOf('styles') >= 0) {
     for (const [rating, tend, words, kind] of STYLES) {
@@ -482,6 +508,7 @@ function main() {
     if (plan.targets.length) out.push(targetReport(Object.assign(merge(plan.targets.map((i) => res[i])), { teams: o.teams })), '');
     const B = base !== null ? res[base] : null;
     let lineupValue = null;
+    const spread = plan.value.some((r) => r.k === 'grades') ? arsenalSpread(o.tweak) : null;
     if (plan.value.length) {
       out.push('Equal-value check (Claude\'s default): +10 points at 40, 60 and 80, everyone else at 60, for a whole lineup or staff.');
       out.push('Runs per team-game (pitching rows: runs allowed, shown as runs saved). Target about ' + TARGET + ', within +-' + (100 * BAND) + '% (' +
@@ -501,6 +528,17 @@ function main() {
         if (sign > 0) all.push(steps[2].v);
         out.push('  ' + row.k.padEnd(12) + steps.map((s) => (s.v.toFixed(3) + '±' + s.se.toFixed(3)).padStart(15)).join('') + '   ' + (ok ? 'ok' : 'MISS'));
         valueRows.push({ k: row.k, kind: sign > 0 ? 'hitter' : 'pitcher', from: LEVELS.slice(0, -1), steps: steps, ok: ok });
+        if (row.k === 'grades' && spread) {
+          // The second line (Session 35's G1, report only): the same runs per a +10 of the ratings' standard spread.
+          const st2 = steps.map((x) => ({ v: x.v * spread.factor, se: x.se * spread.factor }));
+          const ok2 = [st2[0], st2[2], st2[4]].every((x) => Math.abs(x.v - TARGET) <= BAND * TARGET);
+          out.push('  ' + 'per spread'.padEnd(12) + st2.map((x) => (x.v.toFixed(3) + '±' + x.se.toFixed(3)).padStart(15)).join('') + '   ' + (ok2 ? 'ok' : 'MISS'));
+          valueRows.push({ k: 'gradesSpread', kind: 'pitcher', from: LEVELS.slice(0, -1), steps: st2, ok: ok2, factor: spread.factor });
+        }
+      }
+      if (spread) {
+        out.push('  (grades per spread: the grades\' runs x the league\'s Arsenal sd ' + spread.sd.toFixed(1) + ' / ' + RATING_SD + ' = ' + spread.factor.toFixed(3) +
+          '; ' + spread.n + ' generated pitchers; their Velocity, Command and Deception sds ' + Object.keys(spread.others).map((k) => spread.others[k].toFixed(1)).join(', ') + ')');
       }
       if (all.length) lineupValue = all.reduce((a, b) => a + b, 0) / all.length;
       // DESIGN.md section 7: Contact moves AVG more than Raw Power does (+10 from 60, hits per at-bat).
@@ -514,11 +552,12 @@ function main() {
       out.push('');
     }
     if (plan.defense.length) {
-      if (lineupValue === null && plan.defense.hit) lineupValue = plan.defense.hit.map((i) => diff(B, res[i]).v).reduce((a, b) => a + b, 0) / plan.defense.hit.length;
-      const per = lineupValue / 9;
-      out.push('Defense and running, one player at 70 (everyone else 60), runs per team-game. The value rule: at its key spot about a hitting');
-      out.push('rating\'s lineup value / 9 = ' + per.toFixed(3) + ' (+-20%: ' + (per * 0.8).toFixed(3) + '-' + (per * 1.2).toFixed(3) + '), half that for Arm and Baserunning');
-      out.push('(owner\'s choice, Session 5), less elsewhere.');
+      // From Session 36 (step 2.1g item 1): the yardstick is the band's point, TARGET / 9 (owner's choice, Session 35: defense
+      // and running follow the band), not the measured hitting lineup value / 9 (printed beside it for reference).
+      const per = POINT;
+      out.push('Defense and running, one player at 70 (everyone else 60), runs per team-game. The value rule: at its key spot a point, the');
+      out.push('band\'s ' + TARGET + ' / 9 = ' + per.toFixed(3) + ' (+-20%: ' + (per * 0.8).toFixed(3) + '-' + (per * 1.2).toFixed(3) + '), half that for Arm and Baserunning');
+      out.push('(owner\'s choices, Sessions 5 and 35), less elsewhere.' + (lineupValue !== null ? ' The measured hitting lineup value / 9 is ' + (lineupValue / 9).toFixed(3) + '.' : ''));
       out.push('');
       for (const d of plan.defense) {
         let txt;
@@ -618,11 +657,11 @@ function main() {
     out.push('(' + ((Date.now() - t0) / 1000).toFixed(0) + ' s, ' + o.jobs + ' processes' + (o.tweak ? ', tweak ' + o.tweak : '') + ')');
     console.log(out.join('\n'));
     // --json=file: the equal-value rows for the chart page (tools/ratingstats.js --value=file).
-    if (o.json) require('fs').writeFileSync(o.json, JSON.stringify({ date: new Date().toISOString().slice(0, 10), target: TARGET, band: BAND, value: valueRows }));
+    if (o.json) require('fs').writeFileSync(o.json, JSON.stringify({ date: new Date().toISOString().slice(0, 10), target: TARGET, band: BAND, value: valueRows, spread: spread }));
   });
 }
 
 if (process.argv[2] === '--worker') worker();
 else if (require.main === module) main();
 
-module.exports = { TARGET, BAND, setFrom, targets, targetReport, merge, diff, pool };
+module.exports = { TARGET, BAND, POINT, arsenalSpread, setFrom, targets, targetReport, merge, diff, pool };

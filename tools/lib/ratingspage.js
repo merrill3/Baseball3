@@ -10,7 +10,8 @@ const GROUPS = [
 ];
 const NAMES = { contact: 'Contact', timing: 'Timing', launch: 'Launch', rawPower: 'Raw Power', recognition: 'Recognition',
   discipline: 'Discipline', velocity: 'Velocity', command: 'Command', deception: 'Deception', grades: 'Pitch grades',
-  stamina: 'Stamina', speed: 'Speed', arm: 'Arm', range: 'Range', hands: 'Hands', framing: 'Framing', baserunning: 'Baserunning' };
+  stamina: 'Stamina', speed: 'Speed', arm: 'Arm', range: 'Range', hands: 'Hands', framing: 'Framing', baserunning: 'Baserunning',
+  gradesSpread: 'Pitch grades, per the league\'s spread' };
 const STAT = {
   zContact: 'Zone contact %', whiff: 'Whiff % (per swing)', whiff95: 'Whiff % against 95+ mph', sweet: 'Sweet-spot % (8–32°)',
   pu: 'Pop-up %', batSpeed: 'Bat speed (mph)', maxEV: 'Max exit speed (mph, per 400 batted balls)', ev50: 'Hardest-half exit speed (mph)',
