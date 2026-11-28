@@ -1,4 +1,4 @@
-**Docs version: 102** (2026-11-28): Session 34, step 2.1e item 8 done (the change-up's speed gap; high fastballs' pop-ups checked); docs/plan.md. Before that, 101: Session 34, item 7.
+**Docs version: 103** (2026-11-28): Session 34, step 2.1e end checks in progress (the level fit; DESIGN.md section 10 and ARCHITECTURE.md with what step 2.1e built). Before that, 102: Session 34, item 8.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
