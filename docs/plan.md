@@ -1,9 +1,9 @@
-**Docs version: 91** (2026-11-28): Session 33, step 2.1d item 7 stopped and reported (the lean built, left at 0); docs/plan.md (item 7, Stopped at). Before that, 90: Session 33, step 2.1d item 6 stopped before any change (the league's squared-up spread already wider than MLB's); docs/plan.md (item 6, Stopped at).
+**Docs version: 92** (2026-11-28): Session 33, step 2.1d's end checks in progress: the level (BAT.contactSd 1.205); DESIGN.md section 10 (each brainstorm idea built, skipped or stopped), ARCHITECTURE.md (the new hooks), docs/plan.md (Stopped at). Before that, 91: Session 33, step 2.1d item 7 stopped and reported (the lean built, left at 0); docs/plan.md (item 7, Stopped at).
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
 
-**Stopped at:** Session 33 on branch `ccr-42e11b8b-psayd9` (from `main`, which now holds Session 32's work: fast-forwarded at the start, as the prompt asked), in progress, committed and pushed after each item. Step 2.1d: items 1–4 done, item 5 skipped, items 6 and 7 stopped and reported (reasons in their entries). **Next: the end checks** (the level, equal value, the population, the overall's tables, the season's time) and the v.33 ladder page. Tests 120 pass; `gametest.js 1000 7` checksum `41ff0e7c`.
+**Stopped at:** Session 33 on branch `ccr-42e11b8b-psayd9` (from `main`, which now holds Session 32's work: fast-forwarded at the start, as the prompt asked), in progress, committed and pushed after each item. Step 2.1d: items 1–4 done, item 5 skipped, items 6 and 7 stopped and reported (reasons in their entries). End checks in progress: the level done (`BAT.contactSd` 1.22 → 1.205; four seeds runs 4.65, K 22.7%, whiffs 25.8%); next the equal value, the population, the overall's tables, the season's time and the v.33 ladder page. Tests 120 pass; `gametest.js 1000 7` checksum `6ea43314`.
 
 This file is the hand-off between the owner's planning chats and the coding sessions. It holds the roadmap and detailed plans for only the next 1–2 milestones (owner's choice).
 

@@ -16,7 +16,8 @@
 
   // Hitting (DESIGN.md section 10: each input names the rating whose job it is).
   const BAT = {
-    contactSd: 1.22,   // Contact: spread of the *where* error, inches between bat and ball centers (Session 22, was 1.33: the
+    contactSd: 1.205,  // Contact: spread of the *where* error, inches between bat and ball centers (Session 33, was 1.22: the level
+                       // after step 2.1d's hitting changes, four seeds: runs 4.61 -> 4.65, K 22.9 -> 22.7%, whiffs 26.0 -> 25.8%; Session 22, was 1.33: the
                        // level fit, SWING.attack; rated teams' whiffs 26.2 -> 25.5% of swings [MLB 2024 25.3]; Session 28, was
                        // 1.26: the level fit on the generated league, whose wider spread had whiffs at 26.7% and strikeouts 23.6%;
                        // Session 30, was 1.18: the level again after the pitching balance (the grades), which took the generated
