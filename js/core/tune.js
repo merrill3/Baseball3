@@ -40,6 +40,9 @@
     breakRead: 1,      // Recognition: multiplier on the late break (TYPE bite) of an off-speed pitch he swings at (below 1:
                        // he tracks the break; step 1.5 task 4, Session 12: so Recognition still counts once he reads nearly
                        // every pitch, as DESIGN.md section 10 says, "less fooled by off-speed and break")
+    layOff: 0,         // Recognition (Session 33, step 2.1d item 4, owner's choice: an early read helps lay off breaking balls): feet
+                       // added to how far off the plate an off-speed pitch he picked up looks, when it is headed off the plate (above
+                       // 0: easier to see as a ball; below 0, a poor recognizer's late read, it still looks hittable). 0 at 60
     track: 1,          // Recognition (Session 33, step 2.1d item 2, owner's choice: tracking late break moves from Contact): the
                        // bat control on an off-speed pitch's late break, a multiplier on its bite in place of Contact's (SWING.contactAll);
                        // Contact keeps the location part and the fastballs' bite (their life is plain bat-to-ball, Claude's default)
@@ -151,6 +154,7 @@
       // Contact's 0.88: at 0.88 the move changed Recognition's off-speed whiff by under a point; at 0.6 its low end climbs toward
       // the ladder (54.5 / 41.5 at 20 / 40 [62.1 / 44.8]) with the league's off-speed whiff spread inside MLB's (95th 42.6 [44.8])
       track: ['recognition', 'mul', 0.6, 'track'],
+      layOff: ['recognition', 'add', 0.04, 'layOff'], // Session 33 (item 4): feet a step of its own table (RATE.steps.layOff)
       judgeSd: ['discipline', 'mul', 0.85],
       judgeLean: ['discipline', 'mul', 0.7]
     },
@@ -208,6 +212,9 @@
       // on Contact's table as it was, so each part's size is unchanged by the move.
       timingTop: [[20, -2.426], [30, -1.9], [40, -1.33], [50, -0.702], [60, 0], [70, 0.802], [80, 1.742], [90, 2.891], [100, 4.388], [110, 6.312]],
       track: [[20, -2.426], [30, -1.9], [40, -1.33], [50, -0.702], [60, 0], [70, 0.802], [80, 1.742], [90, 2.891], [100, 4.388], [110, 6.312]],
+      // The lay-off (Session 33, step 2.1d item 4): tens of points (after the curve) above 60, steeper below (a poor recognizer's late
+      // read of a breaking ball keeps it looking hittable; with plain tens the chase gap's low end stayed at half MLB's).
+      layOff: [[20, -6], [30, -4.2], [40, -2.7], [50, -1.3], [60, 0], [70, 1], [80, 2], [90, 3], [100, 4], [110, 5]],
       timing: [[20, -1.883], [30, -1.405], [40, -0.933], [50, -0.465], [60, 0], [70, 0.464], [80, 0.928], [90, 1.393], [100, 1.862], [110, 2.337]],
       launch: [[20, -2.701], [30, -2.047], [40, -1.382], [50, -0.702], [60, 0], [70, 0.732], [80, 1.504], [90, 2.334], [100, 3.252], [110, 4.311]],
       // Raw Power (step 1.5): mph of average bat speed from 71.7, on the real ladder (Savant 2024-2026: the worst

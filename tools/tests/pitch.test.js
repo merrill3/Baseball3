@@ -314,6 +314,15 @@ module.exports = function (t) {
     if (S.foulSpeedShare === 0) assert.ok(Math.abs(fouls(85) - fouls(99)) < 0.03, 'a pitcher\'s velocity does not move the foul share of contact');
   });
 
+  t.test('Recognition\'s lay-off (Session 33): a read breaking ball off the plate looks farther off, a fastball or a strike does not', () => {
+    const lookAt = (layOff, pitch) => { const env = setup({ bat: { layOff } }); env.g.rng = env.B3.rng.create('lay'); return env.B3.pitch.look(env.g, pitch).edge; };
+    const off = { type: 'SL', x: 1.3, z: 2.5, grade: 1, read: true };
+    near(lookAt(0.2, off) - lookAt(0, off), 0.2, 1e-9, 'a read slider off the plate');
+    assert.strictEqual(lookAt(0.2, Object.assign({}, off, { read: false })), lookAt(0, Object.assign({}, off, { read: false })), 'an unread one is not');
+    assert.strictEqual(lookAt(0.2, Object.assign({}, off, { type: 'FF' })), lookAt(0, Object.assign({}, off, { type: 'FF' })), 'a fastball is not');
+    assert.strictEqual(lookAt(0.2, Object.assign({}, off, { x: 0.2 })), lookAt(0, Object.assign({}, off, { x: 0.2 })), 'a strike is not');
+  });
+
   t.test('pitch grades (Session 13): a better pitch is harder to pick up and fools more when he misses it', () => {
     const unread = (grade) => rate(trial(setup({ pit: { grades: { SL: grade } } }), { type: 'SL', x: 0.3, z: 2.3 }, null), (x) => !x.p.read);
     const avgShare = unread(1), P = loadCore().tune.PITCH;

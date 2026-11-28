@@ -327,9 +327,12 @@
       if (Math.abs(x) > Math.abs(pitch.x)) x = pitch.x;
       if (up(z) > up(pitch.z)) z = pitch.z;
     }
+    // An early read helps him lay off a breaking ball (Session 33, step 2.1d item 4, owner's choice): an off-speed pitch he picked
+    // up that is headed off the plate looks farther off by his Recognition's bat.layOff (a poor recognizer's, below 0, closer).
+    const lay = T().TYPE[pitch.type].breaking && B3.data.zoneEdge(pitch.x, pitch.z) > 0 ? (1 - u) * (w.b.bat.layOff || 0) : 0;
     // With two strikes he commits sooner, so he judges more roughly (Session 18, CPU.swing.twoSd).
     const sd = g.strikes >= 2 ? Math.hypot(w.b.bat.judgeSd, C.twoSd) : w.b.bat.judgeSd;
-    return { x: x, z: z, edge: B3.data.zoneEdge(x, z) - w.b.bat.judgeLean + g.rng.normal(0, sd) };
+    return { x: x, z: z, edge: B3.data.zoneEdge(x, z) + lay - w.b.bat.judgeLean + g.rng.normal(0, sd) };
   }
 
   B3.pitch = {
