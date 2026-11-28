@@ -161,7 +161,8 @@ function page(data, value, info) {
   }).join('');
   const counts = { ok: 0, near: 0, off: 0 };
   for (const k in data.ratings) for (const own of data.ratings[k].own) { const v = verdict(closeness(own.values, own.target))[0]; if (counts[v] !== undefined) counts[v]++; }
-  return `<title>Rating Ladder Check</title>
+  const ver = info.version ? ' ' + esc(info.version) : '';
+  return `<title>Rating Ladder Check${ver}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
@@ -237,7 +238,7 @@ td.left, th.left { text-align: left; }
 <div class="wrap">
 <header class="head">
   <span class="eyebrow">Diamond Dash · ratings against MLB 2024–2026 · ${esc(info.date)}</span>
-  <h1>Rating Ladder Check</h1>
+  <h1>Rating Ladder Check${ver}</h1>
   <p class="lede">Each rating moved from 20 to 99 for a whole lineup or staff, everyone else at 60, against the real ladder from 2024–2026 player-seasons: 20 is the worst, 40 the 5th percentile, 60 the median, 80 the 95th, 99 the best (owner's choice, Session 8). Engine: ${esc(info.engine)}.</p>
   <div class="summary"><span class="legend"><span class="key eng">Engine</span><span class="key real">Real ladder</span></span>
   <span><span class="pill ok">on the ladder</span> ${counts.ok}</span><span><span class="pill near">near</span> ${counts.near}</span><span><span class="pill off">off</span> ${counts.off}</span>

@@ -1,7 +1,7 @@
 // Ratings against real stats (M1 step 1.5; DESIGN.md section 10, "Ratings measured against stats").
 // Usage: node tools/ratingstats.js [--games=400] [--only=contact,velocity,...] [--seed=1] [--jobs=N]
 //                                  [--tweak=file.js] [--json=out.json] [--part=sweep,pop] [--popteams=40]
-//                                  [--html=page.html] [--value=calibrate.json] [--popkind=hitter|pitcher]
+//                                  [--html=page.html] [--value=calibrate.json] [--popkind=hitter|pitcher] [--version=v.31]
 // For each rating it moves one side's players to 20, 30, ... 99 (everyone else at 60, Balanced) and reads:
 //   layer 1  the rating's own stat (the one that isolates its job) against the real ladder: the real
 //            players' percentiles mirrored around the 50th (owner's choice, Session 8): 20 = the worst
@@ -73,6 +73,7 @@ function args() {
     parts: opt('part', 'sweep,pop').split(','),
     html: opt('html', null),
     value: opt('value', null),
+    version: opt('version', null), // the chart page's version label (owner's choice, Session 31: v.31 on; one page a version)
     popTeams: parseInt(opt('popteams', '40'), 10),
     popKind: opt('popkind', null), // only the hitters' or the pitchers' population (Session 14)
     // Session 27: the population's players come from the league's generator (B3.players, M2 step 2.1a) unless --pop=test
@@ -887,7 +888,7 @@ function main() {
       const value = o.value ? JSON.parse(fs.readFileSync(o.value, 'utf8')) : null;
       let engine = 'working tree';
       try { engine = 'commit ' + require('child_process').execSync('git rev-parse --short HEAD', { cwd: __dirname }).toString().trim(); } catch (e) { /* not a git checkout */ }
-      fs.writeFileSync(o.html, require('./lib/ratingspage').page(out, value, { date: new Date().toISOString().slice(0, 10), engine: engine, real: real }));
+      fs.writeFileSync(o.html, require('./lib/ratingspage').page(out, value, { date: new Date().toISOString().slice(0, 10), engine: engine, real: real, version: o.version }));
       console.log('wrote ' + o.html);
     }
   });
