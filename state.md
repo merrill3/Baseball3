@@ -1130,12 +1130,12 @@ Branch `ccr-18c7ce18-tb1m3b`, committed and pushed, **not merged to `main`** (th
 **Tests:** not run (no code changed); Session 34's 123 pass and checksum `d80bf783` stand.
 
 ## 63. Hand-off for Session 36
-Branch `ccr-d212f8f5-ukjc1s`, committed and pushed, **not merged to `main`** (the owner's OK is needed). Docs version 106. Tests: 123 pass; `gametest.js 1000 7` checksum `d80bf783`; boot check passes (all unchanged from Session 34). Step 2.1f is done; **step 2.1 stays open**.
+Branch `ccr-d212f8f5-ukjc1s`, committed and pushed, **merged to `main`** (fast-forward, the owner's OK after the report). Docs version 107. Tests: 123 pass; `gametest.js 1000 7` checksum `d80bf783`; boot check passes (all unchanged from Session 34). Step 2.1f is done; **step 2.1 stays open**.
 
 **Next: step 2.1g** (Session 36; docs/plan.md, "Step 2.1g"): build the step 2.1f ideas in order: (1) the band in the tools (`calibrate.js` `TARGET` 0.45, the grades' per-spread line); (2) V1, Velocity rushes the hitter's decision (find why walks rise with velocity; chase, walks and exit speed to MLB's same-pitcher numbers per mph, strikeouts kept); (3) C1, Command's walk ladder wider at the top (only in the room V1 frees); (4) G2, the grades' skill ladders (Savant's year-to-year whiff by pitch first; `GEN.veloGrades` eased); (5) C2, the buried two-strike pitch follows Command (Savant's chase and waste shares first; stopped if MLB shows no link); (6) C3, a starter's innings in the overall from his pitches an inning; then the end checks (level, full calibration, population, the overall's tables, a season's time, a before/after table) and the Rating Ladder Check **v.36** as a new private page. Each item stopped and reported if it takes a ladder or the league's spreads off MLB's; the starters' strikeout stars checked after each strikeout item.
 
 **Waiting on the owner:**
-1. The OK to merge this branch to `main` (before Session 36).
+1. (Done: merged to `main` with the owner's OK.)
 2. Keep or change Claude's small decisions (section 62's list); and if Session 36 runs short, whether C3 moves to step 2.3.
 3. Still open from section 61: Session 34's small decisions (the three flagged: a better pitch no longer thrown more before two strikes; the curves' usage weights; the change-up's own speed gap, not yet shown); the gaps (the league's edge % top, the hitters' stars); new ideas not decided (low off-speed pop-ups; showing the change-up's gap; Session 33's Timing level through the swing efficiency's shape and what a chase costs in strikeouts).
 
