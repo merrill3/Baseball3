@@ -49,6 +49,13 @@
     // +0.99 per mph across pitchers but +1.69 for the same pitcher year to year (the engine's per-mph effect since Session 31).
     veloGrades: -0.3,  // sized on the generated starters (160 teams): K% 14.1-30.5 [MLB 15.3-30.0], K% stars 5.8% [5]; at 0, 13.1-32.2 and 9.1%
     aimLean: 0.4,        // chase-getters (Deception and grades) lean Nibbler (Session 19)
+    // Low Discipline leans Aggressive (Session 33, step 2.1d item 7, owner's choice: chases that don't add strikeouts; the size is
+    // Claude's default): the correlation between his Discipline's draw and a hidden normal cut at its quartiles (1 : 2 : 1). MLB's
+    // free swingers chase and also swing at strikes early, so chasing doesn't raise their strikeouts (chase with K% -0.03).
+    // Built and left at 0 (stopped by the realism rule, docs/plan.md step 2.1d item 7): at 0.2 / 0.4 / 0.7 the generated hitters'
+    // chase-K% link went 0.20 -> 0.16 / 0.16 / 0.10 [MLB -0.03], while their walks spread past MLB's (1.04x / 1.12x / 1.11x
+    // without the sampling noise, was 0.97x) and at 0.7 the chase spread too (95th 41.2 [39.5]). At 0 it picks as before.
+    aggLean: 0,
     shapeSd: 0.35,       // a pitch's shape: shapeSd x a normal, rounded to 0.1, within -1 to 1
     shapeOwn: 0.8,       // the share of each shape's variance that is the pitcher's own tilt, shared by his pitches
     // Position leans, in points from 60 (Claude's defaults, Session 27). Raw Power: first basemen, designated hitters and
@@ -153,6 +160,24 @@
 
   function style(rng, words) { return words[rng.weighted(GEN.tendency)]; }
 
+  // The standard normal's distribution function (Abramowitz and Stegun 7.1.26, error under 2e-7).
+  function phi(x) {
+    const t = 1 / (1 + 0.3275911 * Math.abs(x) / Math.SQRT2);
+    const e = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429)))) * Math.exp(-x * x / 2);
+    return x >= 0 ? 1 - e / 2 : e / 2;
+  }
+  // Aggressiveness (Session 33): Aggressive when a hidden normal, -aggLean x his Discipline's draw plus the rest, is above its upper
+  // quartile, Patient below the lower, from one uniform draw (as the plain 1 : 2 : 1 pick, which this is at aggLean 0).
+  const Q = 0.6744897502;
+  function aggOf(rng, zd) {
+    const a = GEN.aggLean;
+    if (!a) return style(rng, ['Patient', 'Balanced', 'Aggressive']);
+    const s = Math.sqrt(1 - a * a), lo = phi((-Q + a * zd) / s), hi = 1 - phi((Q + a * zd) / s);
+    // The quartile cut is for GEN.tendency's 1 : 2 : 1 mix; at that mix and aggLean 0 it picks exactly as style() does.
+    const u = rng.next();
+    return u < lo ? 'Patient' : u >= 1 - hi ? 'Aggressive' : 'Balanced';
+  }
+
   // The Cholesky factor of the hitting ratings' correlations (GEN.hitLinks, in HIT's order), kept until the links change.
   let hitKey = null, hitL = null;
   function hitFactor() {
@@ -205,7 +230,7 @@
     r.baserunning = 60 + half + GEN.sd * rng.normal(0, 1);
     p.ratings = {};
     for (const k in r) p.ratings[k] = clip(r[k]);
-    p.tendencies = { aggressiveness: style(rng, ['Patient', 'Balanced', 'Aggressive']), swingPath: style(rng, ['Ground-ball', 'Level', 'Lift']) };
+    p.tendencies = { aggressiveness: aggOf(rng, z.discipline), swingPath: style(rng, ['Ground-ball', 'Level', 'Lift']) };
     // Infield and outfield both: an infielder can also play left field (center for a middle infielder), an outfielder
     // second or third base.
     if (pos !== 'C' && pos !== 'DH' && rng.next() < GEN.cross[tier]) {

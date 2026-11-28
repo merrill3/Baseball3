@@ -90,6 +90,24 @@ module.exports = function (t) {
     assert.ok(hit(bench) < hit(regulars) - 6 && hit(reserves) < hit(bench), 'tiers');
   });
 
+  t.test('Aggressiveness (Session 33): 1 : 2 : 1, and with GEN.aggLean low Discipline leans Aggressive from the same one draw', () => {
+    const draw = (lean) => {
+      const B3 = loadCore(); B3.players.GEN.aggLean = lean;
+      const rng = B3.rng.create('agg test'), ctx = B3.players.context(), out = [];
+      for (let i = 0; i < 3000; i++) out.push(B3.players.hitter(rng, ctx, { pos: 'LF', tier: 'regular' }));
+      return out;
+    };
+    const plain = draw(0), lean = draw(0.5);
+    for (const list of [plain, lean]) {
+      near(share(list, (p) => p.tendencies.aggressiveness === 'Patient'), 0.25, 0.03, 'Patient share');
+      near(share(list, (p) => p.tendencies.aggressiveness === 'Aggressive'), 0.25, 0.03, 'Aggressive share');
+    }
+    assert.strictEqual(JSON.stringify(lean.map((p) => p.ratings)), JSON.stringify(plain.map((p) => p.ratings)), 'the lean changes no ratings (one draw either way)');
+    const d = (list, t) => mean(list.filter((p) => p.tendencies.aggressiveness === t).map((p) => p.ratings.discipline));
+    assert.ok(Math.abs(d(plain, 'Aggressive') - d(plain, 'Patient')) < 2, 'at 0 no lean');
+    assert.ok(d(lean, 'Patient') - d(lean, 'Aggressive') > 10, 'at 0.5 Patient hitters are the disciplined ones');
+  });
+
   t.test('positions: Speed and Raw Power lean by position, catchers frame, about 1 hitter in 20 plays both sides', () => {
     const { regulars, hitters } = league();
     const at = (pos, k) => mean(regulars.filter((p) => p.pos === pos).map((p) => p.ratings[k]));
