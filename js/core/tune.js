@@ -735,7 +735,11 @@
       // How often each type is thrown when the pitcher has it, before grades and the count.
       // Session 12: so the test staffs throw MLB 2024's mix (fastballs 56%: FF 35.6, SI 16.6, FC 8.0; SL 21.2, CU 6.3,
       // CH 9.0, FS 3.2; Savant's pitch-arsenal leaderboard, sweepers and slurves with sliders).
-      use: { FF: 2.5, SI: 1.45, FC: 2.5, SL: 1.6, CU: 0.65, CH: 0.75, FS: 2.5 },
+      // Session 34 (step 2.1e item 7): CU 0.65 -> 0.8, CH 0.75 -> 0.95, FC 2.5 -> 1.8, so the generated league throws MLB's mix (it had
+      // CH 7.4, CU 5.6, FC 11.3%; now 9.1, 6.6, 8.8 [9.0, 6.3, 8.0]) and a pitcher with a curve throws it 14.5% of the time when 50+ PA
+      // end on it (was 13.4 [MLB 19.2]): with too few curves thrown only the best reached 50 PA, which stretched the league's curve
+      // whiff past MLB's.
+      use: { FF: 2.5, SI: 1.45, FC: 1.8, SL: 1.6, CU: 0.8, CH: 0.95, FS: 2.5 },
       // Better pitches get thrown more: weight x e^(gradeUse x u), u = tens of grade points (B3.ratings.usePull). Session 34 (step 2.1e
       // item 5, owner's choice: the double payoff checked against MLB): [below an average grade, above it], was 0.3 both ways. MLB's
       // pitchers barely throw their better breaking and off-speed pitches more: within a pitcher-season with two or more (50+ PA

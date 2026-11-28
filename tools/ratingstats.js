@@ -458,7 +458,15 @@ function usageReport(seasons, real) {
     best += l[w.indexOf(Math.max.apply(null, w))].use / l.reduce((a, x) => a + x.use, 0);
   }
   const R = real.usage || {};
-  const out = { groups: groups, perWhiff: sxy / sxx, bestShare: best / groups };
+  const out = { groups: groups, perWhiff: sxy / sxx, bestShare: best / groups, byType: {} };
+  const qs = (xs, p) => { const v = xs.slice().sort((a, b) => a - b); return v.length ? v[Math.min(v.length - 1, Math.floor(p * v.length))] : NaN; };
+  const line = [];
+  for (const t of ['SL', 'CU', 'CH', 'FS']) {
+    const xs = rows.filter((x) => x.g === t).map((x) => x.use), rr = real.pct['type.' + t + '.usage'] || {};
+    out.byType[t] = [qs(xs, 0.05), qs(xs, 0.5), qs(xs, 0.95)];
+    line.push(t + ' ' + out.byType[t].map((x) => fmt(x, 1)).join(' / ') + ' [' + [rr.p5, rr.p50, rr.p95].map((x) => fmt(x, 1)).join(' / ') + ']');
+  }
+  console.log('  usage % of his pitches, 5th / 50th / 95th, when 50+ PA end on the pitch: ' + line.join('; '));
   console.log('  usage by quality (' + groups + ' pitcher-seasons with two or more breaking or off-speed pitches): log usage per whiff point ' + fmt(out.perWhiff, 3) +
     ' [' + fmt(R.perWhiff, 3) + ']; his best one\'s share of them ' + fmt(100 * out.bestShare, 1) + '% [' + fmt(100 * R.bestShare, 1) + ']');
   return out;

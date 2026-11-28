@@ -61,6 +61,11 @@
     // chase-K% link went 0.20 -> 0.16 / 0.16 / 0.10 [MLB -0.03], while their walks spread past MLB's (1.04x / 1.12x / 1.11x
     // without the sampling noise, was 0.97x) and at 0.7 the chase spread too (95th 41.2 [39.5]). At 0 it picks as before.
     aggLean: 0,
+    // A pitch type's grade spread x this (Session 34, step 2.1e item 7, owner's choice: the league's curveballs reined in; the size
+    // Claude's default): the curve's x 0.7, with MLB's mix (B3.tune.CPU.pitch.use): the league's curve whiff 21.9-57.7 -> 22.4-49.2
+    // (5th-95th) [MLB 20.5-44.5], the median 35.9 -> 33.9 [32.8]; at x 0.55 the 95th was 47.6 (the rest is the season's noise
+    // and the other ratings).
+    gradeSd: { CU: 0.7 },
     shapeSd: 0.35,       // a pitch's shape: shapeSd x a normal, rounded to 0.1, within -1 to 1
     shapeOwn: 0.8,       // the share of each shape's variance that is the pitcher's own tilt, shared by his pitches
     // Position leans, in points from 60 (Claude's defaults, Session 27). Raw Power: first basemen, designated hitters and
@@ -286,7 +291,7 @@
     z.command = GEN.stuffCommand * zs + Math.sqrt(1 - GEN.stuffCommand * GEN.stuffCommand) * z.command;
     const rp = role !== 'SP';
     const v = {};
-    for (const k of keys) v[k] = clip(60 + level + GEN.sd * z[k]);
+    for (const k of keys) v[k] = clip(60 + level + GEN.sd * (k.startsWith('g:') ? GEN.gradeSd[k.slice(2)] || 1 : 1) * z[k]);
     v.velocity = clip(60 + level + (rp ? GEN.relieverVelocity : 0) + GEN.fade.velocity * (meanFade() - fadeOf(p.age)) + GEN.sd * z.velocity);
     const st = GEN.stamina[role === 'SP' ? 'SP' : role === 'LR' ? 'LR' : 'RP'];
     p.ratings = { velocity: v.velocity, command: v.command, deception: v.deception,
