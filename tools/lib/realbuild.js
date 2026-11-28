@@ -450,6 +450,84 @@ function attackOnly(files, days) {
   console.log('wrote tools/lib/real.js: contact by attack zone from ' + acc.all.n + ' pitches (' + days.length + ' days)');
 }
 
+// Step 2.1e's tables (Session 34; node tools/realdata.js --pitching DIR), kept with the rest of the current real.js:
+//   pct['pit.f_strike_percent']  first-pitch strike % (Savant's custom leaderboard, 250+ batters faced): Command's new job
+//   usage     how much more pitchers throw their better off-speed pitches (Savant's pitch-arsenal stats, 50+ PA ending on the
+//             pitch): within each pitcher-season with two or more breaking or off-speed pitches, the log of a pitch's usage
+//             (less its type's mean) on its whiff % (less its type's mean), both less the pitcher's own means: log usage per
+//             whiff point; and the share of those pitches his best one (by whiff against its type) takes
+//   changeup  change-up whiff % by its speed gap under his fastball (the faster of his four-seam and sinker; Savant's
+//             arsenal speeds, 100+ pitches), and whiff points per mph of gap at the same fastball
+//   popups    pop-ups as a share of balls in play by pitch height in the batter's zone (below its lower third, its middle third,
+//             its upper third, above it), four-seamers, sinkers and cutters, and off-speed pitches (every pitch of the attack days)
+function pitchingOnly(dir, years, files) {
+  const rows = (f) => parseCSV(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, ''));
+  const out = Object.assign({}, previous());
+  out.pct = Object.assign({}, out.pct);
+  const fs1 = [];
+  for (const y of years) for (const r of rows(path.join(dir, 'fstrike_' + y + '.csv'))) if (num(r.pa) >= 250) fs1.push(num(r.f_strike_percent));
+  out.pct['pit.f_strike_percent'] = spread(fs1);
+  // Usage by quality.
+  const OFFS = { SL: 'SL', ST: 'SL', SV: 'SL', CU: 'CU', KC: 'CU', CH: 'CH', FS: 'FS' };
+  const ars = [];
+  for (const y of years) for (const r of rows(path.join(dir, 'arsenal_' + y + '.csv'))) {
+    const g = OFFS[r.pitch_type];
+    if (g && num(r.pa) >= 50) ars.push({ who: r.player_id + ':' + y, g: g, use: num(r.pitch_usage), whiff: num(r.whiff_percent) });
+  }
+  const typeMean = (k) => { const m = {}; for (const g in OFFS) { const v = ars.filter((x) => x.g === OFFS[g]).map((x) => x[k]); if (v.length) m[OFFS[g]] = v.reduce((a, b) => a + b, 0) / v.length; } return m; };
+  for (const x of ars) x.lu = Math.log(x.use);
+  const mw = typeMean('whiff'), ml = typeMean('lu');
+  const by = {};
+  for (const x of ars) (by[x.who] = by[x.who] || []).push(x);
+  let sxy = 0, sxx = 0, groups = 0, bestShare = 0;
+  for (const k in by) {
+    const l = by[k];
+    if (l.length < 2) continue;
+    groups++;
+    const w = l.map((x) => x.whiff - mw[x.g]), u = l.map((x) => x.lu - ml[x.g]);
+    const aw = w.reduce((a, b) => a + b, 0) / w.length, au = u.reduce((a, b) => a + b, 0) / u.length;
+    for (let i = 0; i < l.length; i++) { sxy += (w[i] - aw) * (u[i] - au); sxx += (w[i] - aw) * (w[i] - aw); }
+    const best = l[w.indexOf(Math.max.apply(null, w))];
+    bestShare += best.use / l.reduce((a, x) => a + x.use, 0);
+  }
+  out.usage = { groups: groups, perWhiff: r3(sxy / sxx), bestShare: r3(bestShare / groups),
+    note: 'Pitcher-seasons with two or more breaking or off-speed pitches (SL with ST and SV, CU with KC, CH, FS; 50+ PA ending on each): perWhiff is the log of a pitch\'s usage per whiff point, both against its type\'s league mean and the pitcher\'s own mean; bestShare is the share of those pitches his best one by whiff (against its type) takes.' };
+  // Change-ups by speed gap.
+  const ch = [];
+  for (const y of years) {
+    const sp = {};
+    for (const r of rows(path.join(dir, 'speed_' + y + '.csv'))) sp[r.pitcher] = r;
+    for (const r of rows(path.join(dir, 'arsenal_' + y + '.csv'))) {
+      const s = sp[r.player_id];
+      if (r.pitch_type !== 'CH' || !s || num(r.pa) < 50) continue;
+      const fb = Math.max(num(s.ff_avg_speed) || 0, num(s.si_avg_speed) || 0), c = num(s.ch_avg_speed);
+      if (fb > 0 && c > 0) ch.push({ gap: fb - c, fb: fb, whiff: num(r.whiff_percent) });
+    }
+  }
+  const reg = (xs, ys) => { const n = xs.length, mx = xs.reduce((a, b) => a + b, 0) / n, my = ys.reduce((a, b) => a + b, 0) / n; let a = 0, b = 0; for (let i = 0; i < n; i++) { a += (xs[i] - mx) * (ys[i] - my); b += (xs[i] - mx) * (xs[i] - mx); } return a / b; };
+  const resid = (k) => { const b = reg(ch.map((x) => x.fb), ch.map((x) => x[k])), mf = ch.reduce((a, x) => a + x.fb, 0) / ch.length, m = ch.reduce((a, x) => a + x[k], 0) / ch.length; return ch.map((x) => x[k] - m - b * (x.fb - mf)); };
+  const bins = [[0, 6], [6, 8], [8, 10], [10, 12], [12, 99]];
+  out.changeup = { n: ch.length, gap: spread(ch.map((x) => x.gap)), perMph: r3(reg(resid('gap'), resid('whiff'))), gapPerFbMph: r3(reg(ch.map((x) => x.fb), ch.map((x) => x.gap))),
+    bins: bins.map(([lo, hi]) => { const l = ch.filter((x) => x.gap >= lo && x.gap < hi); return { lo: lo, hi: hi, n: l.length, whiff: r3(l.reduce((a, x) => a + x.whiff, 0) / l.length) }; }),
+    note: 'Change-ups with 50+ PA ending on them (Savant pitch-arsenal stats, 2024-2026) against the pitcher\'s faster fastball (four-seam or sinker; Savant arsenal speeds): whiff % by mph of gap; perMph is whiff points per mph of gap at the same fastball; gapPerFbMph how the gap moves with the fastball.' };
+  // Pop-ups by height.
+  const pu = {};
+  for (const f of files) for (const c of rows(f)) {
+    if (c.game_type !== 'R' || !c.bb_type) continue;
+    const h = (num(c.plate_z) - num(c.sz_bot)) / (num(c.sz_top) - num(c.sz_bot));
+    if (!Number.isFinite(h)) continue;
+    const g = c.pitch_type === 'FF' ? 'FF' : (c.pitch_type === 'SI' || c.pitch_type === 'FC') ? 'SIFC' : 'off';
+    const band = h < 1 / 3 ? 'low' : h < 2 / 3 ? 'mid' : h < 1 ? 'high' : 'above';
+    const a = (pu[g] = pu[g] || {})[band] = pu[g][band] || { bip: 0, pu: 0 };
+    a.bip++; if (c.bb_type === 'popup') a.pu++;
+  }
+  for (const g in pu) for (const b in pu[g]) pu[g][b] = { bip: pu[g][b].bip, popup: Math.round(1000 * pu[g][b].pu / pu[g][b].bip) / 10 };
+  out.popups = Object.assign(pu, { note: 'Pop-ups as a % of balls in play (Statcast bb_type popup) by pitch height in the batter\'s zone (low: its lower third or below, mid, high: its upper third, above), every regular-season pitch of the attack days; FF four-seamers, SIFC sinkers and cutters, off the rest.' });
+  write(out);
+  console.log('wrote tools/lib/real.js: first-pitch strikes (' + fs1.length + ' pitcher-seasons), usage (' + groups + '), change-ups (' + ch.length + '), pop-ups');
+}
+
+module.exports.pitchingOnly = pitchingOnly;
 module.exports.parseCSV = parseCSV;
 module.exports.attackOnly = attackOnly;
 module.exports.battedOnly = battedOnly;

@@ -48,7 +48,9 @@ const RATINGS = {
     units: [['fbSpeed', 'k', 'dvelo.k_percent'], ['fbSpeed', 'whiff', 'velo.whiff_percent'], ['fbSpeed', 'ev', 'velo.exit_velocity_avg'], ['fbSpeed', 'hard', 'velo.hard_hit_percent']] },
   // Command's own stats: walk % and edge % (owner's choice, Session 14: meatball % follows zone %, so it moved to Aim).
   // Session 30 (M2 step 2.1a task 4): with contact over the heart and on the edge (real: tools/lib/real.js's attack, league totals).
-  command: { kind: 'pitcher', own: [['bb', 'pit.bb_percent', -1], ['edge', 'pit.edge_percent', 1]],
+  // Session 34 (step 2.1e item 3, owner's choice): first-pitch strike % as a third (a strike called, swung at, fouled or put in play
+  // on 0-0, as Savant counts it).
+  command: { kind: 'pitcher', own: [['bb', 'pit.bb_percent', -1], ['edge', 'pit.edge_percent', 1], ['fstrike', 'pit.f_strike_percent', 1]],
     extra: [['heart EV', 'heartEV', 1, 'heart.ev'], ['edge EV', 'edgeEV', 1, 'shadow.ev'], ['heart hard%', 'heartHard', 1, 'heart.hard'], ['edge hard%', 'edgeHard', 1, 'shadow.hard'],
       ['heart wOBAcon', 'heartWcon', 3, 'heart.wobacon'], ['edge wOBAcon', 'edgeWcon', 3, 'shadow.wobacon']] },
   deception: { kind: 'pitcher', own: [['chase', 'pit.oz_swing_percent', 1]] },
@@ -86,7 +88,7 @@ function args() {
 function newAcc() {
   return { games: 0, runs: 0, pa: 0, ab: 0, k: 0, bb: 0, h1: 0, h2: 0, h3: 0, hr: 0, sf: 0,
     n: 0, zone: 0, sw: 0, zsw: 0, osw: 0, out: 0, contact: 0, zcontact: 0, ocontact: 0, whiff: 0, foul: 0,
-    heart: 0, shadow: 0, chaseZ: 0, waste: 0, meat: 0, shTake: 0, shCalled: 0,
+    heart: 0, shadow: 0, chaseZ: 0, waste: 0, meat: 0, shTake: 0, shCalled: 0, fp: 0, fs: 0,
     fbN: 0, fbV: 0, offSw: 0, offWhiff: 0, offOut: 0, offOutSw: 0, fbOut: 0, fbOutSw: 0, sw95: 0, whiff95: 0,
     bySw: {}, byWhiff: {}, paBy: {}, curve: {}, zc: {}, azc: {},
     bip: 0, evSum: 0, evs: [], laSum: 0, laSq: 0, hard: 0, barrel: 0, sweet: 0, gb: 0, ld: 0, fb: 0, pu: 0, starts: 0, spPitches: 0, spOuts: 0,
@@ -146,6 +148,7 @@ function addGame(B3, g, side, accFor) {
     if (FB[e.t]) { a.fbN++; a.fbV += e.v; }
     if (inZ) a.zone++; else { a.out++; if (OFF[e.t]) a.offOut++; if (FB[e.t]) a.fbOut++; }
     a.zc['n' + e.c] = (a.zc['n' + e.c] || 0) + 1; // zone % by count (Session 16)
+    if (e.c === '0-0') { a.fp++; if (e.r !== 'B') a.fs++; } // first-pitch strikes (Session 34)
     if (inZ) a.zc['z' + e.c] = (a.zc['z' + e.c] || 0) + 1;
     // The swing curve (Session 15): swings by feet from the zone's edge, before two strikes (e) and with two (t).
     const cb = (+e.c.split('-')[1] >= 2 ? 't' : 'e') + CURVE_BINS.findIndex((b) => B3.data.zoneEdge(e.x, e.z) < b);
@@ -409,6 +412,7 @@ function stats(a) {
     zMinusO: pc(a.zsw, a.zone) - pc(a.osw, a.out),
     whiff: pc(a.whiff, a.sw), zContact: pc(a.zcontact, a.zsw), oContact: pc(a.ocontact, a.osw), contactPct: pc(a.contact, a.sw),
     edge: pc(a.shadow, a.n), meatball: pc(a.meat, a.n), heart: pc(a.heart, a.n), framingStrike: pc(a.shCalled, a.shTake),
+    fstrike: pc(a.fs, a.fp),
     fbSpeed: a.fbV / a.fbN,
     offWhiff: pc(a.offWhiff, a.offSw), offChase: pc(a.offOutSw, a.offOut), fbChase: pc(a.fbOutSw, a.fbOut),
     offChaseMinusFb: pc(a.offOutSw, a.offOut) - pc(a.fbOutSw, a.fbOut), whiff95: pc(a.whiff95, a.sw95),
@@ -514,6 +518,7 @@ const POP_STATS = {
     ['SLG against', 'slg', 'pit.slg_percent', 3], ['exit speed against', 'ev', 'pit.exit_velocity_avg', 1], ['hard-hit % against', 'hard', 'pit.hard_hit_percent', 1],
     ['ground-ball %', 'gb', 'pit.groundballs_percent', 1], ['whiff %', 'whiff', 'pit.whiff_percent', 1], ['chase % against', 'chase', 'pit.oz_swing_percent', 1],
     ['edge %', 'edge', 'pit.edge_percent', 1], ['meatball %', 'meatball', 'pit.meatball_percent', 1], ['zone %', 'zone', 'pit.in_zone_percent', 1],
+    ['first-pitch strike %', 'fstrike', 'pit.f_strike_percent', 1],
     // Starters only (Session 16): Stamina about 60 +- 12.2; real Baseball-Reference 2024-2026, 10+ starts.
     ['pitches per start', 'pps', 'sp.pitches_per_start', 1], ['innings per start', 'ipps', 'sp.innings_per_start', 2],
     // Whiff % by pitch type (Session 13: the pitch grades' spread; real: Savant's arsenal table, 50+ PA ending on the pitch)

@@ -198,6 +198,14 @@ module.exports = function (t) {
     assert.strictEqual(at(1, 1), 0, 'none before two strikes');
   });
 
+  t.test('first-pitch strikes (Session 34): on 0-0 a sharp pitcher aims in the zone more often, a wild one less; later counts alike', () => {
+    const P = setup().B3.tune.CPU.pitch;
+    const at = (command, b, s) => picks(setup({ pit: { command } }), b, s, 8000).zone;
+    assert.ok(P.first > 0, 'the job is on');
+    assert.ok(at(90, 0, 0) > at(60, 0, 0) + 0.02 && at(60, 0, 0) > at(30, 0, 0) + 0.01, '0-0: ' + [at(30, 0, 0), at(60, 0, 0), at(90, 0, 0)]);
+    near(at(90, 1, 1), at(60, 1, 1), 0.02, '1-1 alike');
+  });
+
   t.test('Command (Session 14): a sharp pitcher aims nearer the edges, in the zone and off it; a wild one deeper in the zone, but no farther off the plate', () => {
     const wild = picks(setup({ pit: { command: 25 } }), 1, 1), avg = picks(setup(), 1, 1), sharp = picks(setup({ pit: { command: 95 } }), 1, 1);
     assert.ok(wild.inset > avg.inset + 0.03 && avg.inset > sharp.inset + 0.03, 'inset ' + [wild.inset, avg.inset, sharp.inset]);

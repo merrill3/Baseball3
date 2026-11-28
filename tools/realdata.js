@@ -9,6 +9,9 @@
 //   node tools/realdata.js --attack-urls DIR prints "file<TAB>url" lines for the pitch-level days of `attack`
 //   node tools/realdata.js --attack DIR      only contact by attack zone (real.js's `attack`, Session 30), from
 //                                            the pitches_* downloads (every pitch of 12 days); the rest of real.js is kept
+//   node tools/realdata.js --pitching-urls DIR  prints "file<TAB>url" lines for step 2.1e's tables (Session 34)
+//   node tools/realdata.js --pitching DIR    only step 2.1e's tables (first-pitch strikes, usage by quality, change-ups by
+//                                            speed gap, pop-ups by height; tools/lib/realbuild.js pitchingOnly); the rest kept
 // Sources: Baseball Savant (Statcast leaderboards and grouped searches) and Baseball-Reference, seasons
 // 2024-2026 (Claude's default, confirmed by the owner in Session 8). The downloads are third-party data:
 // they stay outside the repo (keep DIR in a scratch folder); only the summary in tools/lib/real.js is kept.
@@ -112,6 +115,18 @@ function attackSources(dir) {
     `${SAV}/statcast_search/csv?all=true&hfGT=R%7C&game_date_gt=${d}&game_date_lt=${d}&type=details&player_type=pitcher`]);
 }
 
+// Step 2.1e's sources (Session 34): first-pitch strikes, pitch-arsenal stats and arsenal speeds by season (the pop-ups use the
+// attack days' pitches).
+function pitchingSources(dir) {
+  const out = [];
+  for (const y of YEARS) {
+    out.push([path.join(dir, `fstrike_${y}.csv`), custom(y, 'pitcher', 50, ['pa', 'f_strike_percent', 'bb_percent', 'k_percent', 'in_zone_percent', 'p_starting_p'])]);
+    out.push([path.join(dir, `arsenal_${y}.csv`), `${SAV}/leaderboard/pitch-arsenal-stats?type=pitcher&pitchType=&year=${y}&team=&min=50&csv=true`]);
+    out.push([path.join(dir, `speed_${y}.csv`), `${SAV}/leaderboard/pitch-arsenals?year=${y}&min=100&type=avg_speed&hand=&csv=true`]);
+  }
+  return out;
+}
+
 function main() {
   const [mode, dir] = process.argv.slice(2);
   if (mode === '--urls' && dir) {
@@ -125,7 +140,12 @@ function main() {
     return;
   }
   if (mode === '--attack' && dir) return require('./lib/realbuild').attackOnly(attackSources(dir).map((x) => x[0]), ATTACK_DAYS);
-  process.stderr.write('usage: node tools/realdata.js --urls DIR | --build DIR | --batted DIR | --attack-urls DIR | --attack DIR\n');
+  if (mode === '--pitching-urls' && dir) {
+    for (const [f, u] of pitchingSources(dir).concat(attackSources(dir))) process.stdout.write(f + '\t' + u + '\n');
+    return;
+  }
+  if (mode === '--pitching' && dir) return require('./lib/realbuild').pitchingOnly(dir, YEARS, attackSources(dir).map((x) => x[0]));
+  process.stderr.write('usage: node tools/realdata.js --urls DIR | --build DIR | --batted DIR | --attack-urls DIR | --attack DIR | --pitching-urls DIR | --pitching DIR\n');
   process.exit(1);
 }
 

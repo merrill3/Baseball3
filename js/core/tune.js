@@ -740,7 +740,9 @@
       // MLB's with the buried put-aways (bury, below: they no longer stray into the zone as nearer targets did).
       // Session 28: every count -0.012 (the level fit on the generated league: its pitchers' zone % was 50.4 [MLB 49.4] and its
       // walks 7.8% [8-9]).
-      zone: [[0.588, 0.425, 0.254], [0.622, 0.517, 0.343], [0.668, 0.649, 0.492], [0.718, 0.678, 0.676]],
+      // Session 34 (step 2.1e item 3): 0-0 +0.013 (was 0.588), so the first pitch is in the zone as MLB's (54.7% on 13,646 0-0
+      // pitches of the attack days; the engine 53.4).
+      zone: [[0.601, 0.425, 0.254], [0.622, 0.517, 0.343], [0.668, 0.649, 0.492], [0.718, 0.678, 0.676]],
       // Targets in the zone added by Aim, by balls and strikes, per step (Attacker +1, Nibbler -1; none with three balls).
       // Session 16 (was one number per style, all 0): fitted so Attacker and Nibbler sit as far from Balanced, count by count, as
       // MLB's top and bottom thirds of pitchers by the zone % their walks don't explain (2024-2025, 566 pitcher-seasons with 250+
@@ -776,6 +778,12 @@
                            // power, between these limits: sharper command aims nearer the edges (step 1.4)
       commandOff: [0.5, 0.4, 1], // the same for targets off the plate (feet off the edge), but a wild pitcher doesn't aim
                            // farther off than an average one (Session 14)
+      // First-pitch strikes (Session 34, step 2.1e item 3, owner's choice: Command's new job; the size Claude's default): on 0-0,
+      // targets in the zone + first x (1 - his scatter / the average's): +6% at Command 99, +2.7% at 80, -1.6% at 40, -3.1% at 20.
+      // First-pitch strike % 54.7 / 57.8 / 59.5 / 63.2 / 66.8 at 20 / 40 / 60 / 80 / 99 -> 52.9 / 57.3 / 60.3 / 66.5 / 73.6 [MLB
+      // 51.4 / 55.8 / 62.4 / 68.5 / 74.5]; the league's 55.6-68.9 [55.8-68.5]. Aim's 0-0 gap adds to it (a nibbler's first-pitch
+      // strikes rise with his Command as a Balanced pitcher's do, a few points lower).
+      first: 0.3,
       // A Nibbler's targets off the plate x (his scatter / the average's) to this as well (Session 34, step 2.1e item 1b, owner's
       // choice: nibbling pays with good Command; the size Claude's default): Nibbler +0.24 / +0.10 / -0.14 runs allowed a team-game
       // against Balanced at Command 40 / 60 / 80 (was +0.12 / +0.09 / -0.01), Attacker -0.09 / -0.01 / +0.09. Stopped at 1 by the

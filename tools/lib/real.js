@@ -2747,6 +2747,19 @@ module.exports = {
    "p95": 6,
    "p99": 6.3,
    "max": 6.6
+  },
+  "pit.f_strike_percent": {
+   "n": 843,
+   "mean": 62.38,
+   "min": 51.4,
+   "p1": 53.884,
+   "p5": 55.8,
+   "p25": 59.8,
+   "p50": 62.4,
+   "p75": 65,
+   "p95": 68.5,
+   "p99": 71.258,
+   "max": 74.5
   }
  },
  "slope": {
@@ -3845,5 +3858,119 @@ module.exports = {
    }
   },
   "note": "Statcast regular season, every pitch of the listed days (bunts left out); Savant attack zones from the zone padded by the ball's radius (heart to 0.67 of the half-size, shadow to 1.33, chase to 2, waste beyond; shadowIn / shadowOut inside or outside the zone). whiff and foul are per swing; ev, hard (95+ mph), sweet (8-32 degrees), barrel, xwobacon and wobacon on balls in play."
+ },
+ "usage": {
+  "groups": 465,
+  "perWhiff": 0.015,
+  "bestShare": 0.484,
+  "note": "Pitcher-seasons with two or more breaking or off-speed pitches (SL with ST and SV, CU with KC, CH, FS; 50+ PA ending on each): perWhiff is the log of a pitch's usage per whiff point, both against its type's league mean and the pitcher's own mean; bestShare is the share of those pitches his best one by whiff (against its type) takes."
+ },
+ "changeup": {
+  "n": 421,
+  "gap": {
+   "n": 421,
+   "mean": 8.132,
+   "min": 2.8,
+   "p1": 3.82,
+   "p5": 4.9,
+   "p25": 6.5,
+   "p50": 7.9,
+   "p75": 9.5,
+   "p95": 12.4,
+   "p99": 14.1,
+   "max": 15.5
+  },
+  "perMph": 1.157,
+  "gapPerFbMph": -0.085,
+  "bins": [
+   {
+    "lo": 0,
+    "hi": 6,
+    "n": 64,
+    "whiff": 27.43
+   },
+   {
+    "lo": 6,
+    "hi": 8,
+    "n": 149,
+    "whiff": 30.263
+   },
+   {
+    "lo": 8,
+    "hi": 10,
+    "n": 124,
+    "whiff": 32.404
+   },
+   {
+    "lo": 10,
+    "hi": 12,
+    "n": 58,
+    "whiff": 35.103
+   },
+   {
+    "lo": 12,
+    "hi": 99,
+    "n": 26,
+    "whiff": 35.45
+   }
+  ],
+  "note": "Change-ups with 50+ PA ending on them (Savant pitch-arsenal stats, 2024-2026) against the pitcher's faster fastball (four-seam or sinker; Savant arsenal speeds): whiff % by mph of gap; perMph is whiff points per mph of gap at the same fastball; gapPerFbMph how the gap moves with the fastball."
+ },
+ "popups": {
+  "off": {
+   "high": {
+    "bip": 352,
+    "popup": 15.9
+   },
+   "mid": {
+    "bip": 1335,
+    "popup": 7.7
+   },
+   "low": {
+    "bip": 2215,
+    "popup": 4.7
+   },
+   "above": {
+    "bip": 54,
+    "popup": 13
+   }
+  },
+  "SIFC": {
+   "mid": {
+    "bip": 1156,
+    "popup": 4.8
+   },
+   "high": {
+    "bip": 566,
+    "popup": 8.8
+   },
+   "low": {
+    "bip": 919,
+    "popup": 1.4
+   },
+   "above": {
+    "bip": 58,
+    "popup": 17.2
+   }
+  },
+  "FF": {
+   "high": {
+    "bip": 932,
+    "popup": 13.7
+   },
+   "mid": {
+    "bip": 1087,
+    "popup": 7.4
+   },
+   "above": {
+    "bip": 242,
+    "popup": 17.4
+   },
+   "low": {
+    "bip": 503,
+    "popup": 4.2
+   }
+  },
+  "note": "Pop-ups as a % of balls in play (Statcast bb_type popup) by pitch height in the batter's zone (low: its lower third or below, mid, high: its upper third, above), every regular-season pitch of the attack days; FF four-seamers, SIFC sinkers and cutters, off the rest."
  }
 };

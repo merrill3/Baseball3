@@ -15,7 +15,7 @@ const STAT = {
   zContact: 'Zone contact %', whiff: 'Whiff % (per swing)', whiff95: 'Whiff % against 95+ mph', sweet: 'Sweet-spot % (8–32°)',
   pu: 'Pop-up %', batSpeed: 'Bat speed (mph)', maxEV: 'Max exit speed (mph, per 400 batted balls)', ev50: 'Hardest-half exit speed (mph)',
   offWhiff: 'Whiff % on breaking and off-speed', offChaseMinusFb: 'Off-speed chase minus fastball chase', zMinusO: 'Zone swing % minus chase %',
-  chase: 'Chase %', fbSpeed: 'Fastball speed (mph)', bb: 'Walk %', edge: 'Edge % (shadow zone)', meatball: 'Meatball %', whiffSL: 'Slider whiff %',
+  chase: 'Chase %', fbSpeed: 'Fastball speed (mph)', bb: 'Walk %', edge: 'Edge % (shadow zone)', fstrike: 'First-pitch strike %', meatball: 'Meatball %', whiffSL: 'Slider whiff %',
   whiffCH: 'Change-up whiff %', whiffCU: 'Curveball whiff %', sprint: 'Sprint speed (ft/s)', hpTo1b: 'Home to first (s)',
   armRF: 'Arm strength in right field (mph)', armSS: 'Arm strength at shortstop (mph)', staminaPitches: 'Pitches before fatigue',
   pps: 'Pitches per start (starters)', ipps: 'Innings per start (starters)'

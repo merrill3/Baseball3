@@ -108,7 +108,10 @@
       const cm = aimBy(P.commandAim), co = aimBy(P.commandOff || P.commandAim) * (aim < 0 && P.nibble ? Math.pow(sdr, P.nibble) : 1);
       const away = B3.pitch.who(g).bats === 'L' ? -1 : 1; // the side of the plate away from the batter
       const low = r.chance(P.low[type]);
-      if (r.chance(P.zone[d.balls][d.strikes] + aim * P.aimSide[aim + 1] * P.aimZone[d.balls][d.strikes] + (P.zoneType[type] || 0))) {
+      // First-pitch strikes (Session 34, step 2.1e item 3, owner's choice: Command's new job): on 0-0 a sharp pitcher aims in the
+      // zone more often (he trusts himself to hit a spot there), a wild one less, by P.first x (1 - his scatter / the average's).
+      const first = d.balls === 0 && d.strikes === 0 ? (P.first || 0) * (1 - sdr) : 0;
+      if (r.chance(P.zone[d.balls][d.strikes] + aim * P.aimSide[aim + 1] * P.aimZone[d.balls][d.strikes] + (P.zoneType[type] || 0) + first)) {
         // His targets follow his Command (step 1.4): sharper command aims nearer the edges, inside and out.
         const inset = P.inset[aim + 1].map((x) => x * cm), gr = d.balls === 3 ? P.groove : 0;
         const side = r.chance(0.55) ? away : -away;
