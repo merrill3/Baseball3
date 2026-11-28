@@ -92,7 +92,7 @@ function measure(B3, s, set, opts) {
   const from = opts.from || 0, to = Math.min(s.snaps.length, opts.to || s.snaps.length);
   const g = B3.game.create(Object.assign(teams(set), { type: 'regular', rng: B3.rng.create(seed) }));
   const cpu = B3.manager.cpu;
-  const counts = { pa: 0, K: 0, BB: 0, HR: 0, H: 0, pitches: 0, sb: 0, cs: 0, E: 0, DP: 0, sw: 0, whiff: 0, foul: 0, bip: 0, ev: 0, hard: 0 };
+  const counts = { pa: 0, K: 0, BB: 0, HR: 0, H: 0, pitches: 0, sb: 0, cs: 0, E: 0, DP: 0, sw: 0, whiff: 0, foul: 0, bip: 0, ev: 0, hard: 0, z: 0, zsw: 0, zwh: 0, oz: 0, ozsw: 0 };
   let sum = 0, sumSq = 0;
   const side = [[0, 0], [0, 0]]; // [sum, n] by batting side (0 away, 1 home), for conditions on one team
   const vals = opts.keep ? new Float64Array(to - from) : null;
@@ -120,7 +120,10 @@ function measure(B3, s, set, opts) {
         const e = g.log[seen];
         if (e.e === 'pa') pa = e;
         else if (e.e === 'pitch') { // swings, whiffs and fouls (Session 30: Velocity's strikeouts and whiffs per mph, paired)
-          if (e.r === 'S' || e.r === 'F' || e.r === 'X') counts.sw++;
+          const swung = e.r === 'S' || e.r === 'F' || e.r === 'X';
+          if (swung) counts.sw++;
+          // In the zone or out of it (Session 36: chase and zone swing per mph, tools/velo.js)
+          if (B3.data.inZone(e.x, e.z)) { counts.z++; if (swung) counts.zsw++; if (e.r === 'S') counts.zwh++; } else { counts.oz++; if (swung) counts.ozsw++; }
           if (e.r === 'S') counts.whiff++; else if (e.r === 'F') counts.foul++;
           else if (e.r === 'X' && e.ev !== undefined) { counts.bip++; counts.ev += e.ev; if (e.ev >= 95) counts.hard++; }
         } else if (e.e === 'sb') counts.sb++;

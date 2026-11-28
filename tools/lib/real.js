@@ -3330,6 +3330,54 @@ module.exports = {
    "r": 0.237,
    "at": 27.323,
    "mean": 0.293
+  },
+  "dvelo.z_swing_percent": {
+   "n": 335,
+   "per": 0.22,
+   "se": 0.186,
+   "r": 0.065,
+   "at": -0.013,
+   "mean": -0.547
+  },
+  "dvelo.swing_percent": {
+   "n": 335,
+   "per": 0.48,
+   "se": 0.14,
+   "r": 0.185,
+   "at": -0.013,
+   "mean": -0.323
+  },
+  "dvelo.in_zone_percent": {
+   "n": 335,
+   "per": 0.069,
+   "se": 0.199,
+   "r": 0.019,
+   "at": -0.013,
+   "mean": -1.39
+  },
+  "dvelo.edge_percent": {
+   "n": 335,
+   "per": -0.138,
+   "se": 0.131,
+   "r": -0.058,
+   "at": -0.013,
+   "mean": -0.736
+  },
+  "dvelo.iz_contact_percent": {
+   "n": 335,
+   "per": -1.244,
+   "se": 0.166,
+   "r": -0.38,
+   "at": -0.013,
+   "mean": 0.805
+  },
+  "dvelo.pitches_per_pa": {
+   "n": 335,
+   "per": 0.007,
+   "se": 0.013,
+   "r": 0.029,
+   "at": -0.013,
+   "mean": -0.001
   }
  },
  "notes": {},

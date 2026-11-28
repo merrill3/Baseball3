@@ -12,6 +12,8 @@
 //   node tools/realdata.js --pitching-urls DIR  prints "file<TAB>url" lines for step 2.1e's tables (Session 34)
 //   node tools/realdata.js --pitching DIR    only step 2.1e's tables (first-pitch strikes, usage by quality, change-ups by
 //                                            speed gap, pop-ups by height; tools/lib/realbuild.js pitchingOnly); the rest kept
+//   node tools/realdata.js --worth DIR       only step 2.1g's tables (Session 36: more same-pitcher per-mph stats from the pit_*
+//                                            downloads; tools/lib/realbuild.js worthOnly); the rest kept
 // Sources: Baseball Savant (Statcast leaderboards and grouped searches) and Baseball-Reference, seasons
 // 2024-2026 (Claude's default, confirmed by the owner in Session 8). The downloads are third-party data:
 // they stay outside the repo (keep DIR in a scratch folder); only the summary in tools/lib/real.js is kept.
@@ -145,7 +147,8 @@ function main() {
     return;
   }
   if (mode === '--pitching' && dir) return require('./lib/realbuild').pitchingOnly(dir, YEARS, attackSources(dir).map((x) => x[0]));
-  process.stderr.write('usage: node tools/realdata.js --urls DIR | --build DIR | --batted DIR | --attack-urls DIR | --attack DIR | --pitching-urls DIR | --pitching DIR\n');
+  if (mode === '--worth' && dir) return require('./lib/realbuild').worthOnly(dir, YEARS);
+  process.stderr.write('usage: node tools/realdata.js --urls DIR | --build DIR | --batted DIR | --attack-urls DIR | --attack DIR | --pitching-urls DIR | --pitching DIR | --worth DIR\n');
   process.exit(1);
 }
 

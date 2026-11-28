@@ -404,10 +404,12 @@
                        // middle, so a pitch down the middle is the easiest to hit; it was 0.4)
     edgeSd: 2.4,       // per foot from edgeFrom inside the edge outward
     chaseSd: 3.0,      // per foot outside the zone, on top of edgeSd
-    veloSd: 4.2,       // the whole spread x (his fastball / PIT.velo)^veloSd (Session 13: Velocity brings whiffs, not weak
+    veloSd: 3.7,       // the whole spread x (his fastball / PIT.velo)^veloSd (Session 13: Velocity brings whiffs, not weak
                        // contact; real per mph, the same pitcher year to year: whiff +1.65, K% +1.69, exit speed -0.16).
                        // Session 31 (owner's choice: MLB's year-to-year numbers; the size Claude's default), was 2.5: paired
-                       // replays per mph K +1.79, whiffs +1.52 (were +1.33, +1.03); one knob moves both, K a little faster
+                       // replays per mph K +1.79, whiffs +1.52 (were +1.33, +1.03); one knob moves both, K a little faster.
+                       // Session 36 (step 2.1g item 2): 3.7, was 4.2, for the rushed hitter's extra chases (CPU.swing.rush):
+                       // K +1.81 [+1.69], whiffs +1.51 [+1.65]
     chaseGrade: true,  // an off-speed pitch's extra spread off the plate (TYPE.chase above 1) scales with its grade (Session 13)
     locLoss: 0,        // share of exit speed lost per foot from edgeFrom inside the edge outward (step 1.3; step 1.5,
                        // was 0.08; Session 23, was 0.04: the bar's location part, SWING.bar, carries it)
@@ -735,6 +737,12 @@
       // curve is flatter than its curve before two strikes; the engine's had the same steepness, so it swung 2-3 points too
       // often in the zone and chased 3-5 points too little).
       twoSd: 0.15,
+      // A harder thrower rushes his decision (Session 36, step 2.1g item 2, V1, owner's choice; the sizes Claude's default):
+      // per mph of the pitcher's fastball over PIT.velo, his judgment noise x exp(sd) and his line `lean` feet toward a strike.
+      // Sized by paired replays (tools/velo.js, both staffs at 40-80) to MLB's same pitcher a mph faster (real.js dvelo): chase
+      // +0.69 [+0.70], zone swing +0.24 [+0.22], swing +0.42 [+0.48], exit speed -0.11 [-0.16] (were +0.15, +0.24, +0.17,
+      // -0.09); walks +0.02 [-0.27] (were +0.24: the engine's at-bats still lengthen +0.048 pitches a mph [MLB +0.007]).
+      rush: { sd: 0.021, lean: 0.0077 },
       lookShare: 1,        // share of the movement he doesn't read that misleads where he thinks it crosses
       lookCloser: true     // a misread draws his eye toward the zone, never away from it, on each axis (step 1.5 task 4)
     },

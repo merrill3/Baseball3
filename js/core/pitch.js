@@ -339,8 +339,18 @@
     // up that is headed off the plate looks farther off by his Recognition's bat.layOff (a poor recognizer's, below 0, closer).
     const lay = T().TYPE[pitch.type].breaking && B3.data.zoneEdge(pitch.x, pitch.z) > 0 ? (1 - u) * (w.b.bat.layOff || 0) : 0;
     // With two strikes he commits sooner, so he judges more roughly (Session 18, CPU.swing.twoSd).
-    const sd = g.strikes >= 2 ? Math.hypot(w.b.bat.judgeSd, C.twoSd) : w.b.bat.judgeSd;
-    return { x: x, z: z, edge: B3.data.zoneEdge(x, z) + lay - w.b.bat.judgeLean + g.rng.normal(0, sd) };
+    let sd = g.strikes >= 2 ? Math.hypot(w.b.bat.judgeSd, C.twoSd) : w.b.bat.judgeSd;
+    // A harder thrower rushes his decision (Session 36, step 2.1g item 2, V1, owner's choice): he must start sooner for this
+    // pitcher's fastball, so on every pitch he judges more roughly and leans toward swinging, by the mph of the fastball he
+    // gears up for (as cpuTiming's gearUp) over the average's: his noise x exp(rush.sd x mph), his line rush.lean feet a mph
+    // toward a strike. A soft-tosser's the other way. MLB's same pitcher a mph faster: chase +0.70, walks -0.27.
+    let rush = 0;
+    if (C.rush) {
+      const v = fastball(w.p, pitch.fade) - T().PIT.velo;
+      sd *= Math.exp(C.rush.sd * v);
+      rush = C.rush.lean * v;
+    }
+    return { x: x, z: z, edge: B3.data.zoneEdge(x, z) + lay - w.b.bat.judgeLean - rush + g.rng.normal(0, sd) };
   }
 
   B3.pitch = {

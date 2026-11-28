@@ -529,7 +529,44 @@ function pitchingOnly(dir, years, files) {
   console.log('wrote tools/lib/real.js: first-pitch strikes (' + fs1.length + ' pitcher-seasons), usage (' + groups + '), change-ups (' + ch.length + '), pop-ups');
 }
 
+// Step 2.1g's tables (Session 36; node tools/realdata.js --worth DIR), kept with the rest of the current real.js: (1) more of
+// the same pitcher year to year per mph (zone swing, swing, zone %, edge %, zone contact; the custom pitcher leaderboards
+// pit_*, 250+ batters faced, as `dvelo` above), and pitches a plate appearance (arsenal_*).
+function worthOnly(dir, years) {
+  const rows = (f) => parseCSV(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, ''));
+  const out = Object.assign({}, previous());
+  out.slope = Object.assign({}, out.slope);
+  const pit = [];
+  for (const y of years) for (const r of rows(path.join(dir, 'pit_' + y + '.csv'))) if (num(r.pa) >= 250) { r.__year = y; pit.push(r); }
+  const fbv = (r) => num(r.ff_avg_speed) || num(r.fastball_avg_speed);
+  // Swing % from the zone and chase swing rates and the zone share (the leaderboard has no swing % for pitchers).
+  const swing = (r) => (num(r.in_zone_percent) * num(r.z_swing_percent) + (100 - num(r.in_zone_percent)) * num(r.oz_swing_percent)) / 100;
+  const by = {};
+  for (const r of pit) by[r.player_id + ':' + r.__year] = r;
+  const stats = { z_swing_percent: (r) => num(r.z_swing_percent), swing_percent: swing, in_zone_percent: (r) => num(r.in_zone_percent),
+    edge_percent: (r) => num(r.edge_percent), iz_contact_percent: (r) => num(r.iz_contact_percent) };
+  for (const k in stats) {
+    const d = [];
+    for (const r of pit) { const prev = by[r.player_id + ':' + (r.__year - 1)]; if (prev) d.push([fbv(r) - fbv(prev), stats[k](r) - stats[k](prev)]); }
+    out.slope['dvelo.' + k] = fit(d);
+  }
+  // Pitches per plate appearance, from the pitch-arsenal leaderboards (arsenal_*: each type's pitches and the PAs ending on
+  // it, types with 50+ PA; the rarer types are left out alike in both seasons), the same pitcher year to year per mph.
+  const ap = {};
+  for (const y of years) for (const r of rows(path.join(dir, 'arsenal_' + y + '.csv'))) { const k = r.player_id + ':' + y; const a = ap[k] || (ap[k] = [0, 0]); a[0] += num(r.pitches); a[1] += num(r.pa); }
+  const ppa = (r) => { const a = ap[r.player_id + ':' + r.__year]; return a ? a[0] / a[1] : NaN; };
+  stats.pitches_per_pa = ppa;
+  {
+    const d = [];
+    for (const r of pit) { const prev = by[r.player_id + ':' + (r.__year - 1)]; if (prev) d.push([fbv(r) - fbv(prev), ppa(r) - ppa(prev)]); }
+    out.slope['dvelo.pitches_per_pa'] = fit(d);
+  }
+  write(out);
+  console.log('wrote tools/lib/real.js: dvelo ' + Object.keys(stats).map((k) => k + ' ' + out.slope['dvelo.' + k].per + ' +- ' + out.slope['dvelo.' + k].se).join(', '));
+}
+
 module.exports.pitchingOnly = pitchingOnly;
+module.exports.worthOnly = worthOnly;
 module.exports.parseCSV = parseCSV;
 module.exports.attackOnly = attackOnly;
 module.exports.battedOnly = battedOnly;
