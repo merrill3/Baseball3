@@ -60,13 +60,23 @@ module.exports = function (t) {
   });
 
   t.test('Command scatters pitches around the target; his fade (Session 17) widens it, costs speed and flattens his pitches', () => {
-    for (const cmd of [0.25, 0.5, 0.9]) {
+    for (const cmd of [0.25, 0.48]) {
       const rows = trial(setup({ pit: { commandSd: cmd } }), { type: 'FF', x: 0.4, z: 2.2 }, null);
       near(avg(rows.map((x) => x.p.x)), 0.4, 0.05, 'mean x');
       near(avg(rows.map((x) => x.p.z)), 2.2, 0.05, 'mean z');
       near(sd(rows.map((x) => x.p.x)), cmd, cmd * 0.08, 'scatter x');
       near(sd(rows.map((x) => x.p.z)), cmd, cmd * 0.08, 'scatter z');
     }
+    // Real wildness (Session 34): a wild pitcher's scatter has a heavy tail, bad misses well beyond his usual spread; an average
+    // pitcher has none.
+    const W = setup().B3.tune.PITCH.wild, far = (cmd) => {
+      const rows = trial(setup({ pit: { commandSd: cmd } }), { type: 'FF', x: 0.4, z: 2.2 }, null);
+      const d = rows.map((x) => Math.abs(x.p.x - 0.4)).sort((a, b) => a - b);
+      return { far: d.filter((x) => x > 3 * cmd).length / d.length, mid: d[Math.floor(d.length / 2)] / cmd };
+    };
+    const wild = far(0.6), avgP = far(0.48);
+    assert.ok(W.share > 0 && wild.far > 0.015 && avgP.far < 0.006, 'bad misses: wild ' + wild.far + ', average ' + avgP.far);
+    near(wild.mid, 0.6745, 0.06, 'a wild pitcher\'s usual pitch scatters as his Command says');
     // The curve: nothing at the first pitch, points x x^2 to his Stamina's pitches, steeper past them; one rule for every role.
     const env = setup(), B3 = env.B3, F = B3.tune.PITCH.fade, team = env.g.teams[1];
     const S = team.inp['HOM-SP'].pit.stamina;

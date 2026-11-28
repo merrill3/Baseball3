@@ -81,7 +81,10 @@
     const type = B3.data.PITCH[a.type];
     // His fade wears down all three (the owner's choice, Session 16): speed, Command's scatter and the pitch's grade.
     const d = fade(w.p, w.live);
-    const sd = w.p.pit.commandSd * Math.exp(P.fade.command * d);
+    let sd = w.p.pit.commandSd * Math.exp(P.fade.command * d);
+    // Now and then a wild pitcher badly misses his spot (Session 34): the chance grows with how much wider his scatter is than average.
+    const wild = P.wild && P.wild.share && sd > T().PIT.commandSd ? Math.min(P.wild.max, P.wild.share * Math.pow(sd / T().PIT.commandSd - 1, P.wild.power)) : 0;
+    if (wild > 0 && r.chance(wild)) sd *= P.wild.size;
     const x = a.x + r.normal(0, sd), z = a.z + r.normal(0, sd);
     const speed = Math.round((fastball(w.p, d) * type.v + r.normal(0, P.speedSd)) * 10) / 10;
     const rated = w.p.pit.grades[a.type] === undefined ? 1 : w.p.pit.grades[a.type];

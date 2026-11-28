@@ -231,7 +231,10 @@
       // 95th 97.9, 99th 99.3, best 101.4), rows at the points after the curve; the step 1.4 fit had 20 at 69 mph.
       velocity: [[20, -12.1], [30, -6.59], [40, -3.7], [50, -1.5], [60, 0], [70, 1.5], [80, 3.5], [85, 4.2], [91.25, 4.9], [100, 6.0], [108.8, 7.0]],
       // Command (Session 14): step 1.4's rows below 60 x 0.75, so poor Command walks as MLB's worst do (with the 0.92 step).
-      command: [[20, -2.488], [30, -1.881], [40, -1.274], [50, -0.653], [60, 0], [70, 0.92], [80, 1.899], [90, 2.952], [100, 4.098], [110, 5.368]],
+      // Session 34 (step 2.1e item 2, real wildness): the rows below 60 x 0.7 (were -2.488, -1.881, -1.274, -0.653), the bad misses
+      // (PITCH.wild) taking over part of the low end: walks 14.5 / 12.7 / 11.6 / 10.4 at 20 / 30 / 40 / 50 -> 15.0 / 12.8 / 11.3 / 10.1
+      // [MLB 15.3 / 14.3 / 12.3 / 9.7], edge % 40.2 / 40.8 / 41.2 / 41.3 -> 39.5 / 40.5 / 40.9 / 41.6 [35.5 / 37.9 / 39.4 / 41.5].
+      command: [[20, -1.742], [30, -1.317], [40, -0.892], [50, -0.457], [60, 0], [70, 0.92], [80, 1.899], [90, 2.952], [100, 4.098], [110, 5.368]],
       deception: [[20, -7.939], [30, -4.465], [40, -2.294], [50, -0.937], [60, 0], [70, 0.739], [80, 1.358], [90, 1.896], [100, 2.376], [110, 2.812]],
       // The grades (Session 30, M2 step 2.1a task 4, the owner's balancing of the pitching ratings; the sizes Claude's defaults): refitted
       // on whiff % against the table's steps (the slider, change-up and curve averaged; every pitch of a staff at one step, 1,600
@@ -283,6 +286,11 @@
     contactFt: 3.4,    // the ideal contact point, feet in front of the plate's tip
     avgSpeedShare: 0.92, // average speed over the flight, as a share of release speed (drag)
     speedSd: 0.7,      // pitch-to-pitch speed spread, mph
+    // Real wildness (Session 34, step 2.1e item 2, owner's choice: a heavy tail on a low-Command pitcher's scatter): a pitch is a
+    // bad miss, its scatter x size, with chance share x (his scatter now / the average's - 1) to power when that is above 0 (his
+    // fade counts): about 6% of a 20's pitches, 1.5% of a 40's, 0.3% of a 50's. The sizes are Claude's defaults, with Command's
+    // table below 60 x 0.7 (RATE.steps.command), so a 20 walks as MLB's worst and the league's high walk tail stays MLB's.
+    wild: { share: 1.5, size: 2.5, power: 2, max: 0.25 }, // max: the chance's cap (a worn-out wild pitcher)
     // The fade (Session 17, the owner's Session 16 choice: a gradual fade paced by Stamina, wearing down velocity, command and
     // stuff together; replaces Session 16's fatigue, none until his Stamina's pitches and then 1.2 mph and 30% more scatter
     // every 20). With x = his pitches / his Stamina's pitches (B3.ratings.stamina), he plays as if his Velocity, Command and
