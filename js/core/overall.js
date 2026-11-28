@@ -93,13 +93,16 @@
   // generated arsenals (tools/overall.js --part=arsenal), since the pitch type stays the main driver (DESIGN.md section 10).
   const ARSENAL = {
     twoStrike: 1.5,
-    kinds: [0.631, 0.071, 0.297],
+    kinds: [0.631, 0.070, 0.299],
     // Session 29's fit (60 generated arsenals, 121 replayed conditions): whole arsenals r 0.991, rms 0.105 runs (grades alone
     // r 0.79: the types alone spread 0.34 runs, the grades 0.72); was scale 0.937, types FF -1.136, SI -0.141, FC 0.028,
     // SL 0.967, CU 1.445, CH 0.71, FS 1.155. Session 30's, after the pitching balance (the same 60 arsenals): r 0.981, rms
     // 0.145 (grades alone r 0.80; the grades spread 0.63 runs, the types 0.35).
-    scale: 0.882,
-    types: { FF: -1.164, SI: -0.293, FC: 0.177, SL: 0.907, CU: 1.411, CH: 0.802, FS: 1.06 },
+    // Session 31, after Velocity's change and the grades' lean against it (the same 60 arsenals): r 0.985, rms 0.128 (grades
+    // alone r 0.83; the grades spread 0.68 runs, the types 0.32); was scale 0.882, types FF -1.164, SI -0.293, FC 0.177, SL 0.907,
+    // CU 1.411, CH 0.802, FS 1.06.
+    scale: 0.975,
+    types: { FF: -1.126, SI: -0.337, FC: 0.249, SL: 0.853, CU: 1.383, CH: 0.863, FS: 1.043 },
     groups: { fastball: ['FF', 'SI', 'FC'], breaking: ['SL', 'CU'], offspeed: ['CH', 'FS'] }
   };
 
@@ -115,8 +118,10 @@
   // Session 31 (owner's choices: relievers on a scale of their own, the Arsenal re-centered to 60): rel, the league's average
   // reliever (the squads' eight bullpen arms) for a whole staff of him; arsenal, the league's mean raw Arsenal numbers (every
   // starter and reliever; a group among those who throw it) minus 60, taken off so the average pitcher reads 60.
-  const BASE = { hit: { C: -0.0513, '1B': 0.004, '2B': -0.0136, '3B': -0.003, SS: -0.0074, LF: 0.0082, CF: 0.0517, RF: 0.0188, DH: 0.0076 }, pit: 0.4167,
-    rel: 0.4167, arsenal: { arsenal: 0, fastball: 0, breaking: 0, offspeed: 0 } };
+  // Session 31, after Velocity's change and the generator's new links (the same 4,000 organizations): the starter's +0.40, the
+  // average reliever's +0.40 (he throws harder, and his arsenal is smaller); the raw Arsenal averages 63.6.
+  const BASE = { hit: { C: -0.0496, '1B': -0.0077, '2B': -0.0175, '3B': -0.0082, SS: -0.0044, LF: 0.0012, CF: 0.0466, RF: 0.0128, DH: -0.007 }, pit: 0.4003,
+    rel: 0.4047, arsenal: { arsenal: 3.61, fastball: 1.24, breaking: 0.83, offspeed: 0.23 } };
 
   const HIT = ['contact', 'timing', 'launch', 'rawPower', 'recognition', 'discipline'];
   const PIT = ['velocity', 'command', 'deception'];
