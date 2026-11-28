@@ -153,8 +153,11 @@
     return a[1] + (b[1] - a[1]) * (points - a[0]) / (b[0] - a[0]);
   }
 
+  // rule: [rating, 'mul' | 'up' | 'add', size per step, scale]: the scale is the rating's own step table when left out, 'tens' for
+  // tens of points from 60, or the name of another table in RATE.steps (Session 33: a job moved from one rating to another keeps
+  // its own ladder, read on the new rating's points).
   function hook(base, rule, points) {
-    const x = rule[3] === 'tens' ? u(points) : steps(rule[0], points);
+    const x = rule[3] === 'tens' ? u(points) : steps(rule[3] || rule[0], points);
     if (rule[1] === 'mul') return base * Math.pow(rule[2], x);
     if (rule[1] === 'up') return 1 - (1 - base) * Math.pow(rule[2], x); // a share that nears 1, never reaching it
     return base + rule[2] * x;

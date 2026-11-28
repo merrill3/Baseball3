@@ -184,7 +184,10 @@
     // spread further above the median than below it).
     const gr = pitch.grade === undefined ? 1 : pitch.grade;
     const life = kind.gradeSd ? Math.pow(gr, kind.gradeSd[gr < 1 ? 0 : 1]) : 1;
-    const sd = velo * life * cost * tilt * path * Math.sqrt(read.contactSd * read.contactSd + m * m * (bite * bite + loc * loc));
+    // Session 33 (step 2.1d item 2, owner's choice: Contact's parts split up): an off-speed pitch's late break is tracked by
+    // Recognition (bat.track), not Contact; Contact keeps the location part and the fastballs' bite.
+    const mb = kind.breaking ? w.b.bat.track : m;
+    const sd = velo * life * cost * tilt * path * Math.sqrt(read.contactSd * read.contactSd + m * m * loc * loc + mb * mb * bite * bite);
     return { mean: mean, sd: sd, rec: read.rec, bats: w.bats };
   }
 

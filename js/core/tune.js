@@ -24,8 +24,9 @@
     timingSd: 20,      // Timing: spread of a CPU hitter's *when* error at 92 mph, in ms
     square: 1,         // Timing (Session 11, owner's choice: Timing's job is squaring up): multiplier on the exit speed he
                        // loses to a mishit, off center or mistimed (below 1: he keeps the barrel on the ball)
-    timingTop: 92,     // Contact (Session 11; Timing's until then): the pitch speed (mph) around which he starts to run
-                       // late (a soft step, TIMING.lateSoft); real data: whiffs against 95+ mph follow fastball whiffs
+    timingTop: 92,     // Timing (Session 33, step 2.1d item 2, owner's choice: handling velocity moves back from Contact, being late
+                       // is a *when* error; Contact's from Session 11 to 32): the pitch speed (mph) around which he starts to run
+                       // late (a soft step, TIMING.lateSoft)
     batSpeed: 71.7,    // Raw Power: average bat speed in mph (Savant's bat tracking: the sweet spot's speed at
                        // contact; step 1.5, real units, was 90.3 in the engine's own); each swing varies by SWING.batSd
     launchK: 15,       // Launch: degrees of launch angle per inch of *where* error near the bat's center (lower is a
@@ -39,6 +40,9 @@
     breakRead: 1,      // Recognition: multiplier on the late break (TYPE bite) of an off-speed pitch he swings at (below 1:
                        // he tracks the break; step 1.5 task 4, Session 12: so Recognition still counts once he reads nearly
                        // every pitch, as DESIGN.md section 10 says, "less fooled by off-speed and break")
+    track: 1,          // Recognition (Session 33, step 2.1d item 2, owner's choice: tracking late break moves from Contact): the
+                       // bat control on an off-speed pitch's late break, a multiplier on its bite in place of Contact's (SWING.contactAll);
+                       // Contact keeps the location part and the fastballs' bite (their life is plain bat-to-ball, Claude's default)
     judgeSd: 0.4,      // Discipline: feet of noise in judging where a pitch will cross, for swing or take (Session 12, was
                        // 0.45: MLB hitters chase fastballs off the plate 24.8% of the time)
     judgeLean: 0.1,    // Discipline: feet he leans toward seeing a ball as a strike (the CPU's swing choice)
@@ -136,13 +140,17 @@
       contactSd: ['contact', 'mul', 0.88],
       timingSd: ['timing', 'mul', 0.85],
       square: ['timing', 'mul', 0.9],
-      timingTop: ['contact', 'add', 1.0],
+      timingTop: ['timing', 'add', 1.0, 'timingTop'], // Session 33: Timing's (Contact's from Session 11), on its own table below
       launchK: ['launch', 'mul', 0.87],
       launchSd: ['launch', 'mul', 0.87],
       sprayNoise: ['launch', 'mul', 0.87],
       batSpeed: ['rawPower', 'add', 1], // a step is one mph (step 1.5: the table below is the real ladder)
       recognition: ['recognition', 'up', 0.6], // Session 12: was 0.75, so the population's off-speed whiff spreads as MLB's
       breakRead: ['recognition', 'mul', 0.95],
+      // Session 33 (step 2.1d item 2): Contact's bat control on late break, on its own table (Contact's as it was) and steeper than
+      // Contact's 0.88: at 0.88 the move changed Recognition's off-speed whiff by under a point; at 0.6 its low end climbs toward
+      // the ladder (54.5 / 41.5 at 20 / 40 [62.1 / 44.8]) with the league's off-speed whiff spread inside MLB's (95th 42.6 [44.8])
+      track: ['recognition', 'mul', 0.6, 'track'],
       judgeSd: ['discipline', 'mul', 0.85],
       judgeLean: ['discipline', 'mul', 0.7]
     },
@@ -192,6 +200,11 @@
       // Contact (step 1.5 task 4): step 1.4's table x 0.6 now that Contact scales the whole *where* spread (SWING.contactAll),
       // so the test population's whiff and zone-contact spreads match MLB's (the owner's ladder rule, Session 10).
       contact: [[20, -2.426], [30, -1.9], [40, -1.33], [50, -0.702], [60, 0], [70, 0.802], [80, 1.742], [90, 2.891], [100, 4.388], [110, 6.312]],
+      // Session 33 (step 2.1d item 2, Contact's parts split up): the two jobs Contact gave away keep their own ladders, read on the
+      // new rating's points. Handling velocity (bat.timingTop, Timing's) and tracking late break (bat.track, Recognition's) start
+      // on Contact's table as it was, so each part's size is unchanged by the move.
+      timingTop: [[20, -2.426], [30, -1.9], [40, -1.33], [50, -0.702], [60, 0], [70, 0.802], [80, 1.742], [90, 2.891], [100, 4.388], [110, 6.312]],
+      track: [[20, -2.426], [30, -1.9], [40, -1.33], [50, -0.702], [60, 0], [70, 0.802], [80, 1.742], [90, 2.891], [100, 4.388], [110, 6.312]],
       timing: [[20, -1.883], [30, -1.405], [40, -0.933], [50, -0.465], [60, 0], [70, 0.464], [80, 0.928], [90, 1.393], [100, 1.862], [110, 2.337]],
       launch: [[20, -2.701], [30, -2.047], [40, -1.382], [50, -0.702], [60, 0], [70, 0.732], [80, 1.504], [90, 2.334], [100, 3.252], [110, 4.311]],
       // Raw Power (step 1.5): mph of average bat speed from 71.7, on the real ladder (Savant 2024-2026: the worst

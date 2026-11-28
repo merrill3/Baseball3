@@ -37,9 +37,10 @@ module.exports = function (t) {
     const B3 = loadCore();
     // rating -> { 'side.hook': +1 (rises with the rating) or -1 (falls) }
     const own = {
-      contact: { 'bat.contactSd': -1, 'bat.timingTop': 1 }, timing: { 'bat.timingSd': -1, 'bat.square': -1 }, // Session 11: Timing squares up; Contact handles velocity
+      // Session 11: Timing squares up; Session 33 (Contact's parts split up): Timing handles velocity, Recognition tracks late break
+      contact: { 'bat.contactSd': -1 }, timing: { 'bat.timingSd': -1, 'bat.square': -1, 'bat.timingTop': 1 },
       launch: { 'bat.launchK': -1, 'bat.launchSd': -1, 'bat.sprayNoise': -1 },
-      rawPower: { 'bat.batSpeed': 1 }, recognition: { 'bat.recognition': 1, 'bat.breakRead': -1 }, discipline: { 'bat.judgeSd': -1, 'bat.judgeLean': -1 },
+      rawPower: { 'bat.batSpeed': 1 }, recognition: { 'bat.recognition': 1, 'bat.breakRead': -1, 'bat.track': -1 }, discipline: { 'bat.judgeSd': -1, 'bat.judgeLean': -1 },
       velocity: { 'pit.velo': 1 }, command: { 'pit.commandSd': -1 }, deception: { 'pit.deception': 1, 'pit.soft': 1 }, stamina: { 'pit.stamina': 1 },
       // Defense and running (step 1.4): Range a quicker first step and a better route, Hands fewer errors
       // and a quicker release, Arm more mph, Framing a wider edge, Speed sprint speed, Baserunning a quicker
@@ -70,6 +71,9 @@ module.exports = function (t) {
     const st = (k, r) => B3.ratings.steps(k, r);
     near(B3.ratings.inputs(hitter({ contact: 70 })).bat.contactSd, B3.tune.BAT.contactSd * Math.pow(R.bat.contactSd[2], st('contact', 70)), 1e-12, 'contact step');
     near(B3.ratings.inputs(pitcher({ velocity: 50 })).pit.velo, B3.tune.PIT.velo + R.pit.velo[2] * st('velocity', 50), 1e-12, 'velocity step');
+    // Session 33: a moved job reads its own table on the new rating's points.
+    near(B3.ratings.inputs(hitter({ timing: 70 })).bat.timingTop, B3.tune.BAT.timingTop + R.bat.timingTop[2] * st('timingTop', 70), 1e-12, 'timingTop on its own table');
+    near(B3.ratings.inputs(hitter({ recognition: 40 })).bat.track, Math.pow(R.bat.track[2], st('track', 40)), 1e-12, 'track on its own table');
     near(B3.ratings.inputs(hitter({ arm: 70 })).fld.armPlus, R.fld.armPlus[2] * st('arm', 70), 1e-12, 'arm step');
     near(B3.ratings.inputs(hitter({ speed: 50 })).run.speed, B3.tune.RUN.speed + R.run.speed[2] * st('speed', 50), 1e-12, 'speed step');
     near(B3.ratings.inputs(hitter({ recognition: 70 })).bat.recognition, 1 - (1 - B3.tune.BAT.recognition) * Math.pow(R.bat.recognition[2], st('recognition', 70)), 1e-12, 'recognition nears 1');

@@ -326,11 +326,11 @@ The owner was interviewed on a full ratings redesign in a separate chat (merrill
 
 | Rating | Job | Main stats |
 |---|---|---|
-| Contact | The *where* error: whiff, foul or in play | contact %, zone contact %, whiff %, K % |
-| Timing | The *when* error: squaring the ball up (where on the barrel he meets it), so exit speed and where a squared-up ball goes, pull or the other way (owner's choice, Session 11, Nov 21, 2026, replacing "handling velocity": handling velocity is Contact's) | squared-up % per contact, average exit speed for his bat speed, spray mix |
+| Contact | The *where* error: whiff, foul or in play (from Session 33: plain bat-to-ball accuracy and bat control on the location and on fastballs' life; handling velocity and tracking late break moved out, owner's choice, way A) | contact %, zone contact %, whiff %, K % |
+| Timing | The *when* error: squaring the ball up (where on the barrel he meets it), so exit speed and where a squared-up ball goes, pull or the other way (owner's choice, Session 11, Nov 21, 2026, replacing "handling velocity"); from Session 33 also **handling velocity** again (owner's choice, step 2.1c's way A: being late is a *when* error; it was Contact's from Session 11 to 32) | squared-up % per contact, average exit speed for his bat speed, spray mix |
 | Launch | A tight launch-angle band and spray control | launch-angle spread, sweet-spot %, popup % |
 | Raw Power | Bat speed and top exit speed only | max and 90th-percentile exit speed, home runs per fly ball, ISO |
-| Recognition | Reading the pitch early: less fooled by off-speed and break, fewer chases on strike-looking pitches | chase on strike-looking pitches, breaking-ball whiff % |
+| Recognition | Reading the pitch early: less fooled by off-speed and break, fewer chases on strike-looking pitches; from Session 33 also **tracking an off-speed pitch's late break** (owner's choice, way A; Contact's until then) | chase on strike-looking pitches, breaking-ball whiff % |
 | Discipline | Swing-or-take judgment in and near the zone, by count | walk %, swing-decision run value |
 
 - **Aggressiveness** is a tendency (Patient, Balanced, Aggressive), not a 20–99 rating and not part of the overall. It is about value-neutral alone, and pays off or hurts depending on Discipline. **Which way** (owner's choice, Session 4, Nov 20, 2026): good Discipline rewards Aggressive. A disciplined aggressive hitter attacks hittable strikes early; an undisciplined one chases. Patient is the safer style for a hitter with poor Discipline.

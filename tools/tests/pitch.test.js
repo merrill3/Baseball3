@@ -245,7 +245,7 @@ module.exports = function (t) {
     assert.ok(avg(fast) > avg(slow) + 4, 'late against 100 mph');
     assert.ok(sd(fast) > sd(slow) * 1.25, 'wider timing against 100 mph');
     near(sd(tm({ bat: { timingSd: 10 }, pit: { velo: 92 } })), 10, 1, 'Timing sets the spread');
-    assert.ok(avg(tm({ bat: { timingTop: 102 }, pit: { velo: 100 } })) < avg(fast) - 4, 'a good Contact hitter is not late at 100 (timingTop is Contact\'s since Session 11)');
+    assert.ok(avg(tm({ bat: { timingTop: 102 }, pit: { velo: 100 } })) < avg(fast) - 4, 'a hitter with a high timingTop is not late at 100 (Timing\'s from Session 33)');
     const whiff = (velo) => rate(trial(setup({ pit: { velo } }), MID, 'cpu'), (x) => x.r.r === 'S');
     assert.ok(whiff(100) > whiff(90), 'more whiffs against velocity');
   });
