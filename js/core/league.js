@@ -110,6 +110,15 @@
     org.reserves = others.concat(rest.filter((p) => org.relievers.indexOf(p) < 0));
   }
 
+  const PEN = ['CL', 'SU', 'SU', 'MR', 'MR', 'MR', 'MR'];
+  function order2(org) {
+    org.starters.sort((a, b) => B3.overall.of(b, { role: 'SP' }) - B3.overall.of(a, { role: 'SP' }));
+    const pen = org.relievers.filter((p) => p.role !== 'LR'), lr = org.relievers.filter((p) => p.role === 'LR');
+    pen.sort((a, b) => B3.overall.of(b) - B3.overall.of(a));
+    pen.forEach((p, i) => { p.role = PEN[i]; });
+    org.relievers = pen.concat(lr);
+  }
+
   function teamOverall(wins) { return clip(50 + BALANCE.pointsPerWin * (wins - 81)); }
 
   function create(seed, opts) {
@@ -137,6 +146,8 @@
         t.level += d;
       }
     }
+    // The shift can reorder them: the rotation ace first again, and the short relievers' roles by overall (as B3.players).
+    for (const t of teams) order2(t.org);
     const wars = teams.map((t) => war(t.org)), mean = wars.reduce((a, b) => a + b, 0) / n;
     teams.forEach((t, i) => {
       t.level = Math.round(t.level * 10) / 10;
