@@ -1,4 +1,4 @@
-**Docs version: 80** (2026-11-28): Session 31's end: M2 step 2.1b done (teams, parks, the schedule, the league; the owner's rating choices built); docs/plan.md (step 2.1b's tasks with results, status, Stopped at), DESIGN.md sections 6 and 10 (measured results). Before that, 78–79: the same session's earlier docs commits.
+**Docs version: 81** (2026-11-28): Session 31's end: DESIGN.md section 7 ("After the owner's Session 31 choices": the targets and the equal-value check). Before that, 80: M2 step 2.1b done (docs/plan.md, DESIGN.md sections 6 and 10, state.md); 78–79: the same session's earlier docs commits.
 <!-- Coding sessions: add 1 to this number, and update the date and note, in any commit that changes README.md, ARCHITECTURE.md, DESIGN.md, CLAUDE.md or docs/plan.md. The planning chat uses it to detect stale copies. -->
 
 # Diamond Dash (Baseball3): plan
