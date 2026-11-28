@@ -199,7 +199,10 @@
     steps: {
       // Contact (step 1.5 task 4): step 1.4's table x 0.6 now that Contact scales the whole *where* spread (SWING.contactAll),
       // so the test population's whiff and zone-contact spreads match MLB's (the owner's ladder rule, Session 10).
-      contact: [[20, -2.426], [30, -1.9], [40, -1.33], [50, -0.702], [60, 0], [70, 0.802], [80, 1.742], [90, 2.891], [100, 4.388], [110, 6.312]],
+      // Session 33 (step 2.1d item 3, owner's choice: a steeper low end): rows 20-50 steeper (were -2.426, -1.9, -1.33, -0.702), so a 20
+      // makes contact as the worst big leaguer (zone contact 66.5, whiff 42.1 [66.6 / 42.3]); 40 stops where the league's zone-contact
+      // low tail reaches MLB's (5th percentile 75.0 [75.0]; the league's spread wins).
+      contact: [[20, -4.6], [30, -3.0], [40, -1.6], [50, -0.75], [60, 0], [70, 0.802], [80, 1.742], [90, 2.891], [100, 4.388], [110, 6.312]],
       // Session 33 (step 2.1d item 2, Contact's parts split up): the two jobs Contact gave away keep their own ladders, read on the
       // new rating's points. Handling velocity (bat.timingTop, Timing's) and tracking late break (bat.track, Recognition's) start
       // on Contact's table as it was, so each part's size is unchanged by the move.
