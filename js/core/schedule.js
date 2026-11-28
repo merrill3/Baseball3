@@ -35,7 +35,7 @@
 // are searched together, since a choice there must leave the next rounds fillable (an odd cycle of teams left for the
 // last two rounds can't be). When a round can't be filled the search steps back a few rounds and tries again; if that
 // keeps failing, make() starts over from a seed derived from the first, so the result still depends only on the seed
-// (in 2,000 seeds tried, none needed to; the slowest took about 0.3 s, the median 0.02 s). Then each series' off day
+// (in 2,000 seeds tried, none needed to; the median took 0.02 s, the slowest 0.09 s). Then each series' off day
 // goes on a day a team changes parks (a travel day) where it can.
 (function (root) {
   'use strict';
