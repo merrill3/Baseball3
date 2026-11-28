@@ -306,8 +306,9 @@
     g.halfPitches++;
     const ev = { e: 'pitch', p: f.pitcher, b: batterId(g), t: p.type, v: p.speed, x: round2(p.x), z: round2(p.z), c: g.balls + '-' + g.strikes, r: out.r };
     if (a.swing) { ev.tm = a.timing; if (out.bat !== undefined) ev.bat = out.bat; }
-    // Contact with a measured exit speed: every ball in play, and fouls that weren't tipped back (step 1.5).
+    // Contact with a measured exit speed: every ball in play and every foul (from Session 33 also those fouled back or away).
     if (out.contact) { ev.ev = out.contact.ev; ev.la = out.contact.la; ev.sp = out.contact.sp; }
+    else if (out.ev !== undefined) ev.ev = out.ev; // a foul back or away: exit speed only (Session 33)
     emit(g, ev);
     g.pitch = null;
     const steal = g.steal;

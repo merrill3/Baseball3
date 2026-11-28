@@ -285,6 +285,25 @@ module.exports = function (t) {
     assert.ok(whiff(1.35) > whiff(0.7) + 0.04, 'a riding four-seamer misses more bats: ' + whiff(1.35).toFixed(3) + ' against ' + whiff(0.7).toFixed(3));
   });
 
+  t.test('a foul back or away has an exit speed (Session 33, Savant\'s squared-up count) and draws no random numbers for it', () => {
+    const rows = trial(setup(), { type: 'FF', x: 0.7, z: 2.55 }, 0);
+    const back = rows.filter((x) => x.r.r === 'F' && !x.r.contact);
+    assert.ok(back.length > 100, 'enough fouls back: ' + back.length);
+    assert.ok(back.every((x) => Number.isFinite(x.r.ev) && x.r.ev >= 20 && x.r.ev < 120), 'each has an exit speed');
+    const fair = rows.filter((x) => x.r.contact).map((x) => x.r.contact.ev);
+    assert.ok(avg(back.map((x) => x.r.ev)) < avg(fair), 'fouls back come off softer than contact that goes to the field');
+    // The same pitch and swing twice from the same random state: a foul back leaves the generator where a whiff would.
+    const env = setup(), p = env.B3.pitch.throw(env.g, MID), st = env.g.rng.save();
+    let after = null;
+    for (let i = 0; i < 200 && after === null; i++) {
+      env.g.rng.load(st); for (let k = 0; k < i; k++) env.g.rng.next();
+      const s0 = env.g.rng.save(), r = env.B3.pitch.resolve(env.g, p, { swing: true, timing: 0 });
+      if (r.r === 'F' && !r.contact) { const used = env.g.rng.save(); env.g.rng.load(s0); env.g.rng.normal(0, 1); env.g.rng.normal(0, 1); after = { used, two: env.g.rng.save() }; }
+    }
+    assert.ok(after, 'a foul back came up');
+    assert.deepStrictEqual(after.used, after.two, 'a foul back uses only the swing\'s two draws (bat speed and the *where* error)');
+  });
+
   t.test('Velocity (Session 13): a harder thrower\'s pitches are harder to put the bat on, his off-speed ones too', () => {
     const S = loadCore().tune.SWING, P = loadCore().tune.PIT;
     const sdAt = (velo, type) => { const env = setup({ pit: { velo } }); const p = env.B3.pitch.throw(env.g, { type: type, x: 0, z: 2.5 }); return env.B3.pitch.expect(env.g, p).sd; };

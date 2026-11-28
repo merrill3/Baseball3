@@ -215,7 +215,7 @@
     // A mistimed swing that still reaches the ball meets it at an angle, so more of it is fouled away (Session 25, owner's choice: fix
     // Velocity's exit-speed miss): the fair core narrows by timeFoul x the square of the *when* error's share of missMs. A harder
     // thrower's late swings end as fouls and strikeouts more than as weak balls in play, as in MLB.
-    if (Math.abs(off) > fair * Math.max(0, 1 - S.timeFoul * v * v)) { out.r = 'F'; return out; }
+    const foul = Math.abs(off) > fair * Math.max(0, 1 - S.timeFoul * v * v);
     // Exit speed: bat speed and pitch speed (Savant's most a swing can give), less for an off-center hit and for bad timing.
     const u = off / fair;
     // A faster bat also meets the ball a little off the barrel's sweet spot more often (step 1.5, owner's choice, Session 10:
@@ -242,9 +242,17 @@
     // inches from the batter and falls off both ways (B3.tune.SWING.bar).
     const inside = w.bats === 'R' ? -pitch.x : pitch.x; // feet toward the batter
     const B = S.bar;
-    const barErr = B.perFt * inside + B.perMs * tm + r.normal(0, B.sd);
-    const lossBar = Math.min(0.9, sq * B.loss * Math.pow(Math.abs(barErr) / 10, B.pow) * (barErr > 0 ? B.jam : 1));
-    const ev = top * (1 - lossOff) * (1 - lossBar) * (1 - sq * S.timeLoss * v * v * (v > 0 ? 1 + S.lateLoss : 1)) * (1 - S.locLoss * away) + r.normal(0, S.evSd);
+    // nBar and nEv are this contact's two random parts (where on the barrel, and the exit speed's own noise).
+    const evOf = (nBar, nEv) => {
+      const barErr = B.perFt * inside + B.perMs * tm + nBar;
+      const lossBar = Math.min(0.9, sq * B.loss * Math.pow(Math.abs(barErr) / 10, B.pow) * (barErr > 0 ? B.jam : 1));
+      return top * (1 - lossOff) * (1 - lossBar) * (1 - sq * S.timeLoss * v * v * (v > 0 ? 1 + S.lateLoss : 1)) * (1 - S.locLoss * away) + nEv;
+    };
+    // A foul back or away (Session 33, step 2.1d item 1: squared-up % counted as Savant counts it, per bat contact with fouls)
+    // gets its exit speed too, worked out with both random parts at their middle (no extra random draws, so games play out
+    // the same); it has no launch angle or direction. Kept apart from contact (out.ev), as it never goes to B3.ball.
+    if (foul) { out.r = 'F'; out.ev = Math.round(Math.max(20, evOf(0, 0)) * 10) / 10; return out; }
+    const ev = evOf(r.normal(0, B.sd), r.normal(0, S.evSd));
     // Launch angle: over the ball drives it down; high pitches go up. Launch sets the band.
     // The pitch's shape tilts it: a ground-ball shape (above 0) lowers the launch angle (step 1.3: a tilt,
     // not a quality, so it adds no movement for the hitter to misread).
