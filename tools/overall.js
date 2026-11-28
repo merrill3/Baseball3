@@ -344,20 +344,25 @@ function base(o, next) {
   if (o.tweak) require(o.tweak)(B3);
   const O = B3.overall, orgs = o.orgs === 30 ? 4000 : o.orgs;
   const rng = B3.rng.create('overall base:' + o.seed), ctx = B3.players.context();
-  const by = {}, sp = [];
+  const by = {}, sp = [], rp = [], ars = { arsenal: [], fastball: [], breaking: [], offspeed: [] };
   for (let i = 0; i < orgs; i++) {
     const sq = B3.players.squad(rng, ctx);
     for (const p of sq.regulars) (by[p.pos] = by[p.pos] || []).push(O.raw(p));
     for (const p of sq.starters) sp.push(O.raw(p));
+    for (const p of sq.relievers) rp.push(O.raw(p));
+    // Session 31: the raw Arsenal numbers of every active pitcher (the shift that puts the average at 60)
+    for (const p of sq.starters.concat(sq.relievers)) { const a = O.arsenal(p, true); for (const k in ars) if (a[k] !== null) ars[k].push(a[k]); }
   }
   const hit = {};
   for (const pos of B3.data.LINEUP_POS) hit[pos] = r4(mean(by[pos]));
   const se = (xs) => sd(xs) / Math.sqrt(xs.length);
   console.log('Base: ' + orgs + ' generated organizations (seed ' + o.seed + '): mean runs against an all-60 player (standard error)');
   console.log('  regulars (a team-game in his slot): ' + B3.data.LINEUP_POS.map((pos) => pos + ' ' + fmt(hit[pos], 4) + ' (' + se(by[pos]).toFixed(4) + ')').join(', '));
-  console.log('  starters (a whole staff of him): ' + fmt(mean(sp), 4) + ' (' + se(sp).toFixed(4) + ')');
+  console.log('  starters (a whole staff of him): ' + fmt(mean(sp), 4) + ' (' + se(sp).toFixed(4) + '); relievers ' + fmt(mean(rp), 4) + ' (' + se(rp).toFixed(4) + ')');
+  console.log('  raw Arsenal numbers (mean, median): ' + Object.keys(ars).map((k) => k + ' ' + mean(ars[k]).toFixed(2) + ', ' + q(ars[k], 0.5).toFixed(2)).join('; '));
   const key = (k) => (/^[0-9]/.test(k) ? "'" + k + "'" : k);
-  console.log('  const BASE = { hit: { ' + Object.keys(hit).map((k) => key(k) + ': ' + hit[k]).join(', ') + ' }, pit: ' + r4(mean(sp)) + ' };');
+  console.log('  const BASE = { hit: { ' + Object.keys(hit).map((k) => key(k) + ': ' + hit[k]).join(', ') + ' }, pit: ' + r4(mean(sp)) + ',\n    rel: ' + r4(mean(rp)) +
+    ', arsenal: { ' + Object.keys(ars).map((k) => k + ': ' + (mean(ars[k]) - 60).toFixed(2)).join(', ') + ' } };');
   next();
 }
 

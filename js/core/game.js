@@ -155,7 +155,8 @@
       pitch: null, // the pitch thrown, waiting on the swing decision
       play: null, // a caught ball waiting on the tag-up decision
       lastPlay: null, // the last ball in play: { i, h, b, res, script } (the script is for the field view)
-      rng: opts.rng
+      rng: opts.rng,
+      park: opts.park || null // the home team's park (B3.teams; Session 31), or none for the standard park
     };
     if (g.teams[0].id === g.teams[1].id) fail('the two teams need different ids');
     startHalf(g);

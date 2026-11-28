@@ -8,7 +8,7 @@
 //   B3.ball.stealOdds(g, from, err)    his chance before the pitch (err: his misjudgment, s), for the CPU (step 1.4)
 //   B3.ball.tagup(g, play, from)       true if the runner tagging from `from` is safe; adds to the script
 //   B3.ball.tagupOdds(g, play, from, err)  his chance (err: his judgment's error, s), for the CPU (step 1.4)
-//   B3.ball.flight(contact)            the ball's path: { pts: [[t, x, y, z]], land, hr, wall, stop }
+//   B3.ball.flight(contact, park)      the ball's path: { pts: [[t, x, y, z]], land, hr, wall, stop } (park optional)
 //
 // Every rating hook it uses is an input from B3.ratings.inputs (B3.tune.inputs): fielders' Range (react, route), Hands
 // (hands, release), Arm (arm) and catchers' arm and release on steals; runners' Speed (speed) and
@@ -77,20 +77,23 @@
   // it slows at a steady rate (worked out exactly). It travels along its spray direction (no sideways
   // curve), stops at the wall, and is kept every BALL.sample seconds as [t, x, y, z, r] (r: feet from
   // home plate; raw numbers, which the script rounds).
-  function flight(c) {
-    const B = T().BALL, F = B3.data.FIELD;
+  // park (M2 step 2.1b, Session 31): the home team's park ({ fence, wall, elevation }, B3.teams), or none for the standard
+  // park, which is the league's average (its air is the league's mean elevation's).
+  function flight(c, park) {
+    const B = T().BALL;
     const v = c.ev * MPH, la = c.la * D2R, dir = c.sp * D2R;
     const ux = Math.sin(dir), uy = Math.cos(dir);
     let fair = Math.abs(c.sp) <= 45; // and it must come down in front of home plate (step 1.4: a pop-up
                                      // straight up drifts back on its backspin and can land behind it)
-    const fence = B3.data.fenceAt(c.sp);
+    const fence = B3.data.fenceAt(c.sp, park), wallH = B3.data.wallAt(c.sp, park);
+    const air = park ? airOf(park) : 1; // thinner air: less drag and less lift, both in step with the air's density
     // Backspin grows with launch angle; a sliced ball's tilted spin lifts less (step 1.5). A low ball pulled or hit up the middle
     // leaves with topspin and hook and dives (Session 23: hookLift, from hookFrom degrees short of straightaway toward the pull
     // side, fading out by hookTo degrees of launch angle; the spin may push it down).
     const side = c.pull !== undefined ? c.pull : -(c.slice || 0); // degrees toward the batter's pull side
     const back = Math.min(1, c.la / B.liftFull) * Math.max(0, 1 - B.sliceLift * Math.max(0, -side));
     const hook = (B.hookLift || 0) * Math.max(0, side + B.hookFrom) * Math.max(0, 1 - c.la / B.hookTo);
-    const lift = c.la > 0 ? B.lift * (back - hook) : 0;
+    const lift = c.la > 0 ? B.lift * air * (back - hook) : 0;
     let vr = v * Math.cos(la), vh = v * Math.sin(la), r = 0, h = B.startHeight, t = 0;
     let land = null, hr = null, wall = null, stop = null;
     const pts = [[0, 0, 0, h, 0]];
@@ -103,13 +106,13 @@
       const up = land ? 0 : lift; // spin's lift counts only before the first bounce
       // In its first flight the drag coefficient falls as the ball goes faster (step 1.5: the drag crisis, so a softly
       // hit fly ball dies sooner than a hard one); bouncing, plain drag.
-      const base = B.drag * (B.live === undefined ? 1 : B.live); // the league's ball (Session 22: BALL.live)
+      const base = B.drag * air * (B.live === undefined ? 1 : B.live); // the league's ball (Session 22: BALL.live)
       const drag = land ? base : base * Math.pow(B.dragRef / Math.max(s, 20), B.dragPow);
       vr += (-drag * s * vr - up * s * vh) * dt;
       vh += (-drag * s * vh + up * s * vr - G) * dt;
       r += vr * dt; h += vh * dt; t += dt;
       if (fair && !hr && !wall && r >= fence) {
-        if (h > F.wall && !land) hr = { t: t, h: h };
+        if (h > wallH && !land) hr = { t: t, h: h };
         else { wall = { t: t, h: h }; r = fence; vr = -Math.abs(vr) * B.wallBack; vh = Math.min(vh, 0); }
       }
       if (h <= 0) {
@@ -144,6 +147,13 @@
     return { pts: pts, land: land, hr: hr, wall: wall, stop: stop, fair: fair, fence: fence, ux: ux, uy: uy };
   }
 
+  // A park's air density against the standard park's (BALL.air: the density falls about 3.6% a 1,000 ft; k scales it to the
+  // owner's size for the thin-air parks, ref is the league's mean elevation, so the standard park is the average).
+  function airOf(park) {
+    const A = T().BALL.air;
+    return Math.exp(-A.k * ((park.elevation || 0) - A.ref) / A.height);
+  }
+
   // ---- The players on this play ----
 
   // The fielders, where they stand for this batter (shaded toward his pull side), and their inputs.
@@ -161,6 +171,12 @@
         const a = Math.atan2(at[0], at[1]) / D2R + d;
         // With a runner on second, outfielders play a little shallower to cut down the run at home (Session 7).
         if (B3.data.OUTFIELD.indexOf(pos) >= 0 && g.bases[1]) r -= T().BALL.ofIn;
+        // In a park, outfielders play a share of the fence's difference from the standard park's deeper or shallower
+        // (Session 31, Claude's default: BALL.parkDepth, capped at parkDepthMax feet).
+        if (g.park && B3.data.OUTFIELD.indexOf(pos) >= 0) {
+          const B = T().BALL, dd = B.parkDepth * (B3.data.fenceAt(a, g.park) - B3.data.fenceAt(a));
+          r += Math.max(-B.parkDepthMax, Math.min(B.parkDepthMax, dd));
+        }
         at = B3.data.polar(r, a);
       }
       const P = POS[pos];
@@ -906,7 +922,7 @@
     const w = B3.pitch.who(g);
     const D = defense(g, w.bats);
     const off = offense(g, steal, pitch);
-    const path = flight(contact);
+    const path = flight(contact, g.park);
     const S = new Script(D);
     if (!path.fair) {
       // A foul: caught in foul ground for an out, or dead.

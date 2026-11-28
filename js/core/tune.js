@@ -549,6 +549,13 @@
     glove: 4.4,        // feet: a fielder gets a ball this far from where he stands (arm, glove, lean; Session 21: was 4)
     diveReach: 4,      // feet a dive (a diving stop or catch) reaches past the glove
     wallReach: 10.5,   // feet: a leap at the wall
+    // Parks (M2 step 2.1b, Session 31; Claude's defaults): a park's air density is exp(-k x (elevation - ref) / height) of the
+    // standard park's (height: the air's scale height, density -3.6% a 1,000 ft; ref: the league's mean elevation, so the
+    // standard park is the average one; k sized with tools/parks.js so the owner's thin-air park, New Mexico at 5,310 ft,
+    // plays about +10% runs). Outfielders play parkDepth of the fence's difference from the standard park's deeper.
+    air: { height: 27500, ref: 806, k: 0.2 },
+    parkDepth: 0.5,
+    parkDepthMax: 20,
     fieldHeight: 3.5,  // feet: a bouncing ball this low can be fielded
     catchSd: 0.09,     // seconds: how sharply a catch's chance falls off with the margin
     catchAt: 0.045,    // seconds of margin for an even chance at a running or diving catch (Session 21: was 0.05)

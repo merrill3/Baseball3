@@ -59,13 +59,27 @@
     // The infield keeps 3 (owner's choice, Session 23).
     shade: { infield: 3, outfield: -2 }
   };
-  // The fence's distance at a spray angle.
-  function fenceAt(sp) {
+  // The fence's distance at a spray angle: the standard park's (symmetric), or a park's own (M2 step 2.1b, Session 31:
+  // park.fence lists [spray, feet] from the left-field line, -45, to the right-field line, 45; straight lines between).
+  function interp(f, x) {
+    if (x <= f[0][0]) return f[0][1];
+    for (let i = 1; i < f.length; i++) {
+      if (x <= f[i][0]) return f[i - 1][1] + (f[i][1] - f[i - 1][1]) * (x - f[i - 1][0]) / (f[i][0] - f[i - 1][0]);
+    }
+    return f[f.length - 1][1];
+  }
+  function fenceAt(sp, park) {
+    if (park && park.fence) return interp(park.fence, Math.max(-45, Math.min(45, sp)));
     const a = Math.min(45, Math.abs(sp)), f = FIELD.fence;
     for (let i = 1; i < f.length; i++) {
       if (a <= f[i][0]) return f[i - 1][1] + (f[i][1] - f[i - 1][1]) * (a - f[i - 1][0]) / (f[i][0] - f[i - 1][0]);
     }
     return f[f.length - 1][1];
+  }
+  // The wall's height there: the standard 8 ft, or a park's (one height, or [spray, feet] points as the fence's).
+  function wallAt(sp, park) {
+    if (!park || park.wall === undefined) return FIELD.wall;
+    return typeof park.wall === 'number' ? park.wall : interp(park.wall, Math.max(-45, Math.min(45, sp)));
   }
 
   B3.data = {
@@ -73,6 +87,7 @@
     FIELDERS: ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'],
     polar: polar,
     fenceAt: fenceAt,
+    wallAt: wallAt,
     // Lineup positions with the designated hitter (pitchers don't bat).
     LINEUP_POS: ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'],
     OUTFIELD: ['LF', 'CF', 'RF'],

@@ -10,7 +10,8 @@
 //   B3.overall.detail(player, opts)      { overall, war, runs, parts, perGame | staffRuns, ... }: runs above an average
 //                                        player at his position over a full season, wins above replacement, and each
 //                                        rating's share of the runs (see below)
-//   B3.overall.arsenal(player)           { arsenal, fastball, breaking, offspeed }: 20-99, null for a group he doesn't throw
+//   B3.overall.arsenal(player)           { arsenal, fastball, breaking, offspeed }: 20-99, null for a group he doesn't throw;
+//                                        the league's average pitcher reads 60 (Session 31)
 //   B3.overall.arsenalRuns(player)      his arsenal's worth for the overall, runs a team-game for a whole staff of him
 //                                        (his grades' runs and his pitch types' values); gradeRuns(player) the grades' part,
 //                                        weights(player) each pitch's weight (tools/overall.js fits and checks them)
@@ -111,7 +112,11 @@
   // worth (a pitcher throws his better pitches more, and the grades' table is steeper above 60 than below). Session 30, after the
   // pitching balance (the same 4,000 organizations): the starter's +0.42 (was +0.57: the grades' table is less steep above 60
   // and the fit's scale smaller); the regulars' within about 0.01 runs of Session 29's.
-  const BASE = { hit: { C: -0.0513, '1B': 0.004, '2B': -0.0136, '3B': -0.003, SS: -0.0074, LF: 0.0082, CF: 0.0517, RF: 0.0188, DH: 0.0076 }, pit: 0.4167 };
+  // Session 31 (owner's choices: relievers on a scale of their own, the Arsenal re-centered to 60): rel, the league's average
+  // reliever (the squads' eight bullpen arms) for a whole staff of him; arsenal, the league's mean raw Arsenal numbers (every
+  // starter and reliever; a group among those who throw it) minus 60, taken off so the average pitcher reads 60.
+  const BASE = { hit: { C: -0.0513, '1B': 0.004, '2B': -0.0136, '3B': -0.003, SS: -0.0074, LF: 0.0082, CF: 0.0517, RF: 0.0188, DH: 0.0076 }, pit: 0.4167,
+    rel: 0.4167, arsenal: { arsenal: 0, fastball: 0, breaking: 0, offspeed: 0 } };
 
   const HIT = ['contact', 'timing', 'launch', 'rawPower', 'recognition', 'discipline'];
   const PIT = ['velocity', 'command', 'deception'];
@@ -200,18 +205,20 @@
     return at(gradeOfEff, x);
   }
 
-  function arsenal(p) {
+  // raw: the numbers before the league's shift and unrounded (tools/overall.js --part=base measures the shift from them).
+  function arsenal(p, raw) {
     if (!isPitcher(p)) return { arsenal: null, fastball: null, breaking: null, offspeed: null };
-    const e = B3.ratings.effective(p), w = weights(p, undefined, e), G = W().pit.grade;
-    const num = (types) => {
+    const e = B3.ratings.effective(p), w = weights(p, undefined, e), G = W().pit.grade, shift = (base().arsenal || {});
+    const num = (types, k) => {
       const list = p.pitches.filter((t) => !types || types.indexOf(t) >= 0);
       if (!list.length) return null;
       let v = 0, s = 0;
       for (const t of list) { v += w[t] * at(G, e.grades[t]); s += w[t]; }
-      return clip(ratedGrade(inv(G, v / s)));
+      const x = ratedGrade(inv(G, v / s));
+      return raw ? x : clip(x - (shift[k] || 0));
     };
     const A = ARSENAL.groups;
-    return { arsenal: num(null), fastball: num(A.fastball), breaking: num(A.breaking), offspeed: num(A.offspeed) };
+    return { arsenal: num(null, 'arsenal'), fastball: num(A.fastball, 'fastball'), breaking: num(A.breaking, 'breaking'), offspeed: num(A.offspeed, 'offspeed') };
   }
 
   // ---- Hitters ----
@@ -268,8 +275,13 @@
     for (const k in parts) seasonParts[k] = bf * parts[k] / T.pa;
     seasonParts.league = -bf * base().pit / T.pa; // the league's average starter's runs, taken off so he is 50
     seasonParts.stamina = role === 'SP' ? repSP * (ip - ip0) : 0;
-    return { overall: clip(50 + S.points * (war - S.regularWins)), war: war, runs: S.runsPerWin * (war - S.regularWins), staffRuns: staffRuns,
-      perBF: perBF, innings: ip, parts: seasonParts, role: role };
+    // A reliever's overall is on a scale of his own (owner's choice, Session 31): his runs saved a batter against the league's
+    // average reliever, over an average starter's batters, at the starters' points a win. So a reliever's 70 pitches like a
+    // starter's 70 a batter, and the league's average reliever is 50; his real wins (war) stay for team strength.
+    const overall = role === 'SP' ? 50 + S.points * (war - S.regularWins)
+      : 50 + S.points * ip0 * S.bfPerInning * (staffRuns - base().rel) / T.pa / S.runsPerWin;
+    return { overall: clip(overall), war: war, runs: S.runsPerWin * (war - S.regularWins), staffRuns: staffRuns,
+      perBF: perBF, innings: ip, parts: seasonParts, role: role, scale: role === 'SP' ? 'wins' : 'relief' };
   }
 
   function detail(p, opts) {
