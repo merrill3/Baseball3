@@ -7,7 +7,7 @@ How the code is organized and the rules every file follows. Decisions about what
 - **Works opened straight from disk** (`file://`): no ES modules, no web workers, no fetching local files. Data the game needs is a script that sets a value on `B3`.
 - **Logic files never touch the DOM** (or `window`, `localStorage`, `indexedDB`), so Node can load and test them. All logic lives in `js/core/`.
 - **No `Math.random` in `js/core/`.** All randomness goes through `B3.rng` (from M1), so a seed fixes everything and tests repeat exactly.
-- **Names:** real U.S. cities with invented nicknames, as listed in DESIGN.md section 6. Players, coaches and logos are invented. No real MLB team or player names.
+- **Names:** real North American cities and U.S. states with invented nicknames, as listed in DESIGN.md section 6 (owner's choice, widened in Session 31). Players, coaches and logos are invented. No real MLB team or player names.
 - **Saves use Baseball3's own names** (below), so they never collide with Baseball1 on `merrill3.github.io`.
 
 `node tools/test.js` checks the rules it can: every script tag points at a file that exists, no `type="module"`, no `import`/`export`, `fetch(` or `Worker(` in `js/`, and no DOM, browser storage or `Math.random` in `js/core/`.

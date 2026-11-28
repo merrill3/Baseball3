@@ -82,65 +82,79 @@ Baseball1 (merrill3/Baseball1, also called "Diamond Dash") is the reference. Its
 - **Saving:** one franchise slot, autosaved, with a save version, an upgrade step for older saves, and Export and Import from the first saving step (M2) [41].
 - Every game keeps full stats. Full box scores are kept for your games and recent days only, to keep the save small [42].
 - **Rosters:** 26 active (13 position players, 5 starters, 8 relievers including a closer) plus a reserve squad. Minor leagues come after the release [44]. **Reserve squad: about 14** (40 in all) (owner's choice, Session 7, Nov 21, 2026).
-- **Schedule mix** (owner's choice, Session 7, Nov 21, 2026; step 2.1 builds it): about 52 division games (13 against each rival), 64 against the other 10 teams in the league, and 46 interleague (every team in the other league at least once, plus a natural rival).
+- **Schedule mix** (owner's choice, Session 7, Nov 21, 2026; step 2.1 builds it): about 52 division games (13 against each rival), 64 against the other 10 teams in the league, and 46 interleague (every team in the other league at least once, plus a natural rival). The natural rivals are section 6's pairs (owner's choice, Session 31).
 - **Starting balance** (owner's choice, Session 7): a new league starts with a realistic spread: a few teams expected to win about 95–100, a few about 60–65, most in between.
 - **Ages and potential** (owner's choice, Session 25, Nov 27, 2026; step 2.1a builds it): each player gets an age (about 21–40, a realistic mix) and a hidden potential that M6's growth function uses; the shown potential is drawn from it, with one shared look everywhere. Built in Session 27 (section 10, "Player generation"; the details Claude's defaults).
-- **Ballparks** (owner's choice, Session 25; step 2.1b builds them): mild variety (each park its own fences, about 320–345 ft down the lines and 395–410 to center, and wall heights; park effects about MLB's, most within ±5% of runs; Denver's thin air carries the ball farther, about +10%), plus 4–6 parks with a strong quirk, such as a very tall wall in a short left field or a deep center field with a hill. All invented, not copies of real parks.
+- **Ballparks** (owner's choice, Session 25; step 2.1b builds them): mild variety (each park its own fences, about 320–345 ft down the lines and 395–410 to center, and wall heights; park effects about MLB's, most within ±5% of runs; Denver's thin air carries the ball farther, about +10%), plus 4–6 parks with a strong quirk, such as a very tall wall in a short left field or a deep center field with a hill. All invented, not copies of real parks. **Session 31** (owner's choices): five oddly shaped parks; every park's air from its city's real elevation (Denver left the league, so New Mexico's park takes its +10%); invented local park names (section 6).
 - **Player names** (owner's choice, Session 7): a realistic mix with lots of variety: mostly American, many Latin American, some Asian and others. Built in Session 27 (section 6, "Player names").
 - **Positions** (owner's choice, Session 6, Nov 21, 2026; step 2.1 builds it): each player has a main position. Infield ladder: SS → 2B or 3B → 1B; a player moves only down it, never back up, at a cost of a few fielding points for each move down. 2B↔3B is a sideways move at the same small cost. LF, CF and RF swap freely at a very small cost. Infield↔outfield moves are rare (about 1 player in 20, mostly bench utility men), at a bigger cost. Only catchers catch; a catcher can move down to 1B. Anyone can DH at no cost. The exact costs are Claude's default, set and reported when built.
 - **Ratings** run 20–99, and 60 is an average big-leaguer [45]. Which ratings there are is in section 10 (the ratings redesign replaced the proposal's list: Contact, Power, Eye, Speed, Fielding, Arm; Velocity, Control, Stamina, Stuff).
-- **Overall rating tracks value** (WAR) by position, and teams get a team overall [46]. **Its scale** (owner's choice, Session 7, Nov 21, 2026): stretched to the 20–99 scale, so about 50 is an average regular, 70 and up an all-star, 80 and up an MVP type. Built in Session 29 (M2 step 2.1a task 3; the details Claude's defaults, section 10, "The overall and the Arsenal numbers, built"): each rating counts by its measured worth, as wins above replacement over a season against the league's average player at his position, 6 points a win.
+- **Overall rating tracks value** (WAR) by position, and teams get a team overall [46]. **Relievers on a scale of their own** (owner's choice, Session 31, from Session 29's flag): a reliever's overall compares him with relievers (the median reliever about 50, an elite closer about 75–80); team strength and the CPU's choices still use wins underneath. **Its scale** (owner's choice, Session 7, Nov 21, 2026): stretched to the 20–99 scale, so about 50 is an average regular, 70 and up an all-star, 80 and up an MVP type. Built in Session 29 (M2 step 2.1a task 3; the details Claude's defaults, section 10, "The overall and the Arsenal numbers, built"): each rating counts by its measured worth, as wins above replacement over a season against the league's average player at his position, 6 points a win.
 - **Growth:** one growth function handles every rating change (aging, performance, spring breakouts, in-season lasting changes, later training), for your team and the CPU teams alike (M6) [47]. It also grows and ages pitch grades and handles learning a new pitch (section 10).
 - **Contracts and money:** salary in $M, years left, and a payroll budget per team. Payroll always means the whole organization (active roster, injured list, reserves) plus released players still being paid [48]. Finances stay lightweight for now (owner's choice).
 - **Releasing a player:** you keep paying him until his contract would have ended. Blocked during the draft, and blocked if it would leave the roster too thin (M7) [49].
 - **Team control** (M7) [50]: 6 years of big-league service before free agency; about 3 years near the minimum salary, then 3 arbitration years with automatic raises; you tender or non-tender arbitration players; extensions at any time until free agency; minor-league free agency after 7 seasons in the organization without reaching 6 years. CPU teams follow the same rules.
 - Build order: the foundation first, as in the roadmap in `docs/plan.md` [51].
 
-## 6. Teams (owner's choice, Nov 20, 2026)
+## 6. Teams (owner's choice, Nov 28, 2026, Session 31; replaces the Nov 20 list)
 
-From the owner's list (`claude/baseball3-teams-2026-11-20.md` in the planning project). Two nicknames were cut to 3 syllables or fewer: Bodega Cats became **Bodegas**, Gila Monsters became **Gilas** (syllables counted in the nickname only).
+**The league** (owner's choice, Session 31: the owner's own list of cities, leagues and divisions; it replaces the Coast and Heartland Leagues of Nov 20, 2026). Two leagues of three divisions of five. The 16 cities that stay keep their nicknames and colors (owner's choice), except Salt Lake City, whose Brine Shrimp are replaced (owner's choice); the new nicknames, codes and colors, the state teams' home cities and which New York, Chicago and Los Angeles team keeps the old nickname are Claude's drafts, confirmed by the owner in the Session 31 summary ("yes, build it"; any one can still be changed). Montreal plays in the United West, as the owner listed it. The earlier list (Coast League: Atlantic, Gulf, Pacific; Heartland League: Lakes, Central, Desert & Mountain) is in git history (docs version 77).
 
-**Coast League**
+**United League**
 
-| Division | Team | Code | Colors |
-|---|---|---|---|
-| Atlantic | Boston Wicked | BOS | brick #8B2F23 / granite #6F7378 |
-| Atlantic | New York Bodegas | NYC | awning green #1F6F43 / tabby orange #D9822B |
-| Atlantic | Philadelphia Jawns | PHI | pretzel brown #8A5A2B / mustard #D9A520 |
-| Atlantic | Baltimore Hons | BAL | Formstone gray #7D7468 / hairspray blue #6FA8DC |
-| Atlantic | Washington Monuments | WAS | marble #E8E4DA / Potomac blue #2C4A6B |
-| Gulf | Miami Flamingos | MIA | flamingo #F26B8A / Biscayne turquoise #1FB5B0 |
-| Gulf | Tampa Cigars | TAM | tobacco #6B4226 / band gold #C9A227 |
-| Gulf | Orlando Swans | ORL | lake teal #2E7F86 / beak orange #E8752C |
-| Gulf | New Orleans Yats | NOL | streetcar green #2F5D3A / Mardi Gras purple #5B2C83 |
-| Gulf | Houston Bayous | HOU | bayou olive #4E5B31 / sunset orange #E8612C |
-| Pacific | Seattle Freeze | SEA | drizzle gray #5E6A71 / evergreen #1D4D3A |
-| Pacific | Portland Roses | POR | rose #C2185B / moss #6B8E3D |
-| Pacific | San Francisco Sourdoughs | SF | bridge orange #C0362C / fog #B8BEC2 |
-| Pacific | Los Angeles 405s | LA | freeway green #006B3F / sunset violet #8E4F8C |
-| Pacific | San Diego Sea Lions | SD | cove blue #1B7BAA / kelp #3B5323 |
+| Division | Team | Code | Colors | Home |
+|---|---|---|---|---|
+| East | New York Bodegas | NYB | awning green #1F6F43 / tabby orange #D9822B | New York |
+| East | Orlando Swans | ORL | lake teal #2E7F86 / beak orange #E8752C | Orlando |
+| East | Atlanta Peaches | ATL | peach #F4A261 / red clay #A0442B | Atlanta |
+| East | Philadelphia Jawns | PHI | pretzel brown #8A5A2B / mustard #D9A520 | Philadelphia |
+| East | Nashville Pickers | NSH | sunburst #C1661C / denim #2E4A6B | Nashville |
+| Central | Chicago Els | CHE | L-car silver #9EA3A8 / lake blue #1E5C8C | Chicago |
+| Central | Detroit Mittens | DET | steel #5A6470 / mitten red #A8322D | Detroit |
+| Central | Indianapolis Pit Crew | IND | asphalt #232323 / pace-car orange #E8682A | Indianapolis |
+| Central | Michigan Cherries | MI | cherry red #9E1B32 / pine green #2E5339 | Grand Rapids |
+| Central | Wisconsin Curds | WI | cheddar #E89B2F / dairy blue #3D6FA5 | Milwaukee |
+| West | Los Angeles 405s | LA4 | freeway green #006B3F / sunset violet #8E4F8C | Los Angeles |
+| West | San Francisco Sourdoughs | SF | bridge orange #C0362C / fog #B8BEC2 | San Francisco |
+| West | Phoenix Gilas | PHX | gila orange #E07B39 / gila black #231F20 | Phoenix |
+| West | Seattle Freeze | SEA | drizzle gray #5E6A71 / evergreen #1D4D3A | Seattle |
+| West | Montreal Poutine | MTL | fleur-de-lis blue #1F4E9C / gravy brown #7A4A23 | Montreal |
 
-**Heartland League**
+**Diamond League**
 
-| Division | Team | Code | Colors |
-|---|---|---|---|
-| Lakes | Chicago Els | CHI | L-car silver #9EA3A8 / lake blue #1E5C8C |
-| Lakes | Detroit Mittens | DET | steel #5A6470 / mitten red #A8322D |
-| Lakes | Cleveland Walleyes | CLE | Lake Erie green #3F6B5A / walleye gold #C9A13B |
-| Lakes | Pittsburgh Yinzers | PIT | smoke gray #4A4A48 / incline red #B23A2E |
-| Lakes | Minneapolis Skyways | MIN | lake ice #A9CCE3 / north-woods green #2F4F3A |
-| Central | Atlanta Peaches | ATL | peach #F4A261 / red clay #A0442B |
-| Central | Nashville Pickers | NSH | sunburst #C1661C / denim #2E4A6B |
-| Central | St. Louis Arches | STL | steel #A8B0B5 / river brown #6E5A3C |
-| Central | Kansas City Burnt Ends | KC | bark #2B1D16 / sauce red #8B1E1A |
-| Central | Dallas Y'all | DAL | sky blue #4A90C2 / boot brown #6B4423 |
-| Desert & Mountain | Denver Mile High | DEN | Red Rocks #A0452E / snowcap #F0F3F5 |
-| Desert & Mountain | Phoenix Gilas | PHX | gila orange #E07B39 / gila black #231F20 |
-| Desert & Mountain | Las Vegas Locals | LV | neon pink #FF3EA5 / desert night #1A1A2E |
-| Desert & Mountain | Salt Lake Brine Shrimp | SLC | salt white #EEEDE8 / Wasatch blue #3E5C8A |
-| Desert & Mountain | Austin Bats | AUS | dusk purple #4B3A6B / limestone #D8CBB0 |
+| Division | Team | Code | Colors | Home |
+|---|---|---|---|---|
+| East | New York Cabbies | NYC | taxi yellow #F2B705 / asphalt #2B2B2B | New York |
+| East | Toronto Raccoons | TOR | raccoon gray #7A7F84 / Lake Ontario blue #2D5F8B | Toronto |
+| East | Boston Wicked | BOS | brick #8B2F23 / granite #6F7378 | Boston |
+| East | Virginia Hams | VA | smokehouse red #8C2F22 / Blue Ridge blue #4A6FA5 | Richmond |
+| East | Pennsylvania Yinzers | PA | smoke gray #4A4A48 / incline red #B23A2E | Pittsburgh |
+| Central | Chicago Deep Dish | CHD | crust gold #C98A2B / tomato red #B5302A | Chicago |
+| Central | Austin Bats | AUS | dusk purple #4B3A6B / limestone #D8CBB0 | Austin |
+| Central | Ohio Coasters | OH | coaster red #C8352E / track steel #6D7378 | Columbus |
+| Central | Oklahoma City Twisters | OKC | storm gray #5B6470 / red dirt #A4472C | Oklahoma City |
+| Central | Dakota Pheasants | DAK | pheasant copper #A45A2A / prairie gold #D6B65A | Sioux Falls |
+| West | Los Angeles Taco Trucks | LAT | salsa red #B83A2B / lime #7DB84A | Los Angeles |
+| West | San Diego Sea Lions | SD | cove blue #1B7BAA / kelp #3B5323 | San Diego |
+| West | Salt Lake Powder | SLC | salt white #EEEDE8 / Wasatch blue #3E5C8A | Salt Lake City |
+| West | Las Vegas Locals | LV | neon pink #FF3EA5 / desert night #1A1A2E | Las Vegas |
+| West | New Mexico Chiles | NM | chile green #4C7A2C / turquoise #30A3A0 | Albuquerque |
 
-**The names rule** (owner's choice, Nov 20, 2026; Claude's wording, confirmed by the owner in Session 2): teams use real U.S. cities with the invented nicknames above. Nicknames, logos, players and coaches stay invented, and no real MLB team or player name is ever used.
+The Pennsylvania Yinzers take the dropped Pittsburgh team's nickname and colors (their home is Pittsburgh); the Salt Lake Powder keep the old colors. Codes: two-team cities add the nickname's first letter (the 405s' is the 4); state teams use the state's postal code (Dakota DAK). Claude's defaults inside the confirmed drafts.
+
+**Natural rivals** (owner's choice, Session 31: Claude's pairs; each team plays its rival in the other league every season, DESIGN.md section 5's schedule mix): New York Bodegas v. New York Cabbies, Chicago Els v. Chicago Deep Dish, Los Angeles 405s v. Los Angeles Taco Trucks (crosstown), Philadelphia v. Pennsylvania, Michigan v. Ohio, Detroit v. Toronto, Montreal v. Boston, San Francisco v. San Diego, Phoenix v. New Mexico, Seattle v. Salt Lake City, Atlanta v. Virginia, Nashville v. Austin, Orlando v. Las Vegas, Indianapolis v. Oklahoma City, Wisconsin v. Dakota.
+
+**Ballparks** (owner's choices, Session 31, inside Session 25's: mild variety, park effects about MLB's): every park has an invented local name (owner's choice; Claude wrote them, the owner can veto any); five parks have an odd shape (owner's choice: "five weirdly shaped parks"; which five and their shapes are Claude's drafts, confirmed in the summary); and every park's air follows its city's real elevation, so the high cities' parks carry the ball farther (owner's choice: "if you find any cities with high altitude, apply it"). New Mexico (Albuquerque, about 5,300 ft) takes the place of Denver's thin air, about +10% runs; Salt Lake City (about 4,200 ft) about +7%; Las Vegas (about 2,000 ft) about +3%; the rest 0–2%. Denver is no longer in the league. The odd five:
+- **New York Bodegas, The Corner Lot:** squeezed into a city block: a short right field (about 305 ft down the line) behind a very tall wall (about 30 ft).
+- **Pennsylvania Yinzers, Incline Field:** built into a hillside: a deep center field (about 425 ft) up a grassy incline.
+- **Chicago Els, Loop Field:** the elevated tracks cut a notch into right-center: a deep pocket there (about 420 ft) beside a short right-field line.
+- **Dakota Pheasants, The Prairie:** the biggest outfield (about 345 / 400 / 435 ft) behind a low wall: the triples park.
+- **Toronto Raccoons, The Ravine:** a triangle: straight walls from each foul pole to a deep point in dead center (about 430 ft), so the alleys are short.
+The other 25 parks' names and sizes are in `js/core/teams.js` (Claude's defaults, within Session 25's ranges).
+
+**Market sizes** (Claude's default, Session 25's summary): each home city's real metro population (millions, about 2023; Canadian census areas for Montreal and Toronto); the two New York, Chicago and Los Angeles teams share their metro. Stored in step 2.1b, used from M7 (budgets).
+
+**The names rule** (owner's choice, Nov 20, 2026; widened in Session 31 by the owner's new list, which adds Montreal, Toronto and state teams): teams use real North American cities and U.S. states with invented nicknames. Nicknames, logos, players and coaches stay invented, and no real MLB team or player name is ever used.
 
 **Player names** (built in Session 27, M2 step 2.1a task 2; `js/core/names.js`; lists, shares and rules Claude's defaults unless marked):
 - **Groups:** American (63% of players: the U.S. 95%, Canada and Australia), Latin American (27%: the Dominican Republic, Venezuela, Cuba, Puerto Rico, Mexico, Colombia, Panama, Nicaragua), Japanese 2.2%, Korean 1.4%, Taiwanese 1.2%, Dutch and Caribbean 1.8% (Curaçao, Aruba, the Netherlands), Italian 1%, German 1%, Brazilian 1.4%. MLB's mix is about 72% U.S.-born, 26% Latin American and 1.5% Asian; Asia and the others get a little more for variety.
@@ -148,7 +162,6 @@ From the owner's list (`claude/baseball3-teams-2026-11-20.md` in the planning pr
 - **Variety** (the owner's note, Session 27: at least about 500 last names; Baseball1's felt monotonous): 619 American, 293 Latin American, 101 Japanese, 47 Korean, 45 Taiwanese and 75 other last names, 1,173 different in all, with 249, 154, 54, 36 and 34 first names. A league of 1,200 players has about 730 different last names; no two players share a full name.
 - **Never a real MLB player's name** (the names rule): `js/core/realnames.js` holds a hash of every real MLB player's name (1871 on; 23,803 players in the Chadwick Bureau register) that the lists could build, 5,111 of them, under each player's used first name, given first name, whole given name and nickname. No real names are written in the code; the generator draws again on a match. Rebuilt with `node tools/realnames.js DIR` after changing the lists.
 
-Claude's defaults (to check when M2 builds the league): codes are 2–3 letters as listed; market sizes, ballpark sizes and the schedule's division and league mix get proposed in M2. Session 25: the schedule mix and ballparks are now the owner's choices (section 5); market sizes come from each city's real metro size (Claude's default, in the confirmed step 2.1 summary), stored in step 2.1b and used from M7.
 
 ## 7. Calibration targets (confirmed Nov 20, 2026; originally approved by the owner in Baseball1's Milestones 1b and 2b)
 
@@ -396,6 +409,12 @@ The owner was interviewed on a full ratings redesign in a separate chat (merrill
   - **The level** (`BAT.contactSd` 1.18 → 1.22): the grades' change took the generated league to about 4.72 runs, K 22.4%, whiffs 25.4% (four seeds); now 4.69, 22.7%, 25.8% (section 7, "After the pitching balance").
   - **The overall's tables re-measured** (`tools/overall.js`): `WORTH` (every rating 20 to 99 again: the grades worth −1.59 / −1.04 / +0.80 / +1.55 / +3.18 runs a staff at 20 / 40 / 70 / 80 / 99, was −2.00 / −1.26 / +1.01 / +1.74; Velocity +0.59 at 80, was +0.56), `ARSENAL` (scale 0.882, was 0.937; the types FF −1.16, SI −0.29, FC +0.18, SL +0.91, CU +1.41, CH +0.80, FS +1.06; whole arsenals r 0.981, was 0.991), `BASE` (the average starter +0.42 runs, was +0.57). The check: hitters r 0.915, slope 0.94; pitchers r 0.966, slope 1.00. The league (120 organizations): regulars median 50, sd 12.5, 70+ 5.6%, 80+ 1.5%; starters median 50, sd 9.5, 70+ 2.8%; relievers median 39 (the best 58); Arsenal numbers median 64 (p5 49, p95 78): about as in Session 29.
   - **Left for the owner** (as the task says): new jobs (pop-ups on high fastballs, the change-up's speed gap, first-pitch strikes), a Velocity × Command pair, re-pointing the Velocity × put-away pair, moving walk variance away from Aim and the other ratings; and from this task, whether to take Velocity's strikeouts to the year-to-year ladder by its whiffs (both near +1.65 per mph, which makes Velocity worth more than 0.3 runs per +10) or keep them across pitchers (now).
+- **The owner's choices after the pitching balance** (Session 31, Nov 28, 2026, on Session 29's and Session 30's flags; how each is built is Claude's default, recorded below as it is built):
+  - **Velocity's strikeouts:** moved toward MLB's year-to-year numbers (the same pitcher one season to the next: K +1.69, whiffs +1.65 per mph), which raises whiffs too and makes Velocity worth more than 0.3 runs per +10 (replaces task 4 item 4's "whiffs about 0.93, Velocity about 0.2–0.3 runs").
+  - **Edge %:** revisited later, with the aim of moving it near its ladder (it stays as Session 30 left it for now).
+  - **Relievers** get a scale of their own (section 5).
+  - **The Arsenal number** is re-centered so the league's average pitcher reads 60, like every other rating (replaces "about 64").
+  - **The hitters' stars:** fixed with MLB-like trade-off links: strikeout hitters also walk more and hit for more power, contact hitters hit for less (chosen over a stronger Raw Power–Contact link alone and over keeping twice MLB's stars). It changes how hitters' ratings are drawn (Session 10's Raw Power against Contact −0.3 stays the starting point; the links and their sizes are Claude's defaults, measured against MLB's).
 - **Handedness** (owner's choice, Session 3, Nov 20, 2026; not from the interview): batters bat left, right or both (a switch hitter bats from the side opposite the pitcher), and pitchers throw left or right. Handedness mirrors where a hitter pulls the ball and which way a pitch breaks. There is a small platoon edge: hitters see opposite-handed pitchers a little better. Its size is set and reported at calibration (M1 step 1.4). There are no separate split ratings.
 - **Retired and renamed** (Claude's reading of the interview, confirmed by the owner in Session 2): Stuff is retired (its whiff job moves to pitch grades and the put-away pitch); Control is now Command; Eye is split into Recognition and Discipline; Power is now Raw Power; Fielding is split into Range and Hands.
 - **Diagnostics** (squared-up %, chase on strike-looking pitches, launch-angle spread, swing-decision run value) are an advanced view in the Library's Archive part (section 9). M2 stores the counts they need.

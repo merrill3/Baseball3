@@ -12,7 +12,7 @@ Diamond Dash (working title, owner's choice) is a browser baseball game built fr
 ## Hard rules (carried from Baseball1 as Claude's defaults; the owner chose to keep them, Session 3)
 - No build step and no dependencies. Plain scripts on one global namespace, **`B3`**, loaded by `index.html` in a fixed order. It must work opened straight from disk (`file://`): no ES modules, no web workers, no fetching local files.
 - Logic files (`js/core/`) never touch the DOM, so Node can test them.
-- Names: teams use real U.S. cities with invented nicknames (owner's choice, Nov 20, 2026; the list is in DESIGN.md section 6). Players, coaches and logos are invented. No real MLB team or player names.
+- Names: teams use real North American cities and U.S. states with invented nicknames (owner's choice, Nov 20, 2026, widened by the owner's new team list in Session 31; the list is in DESIGN.md section 6). Players, coaches and logos are invented. No real MLB team or player names.
 - Saves use keys unique to Baseball3 (`baseball3`), so they don't collide with Baseball1 on `merrill3.github.io`.
 
 ## Working rules (owner's choices, every session)
