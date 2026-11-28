@@ -113,7 +113,8 @@ const PAIRS = [
   ['contact', 'rawPower', 'hitter'],
   ['recognition', 'discipline', 'hitter'],
   ['velocity', 'putAway', 'pitcher'],
-  ['speed', 'baserunning', 'hitter']
+  ['speed', 'baserunning', 'hitter'],
+  ['velocity', 'command', 'pitcher'] // Session 34 (step 2.1e item 4)
 ];
 function pairCond(pr, at) {
   const c = { kind: pr[2], at: at };

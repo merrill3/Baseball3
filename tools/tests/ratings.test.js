@@ -135,7 +135,7 @@ module.exports = function (t) {
   t.test('the pair synergies (Session 26): both above 60 pay off, inside the cap; physical measures never receive', () => {
     const B3 = loadCore();
     const rows = B3.tune.RATE.synergy;
-    assert.strictEqual(rows.map((r) => r.pair.join('+')).join(' '), 'contact+rawPower recognition+discipline velocity+putAway speed+baserunning');
+    assert.strictEqual(rows.map((r) => r.pair.join('+')).join(' '), 'contact+rawPower recognition+discipline velocity+putAway speed+baserunning velocity+command');
     for (const r of rows) assert.ok(r.k > 0 && r.to.length >= 1 && r.to.every((k) => r.pair.indexOf(k) >= 0), r.pair.join('+') + ' has a size and its own receivers');
     const k = (a, b) => rows.find((r) => r.pair[0] === a && r.pair[1] === b).k;
     // Nothing unless both are above 60: a specialist with a hole plays as before.
@@ -160,6 +160,10 @@ module.exports = function (t) {
     near(vp.velocity, 75, 1e-12, 'velocity stays');
     const vpIn = B3.ratings.inputs(pitcher({ velocity: 75 }, { arsenal: { SL: { grade: 70 } } })), vpOff = B3.ratings.inputs(pitcher({ velocity: 60 }, { arsenal: { SL: { grade: 70 } } }));
     assert.ok(vpIn.pit.grades.SL > vpOff.pit.grades.SL, 'and it reaches the slider\'s movement');
+    // Velocity with Command (Session 34): Command gets the points, Velocity stays.
+    const vc = B3.ratings.effective(pitcher({ velocity: 75, command: 70 }));
+    near(vc.command, 70 + k('velocity', 'command') * 15 * 10 / 100, 1e-9, 'command gets the points');
+    near(vc.velocity, 75, 1e-12, 'velocity stays');
     // Speed with Baserunning: Baserunning gets the points, sprint speed stays.
     const sb = B3.ratings.effective(hitter({ speed: 80, baserunning: 80 }));
     near(sb.baserunning, 80 + k('speed', 'baserunning') * 4, 1e-9, 'baserunning gets the points');

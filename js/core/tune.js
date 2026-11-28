@@ -138,7 +138,11 @@
       { pair: ['contact', 'rawPower'], to: ['contact'], k: 0.4 },
       { pair: ['recognition', 'discipline'], to: ['recognition', 'discipline'], k: 1.8 },
       { pair: ['velocity', 'putAway'], to: ['putAway'], k: 1.0 },
-      { pair: ['speed', 'baserunning'], to: ['baserunning'], k: 0.6 }
+      { pair: ['speed', 'baserunning'], to: ['baserunning'], k: 0.6 },
+      // Session 34 (step 2.1e item 4, owner's choice: a hard thrower who can locate): the points go to Command (Velocity is raw mph).
+      // At 80 and 80 the physics alone gave +0.06 +- 0.07 runs; with k 2.4 the pair pays +0.33 (both +1.70 against +0.87 and +0.50
+      // alone, 24% of the two apart, as the other pairs), and the starters' K% stars hold (5.8% [5]).
+      { pair: ['velocity', 'command'], to: ['command'], k: 2.4 }
     ],
     bat: {
       contactSd: ['contact', 'mul', 0.88],
