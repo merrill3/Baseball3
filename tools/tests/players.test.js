@@ -159,6 +159,10 @@ module.exports = function (t) {
     // Chase-getters (Deception and grades) lean Nibbler.
     const chase = (p) => p.ratings.deception + p.pitches.reduce((a, ty) => a + p.arsenal[ty].grade, 0) / p.pitches.length;
     assert.ok(mean(pitchers.filter((p) => p.tendencies.aim === 'Nibbler').map(chase)) > mean(pitchers.filter((p) => p.tendencies.aim === 'Attacker').map(chase)) + 5, 'Aim lean');
+    // Good Command leans Nibbler too (Session 34, step 2.1e item 1b), and the mix stays 1 : 2 : 1.
+    const cmd = (w) => mean(pitchers.filter((p) => p.tendencies.aim === w).map((p) => p.ratings.command));
+    assert.ok(cmd('Nibbler') > cmd('Balanced') + 2 && cmd('Balanced') > cmd('Attacker') + 2, 'Command lean ' + [cmd('Nibbler'), cmd('Balanced'), cmd('Attacker')]);
+    near(aim('Nibbler'), 0.25, 0.04, 'Nibbler share'); near(aim('Attacker'), 0.25, 0.04, 'Attacker share');
   });
 
   t.test('names: varied lists, unique in a league, never a real MLB player\'s', () => {

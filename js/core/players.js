@@ -49,6 +49,11 @@
     // +0.99 per mph across pitchers but +1.69 for the same pitcher year to year (the engine's per-mph effect since Session 31).
     veloGrades: -0.3,  // sized on the generated starters (160 teams): K% 14.1-30.5 [MLB 15.3-30.0], K% stars 5.8% [5]; at 0, 13.1-32.2 and 9.1%
     aimLean: 0.4,        // chase-getters (Deception and grades) lean Nibbler (Session 19)
+    // Good Command leans Nibbler (Session 34, step 2.1e item 1b, owner's choice; the size Claude's default): Nibbler / Balanced /
+    // Attacker 9 / 43 / 48% at Command under 45, 23 / 52 / 25% at 55-64, 46 / 45 / 10% at 75 and up (at 0: 29 / 49 / 22%, 25 / 50 / 26%,
+    // 22 / 49 / 29%); the mix stays 1 : 2 : 1. It moves walk spread from Aim onto Command (a sharp pitcher's nibbling costs fewer
+    // walks) and brings the league's zone % with BB% to -0.62 [MLB -0.52] (was -0.69).
+    commandLean: 0.4,
     // Low Discipline leans Aggressive (Session 33, step 2.1d item 7, owner's choice: chases that don't add strikeouts; the size is
     // Claude's default): the correlation between his Discipline's draw and a hidden normal cut at its quartiles (1 : 2 : 1). MLB's
     // free swingers chase and also swing at strikes early, so chasing doesn't raise their strikeouts (chase with K% -0.03).
@@ -293,10 +298,16 @@
       const zz = Math.sqrt(GEN.shapeOwn) * own + Math.sqrt(1 - GEN.shapeOwn) * rng.normal(0, 1);
       p.arsenal[t] = { grade: v['g:' + t], shape: Math.round(Math.max(-1, Math.min(1, GEN.shapeSd * zz)) * 10) / 10 };
     }
-    // Aim: pitchers whose stuff gets chases (Deception and grades) lean Nibbler, cut at the quartiles (1 : 2 : 1).
+    // Aim: pitchers whose stuff gets chases (Deception and grades) lean Nibbler, and from Session 34 (step 2.1e item 1b, owner's
+    // choice) so do pitchers with good Command; cut at the quartiles (1 : 2 : 1). The noise's share allows for Command leaning
+    // against the grades (stuffCommand), so the lean stays a standard normal.
     const zc = [(v.deception - 60 - level) / GEN.sd].concat(p.pitches.map((t) => (v['g:' + t] - 60 - level) / GEN.sd));
     const chase = zc.reduce((a, b) => a + b, 0) / Math.sqrt(zc.length);
-    const za = -GEN.aimLean * chase + Math.sqrt(1 - GEN.aimLean * GEN.aimLean) * rng.normal(0, 1);
+    const la = GEN.aimLean, lc = GEN.commandLean || 0;
+    // rho: the chase-getters' lean with his Command's draw (each grade's with his stuff, x stuffCommand, over the chase sum's size).
+    const rho = m * GEN.stuffCommand * (1 + vg + (m - 1) * vg * vg) / (Math.sqrt(1 + m + 2 * m * vg + m * (m - 1) * vg * vg) * Math.sqrt(m + 1));
+    const lean = la * chase + lc * (v.command - 60 - level) / GEN.sd;
+    const za = -lean + Math.sqrt(Math.max(0, 1 - la * la - lc * lc - 2 * la * lc * rho)) * rng.normal(0, 1);
     p.tendencies = { aim: za < -0.674 ? 'Nibbler' : za > 0.674 ? 'Attacker' : 'Balanced' };
     p.potential = potentialOf(rng, p.age);
     return p;

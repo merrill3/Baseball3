@@ -101,7 +101,11 @@
       const aim = d.balls === 3 ? 0 : pit.aim || 0;
       const sdr = pit.commandSd / B3.tune.PIT.commandSd;
       const aimBy = (q) => Math.min(q[2], Math.max(q[1], Math.pow(sdr, q[0])));
-      const cm = aimBy(P.commandAim), co = aimBy(P.commandOff || P.commandAim);
+      // A nibbler's balls follow his Command (Session 34, step 2.1e item 1b, owner's choice: nibbling pays with good Command): his
+      // targets off the plate are x (his scatter / the average's) to P.nibble as well, so at Command 60 he aims as before, a sharp
+      // nibbler just off the edge (chased more, sometimes called a strike) and a wild one farther off (more balls). Built on the
+      // targets off the plate only: on the targets in the zone too, the same payoff took the league's edge % farther past MLB's.
+      const cm = aimBy(P.commandAim), co = aimBy(P.commandOff || P.commandAim) * (aim < 0 && P.nibble ? Math.pow(sdr, P.nibble) : 1);
       const away = B3.pitch.who(g).bats === 'L' ? -1 : 1; // the side of the plate away from the batter
       const low = r.chance(P.low[type]);
       if (r.chance(P.zone[d.balls][d.strikes] + aim * P.aimSide[aim + 1] * P.aimZone[d.balls][d.strikes] + (P.zoneType[type] || 0))) {

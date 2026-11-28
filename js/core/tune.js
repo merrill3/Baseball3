@@ -179,7 +179,10 @@
     },
     pit: {
       velo: ['velocity', 'add', 1], // a step is one mph (Session 13: the table below is the real ladder)
-      commandSd: ['command', 'mul', 0.92], // Session 14: was 0.88 (the test population's walk, edge and chase spreads)
+      // Session 14: was 0.88 (the test population's walk, edge and chase spreads). Session 34 (step 2.1e item 1, owner's choice: the
+      // walk spread moved from Aim onto Command): was 0.92; walks 13.0 / 11.0 / 9.3 / 7.2 / 5.0 at 20 / 40 / 60 / 80 / 99 -> 14.5 /
+      // 11.6 / 9.3 / 6.7 / 4.5 [MLB 15.3 / 12.3 / 8.0 / 4.8 / 2.1]; at 0.88 a 20 walked 16.8 and edge % at 99 was 55.2 [50.1].
+      commandSd: ['command', 'mul', 0.90],
       deception: ['deception', 'mul', 1 / 0.75], // the mirror of Recognition: the unread share grows by the same step
       // Session 19 (owner's choice): Deception also carries the pitchers' contact skill, on its own gentle scale ('tens': tens
       // of points after the curve, not Deception's step table, which is steep below 60), sized so the test population's exit
@@ -735,7 +738,11 @@
       // MLB's top and bottom thirds of pitchers by the zone % their walks don't explain (2024-2025, 566 pitcher-seasons with 250+
       // batters faced: half the gap 2.5 / 4.45 / 4.85 at 0-0 / 0-1 / 0-2, 2.4 / 3.8 / 4.85 at 1-0 / 1-1 / 1-2, 0.95 / 2.75 / 3.8
       // at 2-0 / 2-1 / 2-2, none with three balls). With the insets (below) that is about the 15th and 85th percentiles of zone %.
-      aimZone: [[0.025, 0.065, 0.083], [0.025, 0.056, 0.086], [-0.01, 0.02, 0.051], [0, 0, 0]],
+      // Session 34 (step 2.1e item 1, owner's choice: the walk spread moved from Aim onto Command): x 0.85 (was [[0.025, 0.065, 0.083],
+      // [0.025, 0.056, 0.086], [-0.01, 0.02, 0.051], [0, 0, 0]]), with Command's step 0.92 -> 0.90 and good Command leaning Nibbler
+      // (B3.players GEN.commandLean): the league's BB% 4.9-12.5 [MLB 4.8-12.3] as before; stopped at 0.85 by the league's zone % (at
+      // x 0.7 its spread was 0.88x MLB's, at x 0.5 0.83x; at 0.85 44.9-54.8 [44.2-54.9]).
+      aimZone: [[0.0213, 0.0553, 0.0706], [0.0213, 0.0476, 0.0731], [-0.0085, 0.017, 0.0434], [0, 0, 0]],
       // aimZone x this for Nibbler, Balanced, Attacker (Session 16): with the table as fitted, a nibbler gave back part of his gap by
       // falling behind more often (his extra balls are chased less than MLB's nibblers'), so x1.5 makes the gaps in zone % alike
       // both ways, as MLB's thirds are (47.4 / 50.4 / 53.3): Nibbler 46.9, Balanced 49.9, Attacker 52.9 for average pitchers, near the
@@ -761,6 +768,11 @@
                            // power, between these limits: sharper command aims nearer the edges (step 1.4)
       commandOff: [0.5, 0.4, 1], // the same for targets off the plate (feet off the edge), but a wild pitcher doesn't aim
                            // farther off than an average one (Session 14)
+      // A Nibbler's targets off the plate x (his scatter / the average's) to this as well (Session 34, step 2.1e item 1b, owner's
+      // choice: nibbling pays with good Command; the size Claude's default): Nibbler +0.24 / +0.10 / -0.14 runs allowed a team-game
+      // against Balanced at Command 40 / 60 / 80 (was +0.12 / +0.09 / -0.01), Attacker -0.09 / -0.01 / +0.09. Stopped at 1 by the
+      // league's edge % (95th 46.3 [MLB 45.7]; at 1.5 on the targets in the zone it was 49.1).
+      nibble: 1,
       low: { FF: 0.4, SI: 0.75, FC: 0.55, SL: 0.7, CU: 0.8, CH: 0.8, FS: 0.85 } // share of targets kept low, by type
     },
     pull: {

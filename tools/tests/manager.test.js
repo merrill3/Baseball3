@@ -182,6 +182,14 @@ module.exports = function (t) {
     near(nib.inset, bal.inset, 0.02, '3-1 inset'); near(att.inset, bal.inset, 0.02, '3-1 inset');
   });
 
+  t.test('a nibbler\'s balls follow his Command (Session 34): a sharp nibbler aims nearer the edge off the plate than a sharp Balanced pitcher, a wild one farther off', () => {
+    const at = (aim, command) => picks(setup(Object.assign({ pit: { command } }, aim ? { aim } : {})), 1, 1, 6000);
+    const sharpN = at('Nibbler', 90), sharpB = at(null, 90), wildN = at('Nibbler', 30), wildB = at(null, 30), avgN = at('Nibbler', 60), avgB = at(null, 60);
+    assert.ok(sharpN.off < sharpB.off - 0.02, 'sharp: nibbler ' + sharpN.off + ' against ' + sharpB.off);
+    assert.ok(wildN.off > wildB.off + 0.02, 'wild: nibbler ' + wildN.off + ' against ' + wildB.off);
+    near(avgN.off, avgB.off, 0.015, 'at Command 60 alike');
+  });
+
   t.test('put-aways (Session 18): with two strikes the CPU buries some pitches a foot or more off the plate, more with fewer balls', () => {
     const P = setup().B3.tune.CPU.pitch;
     const at = (b, s) => picks(setup(), b, s, 8000).far;
