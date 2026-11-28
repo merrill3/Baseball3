@@ -35,8 +35,19 @@
     // The test population's spread and links (tools/ratingstats.js, Sessions 8-19), so the league is what the ladders
     // were fitted on: 60 + sd x z for every rating.
     sd: 12.2,
-    powerContact: -0.3,  // Raw Power against Contact (owner's choice, Session 10)
+    // The hitters' trade-off links (Session 31, owner's choice: MLB-like trade-offs, so strikeout hitters also walk more and hit
+    // for more power, and contact hitters hit for less; the pairs and sizes are Claude's defaults, sized on the generated
+    // hitters against MLB's 2024-2026 seasons): correlations between the hitting ratings' draws. Pairs not named are 0.
+    // Sized on 160 teams of generated hitters (tools/ratingstats.js --part=pop) against MLB's [brackets]: wOBA stars 6.3% / 1.3%
+    // [5 / 1] (were 9.8% / 2.2%), wOBA's spread 1.21x MLB's (was 1.49x); K% with BB% +0.19 [+0.17], with ISO +0.25 [+0.32], with
+    // wOBA -0.12 [-0.08]; zone contact with ISO -0.39 [-0.39], with exit speed -0.53 [-0.43]; chase with K% +0.09 [-0.03];
+    // exit speed with BB% +0.29 [+0.32]. Raw Power against Contact goes from Session 10's -0.3 to -0.5 inside the set.
+    hitLinks: { 'contact,rawPower': -0.5, 'contact,discipline': -0.35, 'contact,recognition': -0.4, 'rawPower,discipline': 0.3 },
     stuffCommand: -0.2,  // Command against his stuff, his Velocity and grades together (owner's choice, Session 19; size Claude's)
+    // His grades against his Velocity (Session 31, Claude's default under the owner's Session 19 rule, pitchers' traits linked as
+    // MLB's go together): a soft-tosser sticks in the majors only with better pitches, which is why MLB's strikeouts rise
+    // +0.99 per mph across pitchers but +1.69 for the same pitcher year to year (the engine's per-mph effect since Session 31).
+    veloGrades: -0.3,  // sized on the generated starters (160 teams): K% 14.1-30.5 [MLB 15.3-30.0], K% stars 5.8% [5]; at 0, 13.1-32.2 and 9.1%
     aimLean: 0.4,        // chase-getters (Deception and grades) lean Nibbler (Session 19)
     shapeSd: 0.35,       // a pitch's shape: shapeSd x a normal, rounded to 0.1, within -1 to 1
     shapeOwn: 0.8,       // the share of each shape's variance that is the pitcher's own tilt, shared by his pitches
@@ -142,6 +153,30 @@
 
   function style(rng, words) { return words[rng.weighted(GEN.tendency)]; }
 
+  // The Cholesky factor of the hitting ratings' correlations (GEN.hitLinks, in HIT's order), kept until the links change.
+  let hitKey = null, hitL = null;
+  function hitFactor() {
+    const key = JSON.stringify(GEN.hitLinks);
+    if (key === hitKey) return hitL;
+    const n = HIT.length, C = HIT.map((a, i) => HIT.map((b, j) => (i === j ? 1 : 0)));
+    for (const pr in GEN.hitLinks) {
+      const [a, b] = pr.split(','), i = HIT.indexOf(a), j = HIT.indexOf(b);
+      if (i < 0 || j < 0 || i === j) fail('bad hitLinks pair ' + pr);
+      C[i][j] = C[j][i] = GEN.hitLinks[pr];
+    }
+    const L = HIT.map(() => new Array(n).fill(0));
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j <= i; j++) {
+        let s = C[i][j];
+        for (let k = 0; k < j; k++) s -= L[i][k] * L[j][k];
+        if (i === j) { if (s <= 1e-9) fail('hitLinks is not a valid set of correlations'); L[i][j] = Math.sqrt(s); }
+        else L[i][j] = s / L[j][j];
+      }
+    }
+    hitKey = key; hitL = L;
+    return L;
+  }
+
   function hitter(rng, ctx, opts) {
     opts = opts || {};
     const { tier, level } = levelOf(opts);
@@ -154,9 +189,8 @@
     p.bats = bats;
     p.throws = RIGHT_ONLY.indexOf(pos) >= 0 ? 'R' : (rng.next() < GEN.throwsL[bats] ? 'L' : 'R');
     // Hitting: independent normals, Raw Power against Contact, Raw Power's position lean.
-    const z = {};
-    for (const k of HIT) z[k] = rng.normal(0, 1);
-    z.rawPower = GEN.powerContact * z.contact + Math.sqrt(1 - GEN.powerContact * GEN.powerContact) * z.rawPower;
+    const z0 = HIT.map(() => rng.normal(0, 1)), Lh = hitFactor(), z = {};
+    HIT.forEach((k, i) => { let x = 0; for (let j = 0; j <= i; j++) x += Lh[i][j] * z0[j]; z[k] = x; });
     const r = {};
     for (const k of HIT) r[k] = 60 + level + GEN.sd * z[k];
     r.rawPower = 60 + level + GEN.posPower[pos] + within(GEN.posPower) * z.rawPower;
@@ -213,8 +247,12 @@
     const keys = ['velocity', 'command', 'deception'].concat(p.pitches.map((t) => 'g:' + t));
     const z = {};
     for (const k of keys) z[k] = rng.normal(0, 1);
+    const vg = GEN.veloGrades;
+    if (vg) for (const t of p.pitches) z['g:' + t] = vg * z.velocity + Math.sqrt(1 - vg * vg) * z['g:' + t];
     const stuff = keys.filter((k) => k === 'velocity' || k.startsWith('g:'));
-    const zs = stuff.reduce((t, k) => t + z[k], 0) / Math.sqrt(stuff.length);
+    // His stuff as one standard normal: the sum's spread allows for the grades leaning against Velocity (veloGrades).
+    const m = stuff.length - 1;
+    const zs = stuff.reduce((t, k) => t + z[k], 0) / Math.sqrt(1 + m + 2 * m * vg + m * (m - 1) * vg * vg);
     z.command = GEN.stuffCommand * zs + Math.sqrt(1 - GEN.stuffCommand * GEN.stuffCommand) * z.command;
     const rp = role !== 'SP';
     const v = {};

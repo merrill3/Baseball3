@@ -64,20 +64,27 @@ module.exports = function (t) {
     assert.ok(g.over && g.score[0] !== g.score[1]);
   });
 
-  t.test('ratings spread as the test population: 60 +- 12.2, Raw Power against Contact, Command against stuff', () => {
+  t.test('ratings spread as the test population: 60 +- 12.2, the hitters trade-off links, Command against stuff', () => {
     const { regulars, starters, relievers, bench, reserves } = league();
     for (const k of ['contact', 'timing', 'launch', 'rawPower', 'recognition', 'discipline', 'range', 'hands', 'arm', 'speed', 'baserunning']) {
       const xs = regulars.map((p) => p.ratings[k]);
       near(mean(xs), k === 'range' || k === 'hands' || k === 'arm' ? 60 - 8 / 9 : 60, 1.2, k + ' mean'); // the DH fields poorly
       near(sd(xs), 12.2, 1.0, k + ' sd');
     }
-    near(corr(regulars.map((p) => p.ratings.rawPower), regulars.map((p) => p.ratings.contact)), -0.3, 0.08, 'Raw Power-Contact');
+    // Session 31: the hitters' trade-off links (GEN.hitLinks; Raw Power's position lean thins its link a little)
+    const r = (a, b) => corr(regulars.map((p) => p.ratings[a]), regulars.map((p) => p.ratings[b]));
+    near(r('rawPower', 'contact'), -0.48, 0.08, 'Raw Power-Contact');
+    near(r('discipline', 'contact'), -0.35, 0.08, 'Discipline-Contact');
+    near(r('recognition', 'contact'), -0.4, 0.08, 'Recognition-Contact');
+    near(r('rawPower', 'discipline'), 0.29, 0.08, 'Raw Power-Discipline');
     const big = starters.concat(relievers);
     for (const k of ['command', 'deception']) near(mean(big.map((p) => p.ratings[k])), 60, 1.2, k + ' mean');
     near(mean(starters.map((p) => p.ratings.velocity)), 60, 1.5, 'starters Velocity');
     near(mean(relievers.map((p) => p.ratings.velocity)) - mean(starters.map((p) => p.ratings.velocity)), 5, 2, 'relievers throw harder');
-    const stuff = (p) => p.ratings.velocity + p.pitches.reduce((a, ty) => a + p.arsenal[ty].grade, 0);
-    assert.ok(corr(big.map((p) => p.ratings.command), big.map(stuff)) < -0.1, 'Command leans against the stuff');
+    // Session 31: the grades lean against Velocity (GEN.veloGrades), so Command's lean shows against the grades.
+    const grades = (p) => p.pitches.reduce((a, ty) => a + p.arsenal[ty].grade, 0) / p.pitches.length;
+    assert.ok(corr(big.map((p) => p.ratings.command), big.map(grades)) < -0.1, 'Command leans against the stuff');
+    near(corr(big.map((p) => p.ratings.velocity), big.map((p) => p.arsenal[p.pitches[0]].grade)), -0.3, 0.08, 'grades against Velocity');
     // Bench players and reserves are weaker hitters.
     const hit = (list) => mean(list.filter((p) => !p.pitches).map((p) => p.ratings.contact + p.ratings.rawPower + p.ratings.discipline));
     assert.ok(hit(bench) < hit(regulars) - 6 && hit(reserves) < hit(bench), 'tiers');

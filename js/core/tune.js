@@ -354,8 +354,10 @@
                        // middle, so a pitch down the middle is the easiest to hit; it was 0.4)
     edgeSd: 2.4,       // per foot from edgeFrom inside the edge outward
     chaseSd: 3.0,      // per foot outside the zone, on top of edgeSd
-    veloSd: 2.5,       // the whole spread x (his fastball / PIT.velo)^veloSd (Session 13: Velocity brings whiffs, not weak
-                       // contact; real per mph, the same pitcher year to year: whiff +1.65, K% +1.69, exit speed -0.16)
+    veloSd: 4.2,       // the whole spread x (his fastball / PIT.velo)^veloSd (Session 13: Velocity brings whiffs, not weak
+                       // contact; real per mph, the same pitcher year to year: whiff +1.65, K% +1.69, exit speed -0.16).
+                       // Session 31 (owner's choice: MLB's year-to-year numbers; the size Claude's default), was 2.5: paired
+                       // replays per mph K +1.79, whiffs +1.52 (were +1.33, +1.03); one knob moves both, K a little faster
     chaseGrade: true,  // an off-speed pitch's extra spread off the plate (TYPE.chase above 1) scales with its grade (Session 13)
     locLoss: 0,        // share of exit speed lost per foot from edgeFrom inside the edge outward (step 1.3; step 1.5,
                        // was 0.08; Session 23, was 0.04: the bar's location part, SWING.bar, carries it)
